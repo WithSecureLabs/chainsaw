@@ -1,0 +1,152 @@
+name: ci
+
+on: [push]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          target: x86_64-unknown-linux-gnu
+          
+      - name: Create artifacts directory
+        run: mkdir chainsaw ; mkdir chainsaw/sigma_rules
+        
+      - name: Build
+        run: cargo build --all --release --target x86_64-unknown-linux-gnu && strip target/x86_64-unknown-linux-gnu/release/chainsaw 
+        
+      - name: Move files to artifacts
+        run: mv target/x86_64-unknown-linux-gnu/release/chainsaw samples mapping_files LICENCE README.md chainsaw/ ; mv rules/rules/windows/* chainsaw/sigma_rules/
+        
+      - name: Create ZIP File
+        run: tar -czf chainsaw_x86_64-unknown-linux-gnu.tar.gz chainsaw/*
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: chainsaw_x86_64-unknown-linux-gnu.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+  build-linux-static:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          target: x86_64-unknown-linux-musl
+          
+      - name: Create artifacts directory
+        run: mkdir chainsaw ; mkdir chainsaw/sigma_rules
+        
+      - name: Build
+        run: cargo build --all --release --target x86_64-unknown-linux-musl && strip target/x86_64-unknown-linux-musl/release/chainsaw 
+        
+      - name: Move files to artifacts
+        run: mv target/x86_64-unknown-linux-musl/release/chainsaw samples mapping_files LICENCE README.md chainsaw/ ; mv rules/rules/windows/* chainsaw/sigma_rules/
+        
+      - name: Create ZIP File
+        run: tar -czf chainsaw_x86_64-unknown-linux-musl.tar.gz chainsaw/*
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: chainsaw_x86_64-unknown-linux-musl.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-win:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install latest rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+        
+      - name: Build
+        run: cargo build --all --release
+        
+      - name: Create artifacts directory
+        run: mkdir chainsaw ; mkdir chainsaw/sigma_rules
+        
+      - name: Move files to artifacts
+        run: move target/release/chainsaw.exe chainsaw/ ; move samples chainsaw/ ; move rules/rules/windows/* chainsaw/sigma_rules/; move mapping_files chainsaw; move LICENCE chainsaw; move README.md chainsaw/
+        
+      - name: Create ZIP File
+        shell: pwsh
+        run: Compress-Archive -Path .\chainsaw\ -Destination chainsaw_x86_64-pc-windows-msvc.zip
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: chainsaw_x86_64-pc-windows-msvc.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-mac:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install latest rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-apple-darwin
+          default: true
+          override: true
+          
+      - name: Create artifacts directory
+        run: mkdir chainsaw ; mkdir chainsaw/sigma_rules
+
+      - name: Build for mac
+        run: cargo build --all --release && strip target/release/chainsaw 
+        
+      - name: Move files to artifacts
+        run: mv target/release/chainsaw samples mapping_files LICENCE README.md chainsaw/; mv rules/rules/windows/* chainsaw/sigma_rules/
+        
+      - name: Create ZIP File
+        run: zip -qq -r chainsaw_x86_64-apple-darwin.zip chainsaw
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: chainsaw_x86_64-apple-darwin.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

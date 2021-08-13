@@ -1,0 +1,6 @@
+[submodule "sigma_rules"]
+	path = sigma_rules
+	url = https://github.com/SigmaHQ/sigma
+[submodule "evtx_attack_samples"]
+	path = evtx_attack_samples
+	url = https://github.com/sbousseaden/EVTX-ATTACK-SAMPLES
