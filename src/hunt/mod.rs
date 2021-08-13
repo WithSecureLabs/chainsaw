@@ -200,6 +200,7 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
 			));
 				}
 			};
+			println!("[+] Converting detection rules...");
 			// Load detection rules
 			Some(load_detection_rules(
 				rules,

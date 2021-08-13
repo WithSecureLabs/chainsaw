@@ -4,6 +4,7 @@
    Rapidly Search and Hunt through Windows Event Logs
   </h1>
  </p>
+<img style="padding:0;vertical-align:bottom;" height="76" width="300" src="chainsaw.png"/>
 </div>
 
 ---
@@ -11,9 +12,10 @@ Chainsaw provides a powerful ‘first-response’ capability to quickly identify
 
 ## Features
 ---
+
  - :mag: Search and extract event log records by event IDs, string matching, and regex patterns
  - :dart: Hunt for threats using [Sigma](https://github.com/SigmaHQ/sigma) detection rules and custom built-in detection logic
- - :zap: Lightning fast, written in rust, wrapping the [EVTX parser](https://github.com/omerbenamram/evtx) library by [@OBenamram](https://twitter.com/obenamram?lang=en) 
+ - :zap: Lightning fast, written in rust, wrapping the [EVTX parser](https://github.com/omerbenamram/evtx) library by [@OBenamram](https://twitter.com/obenamram?lang=en)
  - :fire:  Document tagging (detection logic matching) provided by the [TAU Engine](https://github.com/countercept/tau-engine) Library
  - :bookmark_tabs: Output in an ASCII table format, CSV format, or JSON format
 
@@ -43,7 +45,7 @@ Using the `--rules` and `--mapping` parameters you can specify a directory conta
  4. Brute-force of local user accounts
  5. RDP Logins
 
-You can specify the `--lateral-all` flag to chainsaw to also parse and extract additional 4624 logon types (network logons, service, batch etc.) relating to potential lateral movement that may be interesting for investigations. 
+You can specify the `--lateral-all` flag to chainsaw to also parse and extract additional 4624 logon types (network logons, service, batch etc.) relating to potential lateral movement that may be interesting for investigations.
 
 ## Getting Started
 ---
@@ -53,6 +55,14 @@ You can find pre-compiled versions of chainsaw in the releases section of this G
 You can then compile the code yourself by running:  `cargo build --release`. Once the build has finished, you will find a copy of the compiled binary in the target/release folder.
 
 **Make sure to build with the `--release` flag as this will ensure significantly faster execution time.**
+
+If you want to quickly see what Chainsaw looks like when it runs, you can use the command:
+```
+./chainsaw hunt evtx_attack_samples/ --rules sigma_rules/ --mapping mapping_files/sigma-mapping.yml
+```
+
+## Supporting Additional Event IDs (via Mapping Files)
+When using Sigma rule detection logic, Chainsaw requires a 'mapping file' to tell it which event IDs to check, what fields are important, and which fields to output in the table view. The included sigma mapping in the "mapping_files" directory already supports most of the key Event IDs, but if you want to add support for additional event IDs you can use this mapping file as a template.
 
 ## Examples
 ---
@@ -141,8 +151,8 @@ You can then compile the code yourself by running:  `cargo build --release`. Onc
 #### Command Examples
 *Hunt through all event logs in a specific path, show additional information relating to potential lateral movement, and save results to individual CSV files*
 
-    -> % ./chainsaw hunt ../../samples/ --lateral-all --csv
-    
+    -> % ./chainsaw hunt evtx_attack_samples/ --lateral-all --csv
+
      ██████╗██╗  ██╗ █████╗ ██╗███╗   ██╗███████╗ █████╗ ██╗    ██╗
     ██╔════╝██║  ██║██╔══██╗██║████╗  ██║██╔════╝██╔══██╗██║    ██║
     ██║     ███████║███████║██║██╔██╗ ██║███████╗███████║██║ █╗ ██║
@@ -167,7 +177,7 @@ You can then compile the code yourself by running:  `cargo build --release`. Onc
 
 *Hunt through all event logs in a specific path, apply detection logic and TAU rules from the specified path*
 
-	-> % ./chainsaw hunt ../../samples/ --rules ../../rules --mapping ../../mapping_files/sigma-mapping.yml
+	-> % ./chainsaw hunt evtx_attack_samples/ --rules sigma_rules/ --mapping mapping_files/sigma-mapping.yml
 
      ██████╗██╗  ██╗ █████╗ ██╗███╗   ██╗███████╗ █████╗ ██╗    ██╗
     ██╔════╝██║  ██║██╔══██╗██║████╗  ██║██╔════╝██╔══██╗██║    ██║
@@ -556,4 +566,10 @@ You can then compile the code yourself by running:  `cargo build --release`. Onc
     │ 2019-09-22 11:23:19 │ 4732 │ "MSEDGEWIN10" │ User added to local group │ "S-1-5-20"                                      │ "Administrators" │
     └─────────────────────┴──────┴───────────────┴───────────────────────────┴─────────────────────────────────────────────────┴──────────────────┘
 
+
+### Acknowledgements
+ - [EVTX-ATTACK-SAMPLES](https://github.com/sbousseaden/EVTX-ATTACK-SAMPLES) by [SBousseaden](https://twitter.com/SBousseaden)
+ - [Sigma](https://github.com/SigmaHQ/sigma) detection rules
+ - [EVTX parser](https://github.com/omerbenamram/evtx) library by [@OBenamram](https://twitter.com/obenamram?lang=en)
+ - [TAU Engine](https://github.com/countercept/tau-engine) Library by [@AlexKornitzer](https://twitter.com/AlexKornitzer?lang=en)
 
