@@ -1,7 +1,9 @@
 name: ci
 
-on: [push]
-
+on:
+  push:
+    tags:
+        - v*
 jobs:
   build-linux:
     runs-on: ubuntu-latest
