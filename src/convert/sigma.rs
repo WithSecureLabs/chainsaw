@@ -361,6 +361,11 @@ pub fn load(rule: &Path) -> Result<Vec<Yaml>> {
         })
         .collect();
 
+    // Silently error if we found no sigma rules.
+    if sigma.is_empty() {
+        return Ok(vec![]);
+    }
+
     let main = sigma.remove(0);
     let base = match main.as_base() {
         Some(base) => base,
