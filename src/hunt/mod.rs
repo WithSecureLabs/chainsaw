@@ -580,6 +580,13 @@ fn save_hunt_results(detections: &[Detection]) -> Result<()> {
 
 pub fn get_mapping_file(path: &Path) -> Result<Mapping> {
     let mapping: Mapping;
+    let md = metadata(&path)?;
+    if md.is_dir() {
+        return Err(anyhow!(
+            "Specified mapping file is a directory: '{}' - please specify a file",
+            path.display()
+        ));
+    };
     match File::open(&path) {
         Ok(mut file) => {
             let mut content = String::new();
