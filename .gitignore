@@ -3,3 +3,6 @@ target
 
 # Vim
 *.sw*
+
+# VSCode
+*.vscode*
