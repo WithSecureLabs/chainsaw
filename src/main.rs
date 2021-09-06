@@ -57,7 +57,7 @@ fn print_title() {
 ██║     ██╔══██║██╔══██║██║██║╚██╗██║╚════██║██╔══██║██║███╗██║
 ╚██████╗██║  ██║██║  ██║██║██║ ╚████║███████║██║  ██║╚███╔███╔╝
  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝
-    By F-Secure Countercept (Author: @FranticTyping)
+    By F-Secure Countercept (@FranticTyping, @AlexKornitzer)
 "
     );
 }
