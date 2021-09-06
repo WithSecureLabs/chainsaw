@@ -47,6 +47,10 @@ pub struct HuntOpts {
     #[structopt(long = "csv")]
     pub csv_output: bool,
 
+    /// Show rule author information in table output
+    #[structopt(long = "authors")]
+    pub show_authors: bool,
+
     /// Show full event output, otherwise output is trunctated to improve readability
     #[structopt(long = "full")]
     pub full_output: bool,
@@ -86,6 +90,7 @@ pub struct ChainsawRule {
     #[serde(alias = "title")]
     pub tag: String,
     pub status: Option<String>,
+    pub authors: Option<Vec<String>>,
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
@@ -275,6 +280,7 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
                             &mapping.mappings,
                             &opt.full_output,
                             opt.col_width,
+                            &opt.show_authors,
                         ) {
                             if opt.json_output.is_some() {
                                 json_detections.push(det_to_json(
