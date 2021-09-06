@@ -10,6 +10,7 @@ pub struct Stalker {
 	tau: tau_engine::Rule,
 	level: String,
 	status: String,
+	authors: Vec<String>,
 }
 
 impl From<Stalker> for ChainsawRule {
@@ -19,6 +20,7 @@ impl From<Stalker> for ChainsawRule {
 			level: Some(stalker.level),
 			status: Some(stalker.status),
 			logic: stalker.tau,
+			authors: Some(stalker.authors),
 		}
 	}
 }

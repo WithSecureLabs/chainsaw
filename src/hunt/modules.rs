@@ -32,8 +32,12 @@ fn split_tag(tag_name: String, target: usize) -> String {
     chars.into_iter().collect()
 }
 
-fn get_tau_matches(mut data: serde_json::Value, chainsaw_rules: &[ChainsawRule]) -> Option<String> {
+fn get_tau_matches(
+    mut data: serde_json::Value,
+    chainsaw_rules: &[ChainsawRule],
+) -> Option<(String, String)> {
     let mut matches = vec![];
+    let mut authors = vec![];
 
     // TAU specific fix to make sure raw.ex.name is set to just the image name, not the full path
     if let Some(name) = data.get("raw.ex.name") {
@@ -51,6 +55,12 @@ fn get_tau_matches(mut data: serde_json::Value, chainsaw_rules: &[ChainsawRule])
             } else {
                 matches.push(format!("{}{}", RULE_PREFIX, rule.tag.clone()));
             }
+            // To comply to the sigma DRL we need to display rule author information
+            if let Some(x) = &rule.authors {
+                authors.push(format!("{}{}", RULE_PREFIX, x.join("\n")))
+            } else {
+                authors.push(format!("{}Unknown", RULE_PREFIX));
+            }
         } else {
             continue;
         }
@@ -59,7 +69,7 @@ fn get_tau_matches(mut data: serde_json::Value, chainsaw_rules: &[ChainsawRule])
         return None;
     }
     // Flatten vec here
-    Some(matches.join("\n"))
+    Some((matches.join("\n"), authors.join("\n")))
 }
 
 fn format_time(event_time: String) -> String {
@@ -167,6 +177,7 @@ pub fn detect_tau_matches(
     id_mappings: &HashMap<u64, Events>,
     full_output: &bool,
     col_width: i32,
+    show_authors: &bool,
 ) -> Option<Detection> {
     let command_line;
     let mut headers = vec![];
@@ -221,8 +232,8 @@ pub fn detect_tau_matches(
         None => return None,
     };
 
-    let hits = match get_tau_matches(doc, &chainsaw_rules) {
-        Some(h) => h,
+    let (hits, authors) = match get_tau_matches(doc, &chainsaw_rules) {
+        Some(ret) => ret,
         None => return None,
     };
 
@@ -247,6 +258,9 @@ pub fn detect_tau_matches(
             // Set hardcoded table headers and values
             headers.push("id".to_string());
             headers.push("detection_rules".to_string());
+            if *show_authors {
+                headers.push("rule_authors".to_string());
+            }
             headers.push("computer_name".to_string());
             match fields.table_headers.get("context_field") {
                 Some(v) => headers.push(v.to_string()),
@@ -255,6 +269,9 @@ pub fn detect_tau_matches(
 
             values.push(event_id.to_string());
             values.push(hits);
+            if *show_authors {
+                values.push(authors);
+            }
             values.push(event["Event"]["System"]["Computer"].to_string());
             values.push(command_line);
             for (k, v) in &fields.table_headers {
