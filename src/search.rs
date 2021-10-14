@@ -7,7 +7,7 @@ use regex::Regex;
 use serde_json::Value;
 use structopt::StructOpt;
 
-use crate::util::{check_output_file, get_evtx_files, get_progress_bar};
+use crate::util::{get_evtx_files, get_progress_bar};
 
 #[derive(StructOpt)]
 pub struct SearchOpts {
@@ -15,9 +15,8 @@ pub struct SearchOpts {
     /// If you specify a directory, all files matching *.evtx will be used.
     pub evtx_path: PathBuf,
 
-    /// Save the output of the search filters to a specified path
-    #[structopt(short = "o", long = "output")]
-    pub output_file: Option<PathBuf>,
+    #[structopt(short = "q", long = "quiet")]
+    pub quiet: bool,
 
     /// This option can be used in conjunction with any other search methods. It will only return
     /// results of the event ID supplied.
@@ -43,14 +42,6 @@ pub struct SearchOpts {
 pub fn run_search(opt: SearchOpts) -> Result<String> {
     // Load EVTX Files
     let evtx_files = get_evtx_files(&opt.evtx_path)?;
-    // Perform sanity checks on output file
-    match &opt.output_file {
-        Some(file) => {
-            check_output_file(file)?;
-            println!("[+] Saving results to {:?}", file);
-        }
-        None => println!("[+] Printing results to the screen"),
-    }
     let pb = get_progress_bar(evtx_files.len() as u64, "Searching".to_string());
     // Loop through EVTX files and perform actions
     let mut hits = vec![];
@@ -66,12 +57,7 @@ pub fn run_search(opt: SearchOpts) -> Result<String> {
         pb.inc(1);
     }
     pb.finish();
-    if let Some(out_file) = &opt.output_file {
-        let file = File::create(out_file)?;
-        serde_json::to_writer(file, &hits)?;
-    } else {
-        serde_json::to_writer_pretty(std::io::stdout(), &hits)?;
-    }
+    cs_print_json_pretty!(&hits)?;
     Ok(format!("\n[+] Found {} matching log entries", hits.len()))
 }
 

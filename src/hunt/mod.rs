@@ -4,7 +4,6 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
-use colour::{green_ln, yellow_ln};
 use itertools::Itertools;
 use prettytable::format;
 use prettytable::row::Row;
@@ -26,6 +25,9 @@ pub struct HuntOpts {
     /// Specifying "win_default" will use "C:\Windows\System32\winevt\Logs\"
     pub evtx_path: PathBuf,
 
+    #[structopt(short = "q", long = "quiet")]
+    pub quiet: bool,
+
     // Specify the detection rule directory to use
     //
     /// Specify a directory containing detection rules to use. All files matching *.yml will be used.
@@ -43,9 +45,9 @@ pub struct HuntOpts {
     #[structopt(long = "lateral-all")]
     pub lateral_all: bool,
 
-    /// Save hunt output to individual CSV file, otherwise output in a table format
-    #[structopt(long = "csv")]
-    pub csv_output: bool,
+    /// Save hunt output to individual CSV files in the directory provided
+    #[structopt(long = "csv", group = "output")]
+    pub csv: Option<PathBuf>,
 
     /// Show rule author information in table output
     #[structopt(long = "authors")]
@@ -56,8 +58,8 @@ pub struct HuntOpts {
     pub full_output: bool,
 
     /// Save the full event log and associated detections to disk in a JSON format to the specified path
-    #[structopt(long = "json")]
-    pub json_output: Option<PathBuf>,
+    #[structopt(short, long = "json", group = "output")]
+    pub json: bool,
 
     /// Do not use inbuilt detection logic, only use the specified rules for detection
     #[structopt(long = "no-builtin")]
@@ -203,7 +205,7 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
       ));
                 }
             };
-            println!("[+] Converting detection rules...");
+            cs_eprintln!("[+] Converting detection rules...");
             // Load detection rules
             Some(load_detection_rules(
                 rules,
@@ -218,25 +220,17 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
           "In-built detection logic disabled (--no-builtin) but no detection rules provided! Use --rules to specify rules"),
         );
             }
-            yellow_ln!("[!] Continuing without detection rules, no path provided");
+            cs_eyellowln!("[!] Continuing without detection rules, no path provided");
             None
         }
     };
     if opt.disable_inbuilt_logic {
-        yellow_ln!(
+        cs_eyellowln!(
             "[!] Inbuilt detection logic disabled (--no-builtin). Only using specified rule files"
         );
     }
-    if opt.csv_output {
-        println!("[+] Saving results to CSV files");
-    } else {
-        println!("[+] Printing results to screen");
-    }
-    if let Some(ref json_filepath) = opt.json_output {
-        println!("[+] Saving results to {}", json_filepath.display());
-    }
     if large_event_logs(&evtx_files) {
-        yellow_ln!(
+        cs_eyellowln!(
             "[!] Provided event logs are over 500MB in size. This will take a while to parse...",
         );
     }
@@ -282,7 +276,7 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
                             opt.col_width,
                             &opt.show_authors,
                         ) {
-                            if opt.json_output.is_some() {
+                            if opt.json {
                                 json_detections.push(det_to_json(
                                     det.clone(),
                                     r.data.clone(),
@@ -378,7 +372,7 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
                         }
                     };
                     if let Some(d) = det {
-                        if opt.json_output.is_some() {
+                        if opt.json {
                             json_detections.push(det_to_json(d.clone(), r.data, "title")?);
                         }
                         hunt_detections.push(d);
@@ -397,19 +391,15 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
             hunt_detections.push(r);
         }
     };
-    if opt.csv_output {
-        match save_hunt_results(&hunt_detections) {
-            Ok(()) => {}
-            Err(e) => return Err(anyhow!("Failed to save results to CSV: {}", e)),
-        };
+
+    if let Some(dir) = opt.csv {
+        save_hunt_results(dir, &hunt_detections)?;
+    } else if opt.json {
+        cs_print_json!(&json_detections)?;
     } else {
         print_hunt_results(&hunt_detections);
     }
-    if let Some(json_filepath) = opt.json_output {
-        green_ln!("\n[+] Detections written to {}", json_filepath.display());
-        let file = File::create(json_filepath)?;
-        serde_json::to_writer(file, &json_detections)?;
-    }
+
     Ok(format!("\n[+] {} Detections found", hunt_detections.len()))
 }
 
@@ -474,7 +464,7 @@ fn print_hunt_results(detections: &[Detection]) {
         let mut table = Table::new();
         table.set_format(format);
         let mut header = false;
-        green_ln!("\n[+] Detection: {}", title);
+        cs_greenln!("\n[+] Detection: {}", title);
 
         let mut unsorted_rows = vec![];
         // Loop through detection values and print in a table view
@@ -518,34 +508,27 @@ fn print_hunt_results(detections: &[Detection]) {
         for row in sorted_rows {
             table.add_row(Row::new(row));
         }
-        table.printstd();
+        cs_print_table!(table);
     }
 }
 
-fn save_hunt_results(detections: &[Detection]) -> Result<()> {
+fn save_hunt_results(dir: PathBuf, detections: &[Detection]) -> Result<()> {
     // Create a uniq list of all hunt result titles so that we can agg
     let detection_titles: &Vec<String> = &detections
         .iter()
         .map(|x| x.title.clone())
         .unique()
         .collect();
+    // Create output directory
+    create_dir_all(&dir)?;
     // Loop through uniq list of hunt results
-    println!();
+    cs_println!();
     for title in detection_titles {
         let mut header = false;
-        let time = chrono::offset::Local::now()
-            .format("%FT%H-%M-%S")
-            .to_string();
-        let output_directory = format!("chainsaw_{}", time);
-        let filename = format!(
-            "{}/{}.csv",
-            output_directory,
-            title.replace(" ", "_").to_lowercase()
-        );
         let mut unsorted_rows = vec![];
-        // Create output directory
-        create_dir_all(output_directory)?;
-        let mut writer = csv::Writer::from_path(filename.to_string())?;
+        let filename = format!("{}.csv", title.replace(" ", "_").to_lowercase());
+        let path = dir.join(&filename);
+        let mut writer = csv::Writer::from_path(path)?;
         for detection in detections {
             // Only group together results of the same hunt
             if detection.title != *title {
@@ -553,7 +536,7 @@ fn save_hunt_results(detections: &[Detection]) -> Result<()> {
             }
             if !header {
                 // Write headers to CSV
-                println!("[+] Created {}", filename);
+                cs_println!("[+] Created {}", filename);
                 writer.write_record(&detection.headers)?;
                 header = true;
             }
@@ -659,9 +642,9 @@ pub fn load_detection_rules(
                                         None => path.display().to_string(),
                                     };
                                     if let Some(source) = e.source() {
-                                        eprintln!("[!] {:?}: {} - {}", file_name, e, source);
+                                        cs_eprintln!("[!] {:?}: {} - {}", file_name, e, source);
                                     } else {
-                                        eprintln!("[!] {:?}: {}", file_name, e);
+                                        cs_eprintln!("[!] {:?}: {}", file_name, e);
                                     }
                                 }
                                 continue;
@@ -678,7 +661,7 @@ pub fn load_detection_rules(
                                                 Some(e) => e.to_string(),
                                                 None => path.display().to_string(),
                                             };
-                                        eprintln!("[!] {:?}: {}", file_name, e);
+                                        cs_eprintln!("[!] {:?}: {}", file_name, e);
                                     }
                                     continue;
                                 }
@@ -693,7 +676,7 @@ pub fn load_detection_rules(
                                                 Some(e) => e.to_string(),
                                                 None => path.display().to_string(),
                                             };
-                                        eprintln!(
+                                        cs_eprintln!(
                                             "[!] {:?} is excluded in mapping file",
                                             file_name
                                         );
@@ -717,7 +700,7 @@ pub fn load_detection_rules(
                                         Some(e) => e.to_string(),
                                         None => path.display().to_string(),
                                     };
-                                    eprintln!("[!] {:?}: {}", file_name, e);
+                                    cs_eprintln!("[!] {:?}: {}", file_name, e);
                                 }
                                 continue;
                             }
@@ -746,7 +729,7 @@ pub fn load_detection_rules(
                                         Some(e) => e.to_string(),
                                         None => path.display().to_string(),
                                     };
-                                    eprintln!("[!] {:?} is excluded in mapping file", file_name);
+                                    cs_eprintln!("[!] {:?} is excluded in mapping file", file_name);
                                 }
                                 continue;
                             };
@@ -775,14 +758,15 @@ pub fn load_detection_rules(
     }
     if failed > 0 {
         if check {
-            println!();
+            cs_eprintln!();
         }
-        println!(
+        cs_eprintln!(
             "[+] Loaded {} detection rules ({} were not loaded)",
-            count, failed
+            count,
+            failed
         );
     } else {
-        println!("[+] Loaded {} detection rules", count);
+        cs_eprintln!("[+] Loaded {} detection rules", count);
     }
     Ok(chainsaw_rules)
 }
