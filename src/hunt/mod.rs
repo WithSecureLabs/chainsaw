@@ -270,7 +270,7 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
                         if let Some(det) = modules::detect_tau_matches(
                             &r.data,
                             e_id,
-                            &rules,
+                            rules,
                             &mapping.mappings,
                             &opt.full_output,
                             opt.col_width,
@@ -423,7 +423,7 @@ fn post_process_hunt(
     }
     // Process 4624 Events
     if let Some(a) = grouped_events.get(&4624) {
-        let detections = match modules::filter_lateral_movement(a, &hunts) {
+        let detections = match modules::filter_lateral_movement(a, hunts) {
             Some(b) => b,
             None => vec![],
         };

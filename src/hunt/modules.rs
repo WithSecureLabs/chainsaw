@@ -202,7 +202,7 @@ pub fn detect_tau_matches(
 
             // Loop through every specified field and attempt to match to the current event doc
             for (k, v) in &fields.search_fields {
-                let h = match ajson::get(&event.to_string(), &v) {
+                let h = match ajson::get(&event.to_string(), v) {
                     Some(h) => h.to_string(),
                     None => {
                         // cs_println!("{} - could not match: {}", event_id, v);
@@ -216,12 +216,12 @@ pub fn detect_tau_matches(
 
             // Find the context_field and extract it's value from the event
             command_line = match fields.table_headers.get("context_field") {
-                Some(a) => match ajson::get(&event.to_string(), &a) {
+                Some(a) => match ajson::get(&event.to_string(), a) {
                     Some(v) => {
                         if v.to_string().is_empty() {
                             "<empty>".to_string()
                         } else {
-                            format_field_length(v.to_string(), &full_output, col_width as usize)
+                            format_field_length(v.to_string(), full_output, col_width as usize)
                         }
                     }
                     None => "context_field not found!".to_string(),
@@ -232,7 +232,7 @@ pub fn detect_tau_matches(
         None => return None,
     };
 
-    let (hits, authors) = match get_tau_matches(doc, &chainsaw_rules) {
+    let (hits, authors) = match get_tau_matches(doc, chainsaw_rules) {
         Some(ret) => ret,
         None => return None,
     };
@@ -281,13 +281,13 @@ pub fn detect_tau_matches(
                 // Insert the table headers
                 headers.push(k.to_string());
                 // Insert the table values
-                match ajson::get(&event.to_string(), &v) {
+                match ajson::get(&event.to_string(), v) {
                     Some(b) => {
                         let b = b.to_string();
                         if b.is_empty() {
                             values.push("<empty>".to_string())
                         } else {
-                            values.push(format_field_length(b, &full_output, col_width as usize))
+                            values.push(format_field_length(b, full_output, col_width as usize))
                         }
                     }
                     None => values.push("Invalid Mapping".to_string()),
