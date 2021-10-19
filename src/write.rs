@@ -39,6 +39,12 @@ where
     Ok(())
 }
 
+macro_rules! cs_print {
+    ($($arg:tt)*) => ({
+        print!($($arg)*);
+    })
+}
+
 macro_rules! cs_println {
     ($($arg:tt)*) => ({
         println!($($arg)*);
@@ -63,10 +69,11 @@ macro_rules! cs_print_json {
     }};
 }
 
-macro_rules! cs_print_json_pretty {
+macro_rules! cs_print_yaml {
     ($value:expr) => {{
         use std::io::Write;
-        $crate::serde_json::to_writer_pretty(std::io::stdout(), $value)?;
+        $crate::serde_yaml::to_writer(std::io::stdout(), $value)?;
+        println!();
         std::io::stdout().flush()
     }};
 }

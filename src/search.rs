@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use anyhow::Result;
 use evtx::{EvtxParser, ParserSettings};
 use regex::Regex;
-use serde_json::Value;
 use structopt::StructOpt;
 
 use crate::util::{get_evtx_files, get_progress_bar};
@@ -33,6 +32,10 @@ pub struct SearchOpts {
     #[structopt(short = "i", long = "case-insensitive")]
     pub case_insensitive: bool,
 
+    /// Save the full event log and associated detections to disk in a JSON format to the specified path
+    #[structopt(short, long = "json", group = "output")]
+    pub json: bool,
+
     /// Use this option to search EVTx files for the regex pattern supplied. If a pattern match is found, the
     /// whole matching event will be returned.
     #[structopt(short = "r", long = "regex-search")]
@@ -43,8 +46,14 @@ pub fn run_search(opt: SearchOpts) -> Result<String> {
     // Load EVTX Files
     let evtx_files = get_evtx_files(&opt.evtx_path)?;
     let pb = get_progress_bar(evtx_files.len() as u64, "Searching".to_string());
+    if opt.json {
+        cs_print!("[");
+    } else {
+        pb.set_draw_target(indicatif::ProgressDrawTarget::hidden());
+    }
+
     // Loop through EVTX files and perform actions
-    let mut hits = vec![];
+    let mut hits = 0;
     for evtx in &evtx_files {
         pb.tick();
         // Parse EVTx files
@@ -52,17 +61,23 @@ pub fn run_search(opt: SearchOpts) -> Result<String> {
         let parser = EvtxParser::from_path(evtx)?.with_configuration(settings);
 
         // Search EVTX files for user supplied arguments
-        hits.extend(search_evtx_file(parser, &opt)?);
+        hits += search_evtx_file(parser, &opt, hits == 0)?;
 
         pb.inc(1);
     }
+    if opt.json {
+        cs_println!("]");
+    }
     pb.finish();
-    cs_print_json_pretty!(&hits)?;
-    Ok(format!("\n[+] Found {} matching log entries", hits.len()))
+    Ok(format!("\n[+] Found {} matching log entries", hits))
 }
 
-pub fn search_evtx_file(mut parser: EvtxParser<File>, opt: &SearchOpts) -> Result<Vec<Value>> {
-    let mut hits = vec![];
+pub fn search_evtx_file(
+    mut parser: EvtxParser<File>,
+    opt: &SearchOpts,
+    first: bool,
+) -> Result<usize> {
+    let mut hits = 0;
     for record in parser.records_json_value() {
         // TODO - work out why chunks of a record can fail here, but the overall event logs count
         // isn't affected. If this parser isn't seeing an event that you know exists, it's mostly
@@ -120,7 +135,17 @@ pub fn search_evtx_file(mut parser: EvtxParser<File>, opt: &SearchOpts) -> Resul
                 continue;
             }
         }
-        hits.push(r.data);
+
+        if opt.json {
+            if !(first && hits == 0) {
+                cs_print!(",");
+            }
+            cs_print_json!(&r.data)?;
+        } else {
+            cs_print_yaml!(&r.data)?;
+        }
+
+        hits += 1;
     }
     Ok(hits)
 }
