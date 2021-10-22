@@ -25,6 +25,7 @@ pub struct HuntOpts {
     /// Specifying "win_default" will use "C:\Windows\System32\winevt\Logs\"
     pub evtx_path: PathBuf,
 
+    /// Suppress all unnecessary output
     #[structopt(short = "q", long = "quiet")]
     pub quiet: bool,
 
@@ -45,7 +46,7 @@ pub struct HuntOpts {
     #[structopt(long = "lateral-all")]
     pub lateral_all: bool,
 
-    /// Save hunt output to individual CSV files in the directory provided
+    /// Save hunt output to individual CSV files in the specified directory
     #[structopt(long = "csv", group = "output")]
     pub csv: Option<PathBuf>,
 

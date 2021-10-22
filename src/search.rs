@@ -14,6 +14,7 @@ pub struct SearchOpts {
     /// If you specify a directory, all files matching *.evtx will be used.
     pub evtx_path: PathBuf,
 
+    /// Suppress all unnecessary output
     #[structopt(short = "q", long = "quiet")]
     pub quiet: bool,
 
