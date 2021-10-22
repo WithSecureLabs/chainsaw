@@ -527,7 +527,15 @@ fn save_hunt_results(dir: PathBuf, detections: &[Detection]) -> Result<()> {
     for title in detection_titles {
         let mut header = false;
         let mut unsorted_rows = vec![];
-        let filename = format!("{}.csv", title.replace(" ", "_").to_lowercase());
+        // Build the final CSV filename
+        // TODO: This feels very hacky, maybe we shouldn't use the title for the filename in this way?
+        let mut filename = format!("{}.csv", title.replace(" ", "_").to_lowercase());
+        if let Some(x) = filename.split('-').last() {
+            filename = x.to_string();
+            if &filename[0..1] == "_" {
+                filename.remove(0);
+            }
+        }
         let path = dir.join(&filename);
         let mut writer = csv::Writer::from_path(path)?;
         for detection in detections {
