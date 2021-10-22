@@ -1,12 +1,10 @@
 use std::fs;
 use std::fs::{metadata, File};
-use std::io;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use evtx::{EvtxParser, ParserSettings};
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 #[cfg(windows)]
 use is_elevated::is_elevated as user_is_elevated;
 use walkdir::WalkDir;
@@ -68,7 +66,7 @@ pub fn get_evtx_files(mut path: &Path) -> Result<Vec<PathBuf>> {
     };
     // Check if there is at least one EVTX file in the directory
     if !evtx_files.is_empty() {
-        println!("[+] Found {} EVTX files", evtx_files.len());
+        cs_eprintln!("[+] Found {} EVTX files", evtx_files.len());
     } else {
         return Err(anyhow!("No EVTx files found. Check input path?"));
     }
@@ -81,31 +79,14 @@ pub fn parse_evtx_file(evtx_file: &Path) -> Result<evtx::EvtxParser<File>> {
     Ok(parser)
 }
 
-pub fn check_output_file(file: &Path) -> Result<()> {
-    // We want to sanity check the specified output file before we do heavy processing
-    if file.exists() {
-        print!("Output file already exists, Overwrite? [y]es/[n]o: ");
-        io::stdout().flush()?;
-        let mut input = String::new();
-        io::stdin()
-            .read_line(&mut input)
-            .expect("Failed to read from stdin!");
-        if input.ends_with('\n') {
-            input.pop();
-        }
-        match input.as_str() {
-            "Yes" => {}
-            "yes" => {}
-            "y" => {}
-            "Y" => {}
-            _ => return Err(anyhow!("Exiting")),
-        }
-    }
-    Ok(())
-}
-
 pub fn get_progress_bar(size: u64, msg: String) -> indicatif::ProgressBar {
     let pb = ProgressBar::new(size);
+    unsafe {
+        match crate::write::WRITER.quiet {
+            true => pb.set_draw_target(ProgressDrawTarget::hidden()),
+            false => pb.set_draw_target(ProgressDrawTarget::stderr()),
+        }
+    };
     pb.set_style(
         ProgressStyle::default_bar()
             .template("[+] {msg}: [{bar:40}] {pos}/{len} {spinner}")
