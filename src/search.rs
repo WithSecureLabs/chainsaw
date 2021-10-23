@@ -2,6 +2,7 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use chrono::NaiveDateTime;
 use evtx::{EvtxParser, ParserSettings};
 use regex::Regex;
 use structopt::StructOpt;
@@ -41,6 +42,14 @@ pub struct SearchOpts {
     /// whole matching event will be returned.
     #[structopt(short = "r", long = "regex-search")]
     pub search_regex: Option<String>,
+
+    /// Start date for including events (UTC). Anything older than this is dropped. Format: YYYY-MM-DDTHH:MM:SS. Example: 2019-11-17T17:55:11
+    #[structopt(long = "start-date", short = "sd")]
+    pub start_date: Option<String>,
+
+    /// End date for including events (UTC). Anything newer than this is dropped. Format: YYYY-MM-DDTHH:MM:SS. Example: 2019-11-17T17:55:11
+    #[structopt(long = "end-date", short = "ed")]
+    pub end_date: Option<String>,
 }
 
 pub fn run_search(opt: SearchOpts) -> Result<String> {
@@ -53,16 +62,44 @@ pub fn run_search(opt: SearchOpts) -> Result<String> {
         pb.set_draw_target(indicatif::ProgressDrawTarget::hidden());
     }
 
+    let mut sd_marker = None;
+    let mut ed_marker = None;
+
+    let time_format = "%Y-%m-%dT%H:%M:%S";
+
+    // if start date filter is provided, validate that the provided string is a valid timestamp
+    if let Some(x) = &opt.start_date {
+        sd_marker = match NaiveDateTime::parse_from_str(x.as_str(), time_format) {
+            Ok(a) => {
+                cs_eprintln!("[+] Filtering out events before: {}", a);
+                Some(a)
+            }
+            Err(e) => return Err(anyhow!("Error parsing provided start-date filter: {}", e)),
+        }
+    }
+
+    // if end date filter is provided, validate that the provided string is a valid timestamp
+    if let Some(x) = &opt.end_date {
+        ed_marker = match NaiveDateTime::parse_from_str(x.as_str(), time_format) {
+            Ok(a) => {
+                cs_eprintln!("[+] Filtering out events after:  {}", a);
+                Some(a)
+            }
+            Err(e) => return Err(anyhow!("Error parsing provided end-date filter: {}", e)),
+        }
+    }
+
     // Loop through EVTX files and perform actions
     let mut hits = 0;
     for evtx in &evtx_files {
         pb.tick();
+
         // Parse EVTx files
         let settings = ParserSettings::default().num_threads(0);
         let parser = EvtxParser::from_path(evtx)?.with_configuration(settings);
 
         // Search EVTX files for user supplied arguments
-        hits += search_evtx_file(parser, &opt, hits == 0)?;
+        hits += search_evtx_file(parser, &opt, hits == 0, sd_marker, ed_marker)?;
 
         pb.inc(1);
     }
@@ -77,8 +114,11 @@ pub fn search_evtx_file(
     mut parser: EvtxParser<File>,
     opt: &SearchOpts,
     first: bool,
+    sd_marker: Option<NaiveDateTime>,
+    ed_marker: Option<NaiveDateTime>,
 ) -> Result<usize> {
     let mut hits = 0;
+
     for record in parser.records_json_value() {
         // TODO - work out why chunks of a record can fail here, but the overall event logs count
         // isn't affected. If this parser isn't seeing an event that you know exists, it's mostly
@@ -89,6 +129,36 @@ pub fn search_evtx_file(
                 continue;
             }
         };
+
+        // Perform start/end datetime filtering
+        if sd_marker.is_some() || ed_marker.is_some() {
+            let event_time = match NaiveDateTime::parse_from_str(
+                r.data["Event"]["System"]["TimeCreated"]["#attributes"]["SystemTime"]
+                    .as_str()
+                    .unwrap(),
+                "%Y-%m-%dT%H:%M:%S%.6fZ",
+            ) {
+                Ok(t) => t,
+                Err(_) => {
+                    return Err(anyhow!(
+                        "Failed to parse datetime from supplied events. This shouldn't happen..."
+                    ));
+                }
+            };
+
+            // Check if event is older than start date marker
+            if let Some(sd) = sd_marker {
+                if event_time <= sd {
+                    continue;
+                }
+            }
+            // Check if event is newer than end date marker
+            if let Some(ed) = ed_marker {
+                if event_time >= ed {
+                    continue;
+                }
+            }
+        }
         // Do processing of EVTX record now it's in a JSON format
         //
         // The default action of the whole OK logic block it mark a record as matched
