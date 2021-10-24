@@ -212,7 +212,7 @@ pub fn detect_tau_matches(
                 };
                 doc[k] = json!(h);
             }
-            doc["EventID"] = json!(event_id);
+            doc["EventID"] = json!(event_id.to_string());
 
             // Find the context_field and extract it's value from the event
             command_line = match fields.table_headers.get("context_field") {
