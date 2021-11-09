@@ -4,6 +4,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
+use chrono::NaiveDateTime;
 use itertools::Itertools;
 use prettytable::format;
 use prettytable::row::Row;
@@ -69,6 +70,14 @@ pub struct HuntOpts {
     /// Change the maximum column width (default 40). Use this option if the table output is un-readable
     #[structopt(long = "col-width", default_value = "40")]
     pub col_width: i32,
+
+    /// Start date for including events (UTC). Anything older than this is dropped. Format: YYYY-MM-DDTHH:MM:SS. Example: 2019-11-17T17:55:11
+    #[structopt(long = "start-date", short = "sd")]
+    pub start_date: Option<String>,
+
+    /// End date for including events (UTC). Anything newer than this is dropped. Format: YYYY-MM-DDTHH:MM:SS. Example: 2019-11-17T17:55:11
+    #[structopt(long = "end-date", short = "ed")]
+    pub end_date: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -192,6 +201,33 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
     let mut hunt_detections = Vec::new();
     let mut json_detections = Vec::new();
     let mut mapping_file = None;
+    let mut sd_marker = None;
+    let mut ed_marker = None;
+
+    let time_format = "%Y-%m-%dT%H:%M:%S";
+
+    // if start date filter is provided, validate that the provided string is a valid timestamp
+    if let Some(x) = &opt.start_date {
+        sd_marker = match NaiveDateTime::parse_from_str(x.as_str(), time_format) {
+            Ok(a) => {
+                cs_eprintln!("[+] Filtering out events before: {}", a);
+                Some(a)
+            }
+            Err(e) => return Err(anyhow!("Error parsing provided start-date filter: {}", e)),
+        }
+    }
+
+    // if end date filter is provided, validate that the provided string is a valid timestamp
+    if let Some(x) = &opt.end_date {
+        ed_marker = match NaiveDateTime::parse_from_str(x.as_str(), time_format) {
+            Ok(a) => {
+                cs_eprintln!("[+] Filtering out events after:  {}", a);
+                Some(a)
+            }
+            Err(e) => return Err(anyhow!("Error parsing provided end-date filter: {}", e)),
+        }
+    }
+
     // If detection rules are provided we need to load, convert and apply mapping file
     let detection_rules = match &opt.rules_path {
         Some(rules) => {
@@ -230,6 +266,7 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
             "[!] Inbuilt detection logic disabled (--no-builtin). Only using specified rule files"
         );
     }
+
     if large_event_logs(&evtx_files) {
         cs_eyellowln!(
             "[!] Provided event logs are over 500MB in size. This will take a while to parse...",
@@ -250,6 +287,35 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
                     continue;
                 }
             };
+            // Perform start/end datetime filtering
+            if sd_marker.is_some() || ed_marker.is_some() {
+                let event_time = match NaiveDateTime::parse_from_str(
+                    r.data["Event"]["System"]["TimeCreated"]["#attributes"]["SystemTime"]
+                        .as_str()
+                        .unwrap(),
+                    "%Y-%m-%dT%H:%M:%S%.6fZ",
+                ) {
+                    Ok(t) => t,
+                    Err(_) => {
+                        return Err(anyhow!(
+          "Failed to parse datetime from supplied events. This shouldn't happen..."));
+                    }
+                };
+
+                // Check if event is older than start date marker
+                if let Some(sd) = sd_marker {
+                    if event_time <= sd {
+                        continue;
+                    }
+                }
+                // Check if event is newer than end date marker
+                if let Some(ed) = ed_marker {
+                    if event_time >= ed {
+                        continue;
+                    }
+                }
+            }
+
             let e_id;
 
             // Event ID can be stored in two different locations
