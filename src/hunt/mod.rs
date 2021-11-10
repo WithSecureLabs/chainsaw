@@ -72,11 +72,11 @@ pub struct HuntOpts {
     pub col_width: i32,
 
     /// Start date for including events (UTC). Anything older than this is dropped. Format: YYYY-MM-DDTHH:MM:SS. Example: 2019-11-17T17:55:11
-    #[structopt(long = "start-date", short = "sd")]
+    #[structopt(long = "start-date")]
     pub start_date: Option<String>,
 
     /// End date for including events (UTC). Anything newer than this is dropped. Format: YYYY-MM-DDTHH:MM:SS. Example: 2019-11-17T17:55:11
-    #[structopt(long = "end-date", short = "ed")]
+    #[structopt(long = "end-date")]
     pub end_date: Option<String>,
 }
 
