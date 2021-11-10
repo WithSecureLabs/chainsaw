@@ -390,6 +390,7 @@ pub fn load(rule: &Path) -> Result<Vec<Yaml>> {
     // https://github.com/SigmaHQ/sigma/wiki/Specification#rule-collections
     // TODO: This is a minimal implementation which supports most of the styles found in the
     // Windows rules. We can do a more complete one when required.
+    let mut single = false;
     if main.header.and_then(|m| m.action).is_some() {
         for sigma in sigma.into_iter() {
             if let Some(extension) = sigma.detection {
@@ -406,9 +407,15 @@ pub fn load(rule: &Path) -> Result<Vec<Yaml>> {
                     rule.insert(k, v);
                 }
                 rules.push(rule.into());
+            } else {
+                single = true;
             }
         }
     } else {
+        single = true;
+    }
+
+    if single {
         let mut rule = base;
         if let Some(detection) = main.detection {
             let detection = prepare(detection, None)?;
