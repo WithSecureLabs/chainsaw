@@ -248,6 +248,7 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
                 rules,
                 false,
                 mapping_file.as_ref().expect("No mapping file"),
+                false,
             )?)
         }
         None => {
@@ -686,6 +687,7 @@ pub fn load_detection_rules(
     path: &Path,
     check: bool,
     mapping: &Mapping,
+    verbose: bool,
 ) -> Result<Vec<ChainsawRule>> {
     let mut count = 0;
     let mut failed = 0;
@@ -725,6 +727,14 @@ pub fn load_detection_rules(
                                 continue;
                             }
                         };
+                        if verbose {
+                            for rule in &rules {
+                                println!(
+                                    "{}",
+                                    serde_yaml::to_string(&rule).expect("could not serialise")
+                                );
+                            }
+                        }
                         for file in rules {
                             let rule: ChainsawRule = match serde_yaml::from_value(file) {
                                 Ok(e) => e,

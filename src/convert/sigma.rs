@@ -31,6 +31,8 @@ struct Header {
     pub title: String,
     pub description: String,
     #[serde(default)]
+    pub action: Option<String>,
+    #[serde(default)]
     pub author: Option<String>,
     #[serde(default)]
     pub references: Option<Vec<String>>,
@@ -175,15 +177,19 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
     Ok(v)
 }
 
-fn prepare(detection: Detection, extra: Vec<Detection>) -> Detection {
+fn prepare(detection: Detection, extra: Option<Detection>) -> Result<Detection> {
     let mut detection = detection;
-    if let Some(condition) = &detection.condition {
-        if condition == "all of them" {
+    let condition = detection
+        .condition
+        .clone()
+        .or(extra.as_ref().and_then(|e| e.condition.clone()));
+    if let Some(c) = &condition {
+        if c == "all of them" {
             let mut scratch = Sequence::new();
             for (_, v) in &detection.identifiers {
                 scratch.push(v.clone());
             }
-            for d in extra {
+            if let Some(d) = extra {
                 for (_, v) in d.identifiers {
                     scratch.push(v);
                 }
@@ -194,12 +200,12 @@ fn prepare(detection: Detection, extra: Vec<Detection>) -> Detection {
                 condition: Some("all(A)".into()),
                 identifiers,
             }
-        } else if condition == "1 of them" {
+        } else if c == "1 of them" {
             let mut scratch = Sequence::new();
             for (_, v) in &detection.identifiers {
                 scratch.push(v.clone());
             }
-            for d in extra {
+            if let Some(d) = extra {
                 for (_, v) in d.identifiers {
                     scratch.push(v);
                 }
@@ -210,39 +216,43 @@ fn prepare(detection: Detection, extra: Vec<Detection>) -> Detection {
                 condition: Some("of(A, 1)".into()),
                 identifiers,
             }
-        } else if !extra.is_empty() {
-            let mut identifiers = Mapping::new();
-            for (k, v) in detection.identifiers {
-                if v.is_sequence() {
-                    identifiers.insert(k, v);
-                } else {
-                    let sequence = vec![v];
-                    identifiers.insert(k, sequence.into());
-                }
-            }
-            for d in extra {
-                for (k, v) in d.identifiers {
-                    match identifiers.remove(&k) {
-                        Some(i) => {
-                            if let Yaml::Sequence(mut s) = i {
-                                s.push(v);
-                                identifiers.insert(k, s.into());
+        } else if let Some(d) = extra {
+            let mut identifiers = detection.identifiers;
+            for (k, v) in d.identifiers {
+                match identifiers.remove(&k) {
+                    Some(i) => match (i, v) {
+                        (Yaml::Mapping(mut m), Yaml::Mapping(v)) => {
+                            for (x, y) in v {
+                                m.insert(x, y);
                             }
+                            identifiers.insert(k, Yaml::Mapping(m));
                         }
-                        None => {
-                            let sequence = vec![v];
-                            identifiers.insert(k, sequence.into());
+                        (Yaml::Sequence(s), Yaml::Mapping(v)) => {
+                            let mut z = vec![];
+                            for mut ss in s.into_iter() {
+                                if let Some(m) = ss.as_mapping_mut() {
+                                    for (x, y) in v.clone() {
+                                        m.insert(x, y);
+                                    }
+                                }
+                                z.push(ss);
+                            }
+                            identifiers.insert(k, Yaml::Sequence(z));
                         }
+                        (_, _) => anyhow::bail!("unsupported rule collection format"),
+                    },
+                    None => {
+                        identifiers.insert(k, v);
                     }
                 }
             }
             detection = Detection {
-                condition: detection.condition,
+                condition,
                 identifiers,
             }
         }
     }
-    detection
+    Ok(detection)
 }
 
 fn detections_to_tau(detection: Detection) -> Result<Mapping> {
@@ -374,48 +384,44 @@ pub fn load(rule: &Path) -> Result<Vec<Yaml>> {
 
     let mut rules = vec![];
 
-    // NOTE: Sigma rules seem to be split due allow for different log sources? We do some
-    // best effort stuff here to reduce the amount of effort in the conversion process.
-    let mut dangling = vec![];
-    for sigma in sigma.into_iter() {
-        if let Some(detection) = sigma.detection {
-            if detection.condition.is_some() {
-                let mut rule = base.clone();
-                rule.insert(
-                    "title".into(),
-                    main.header
-                        .as_ref()
-                        .expect("could not get header")
-                        .title
-                        .clone()
-                        .into(),
-                );
-                let detection = prepare(detection, vec![]);
+    // Sigma has this annoying feature called Rule Collections which makes parsing a PITA at the
+    // cost of slightly better maintainability. I am not a fan but we have to handle it as best as
+    // possible.
+    // https://github.com/SigmaHQ/sigma/wiki/Specification#rule-collections
+    // TODO: This is a minimal implementation which supports most of the styles found in the
+    // Windows rules. We can do a more complete one when required.
+    if main.header.and_then(|m| m.action).is_some() {
+        for sigma in sigma.into_iter() {
+            if let Some(extension) = sigma.detection {
+                let detection = match &main.detection {
+                    Some(d) => prepare(d.clone(), Some(extension)),
+                    None => prepare(extension, None),
+                }?;
                 let tau = detections_to_tau(detection)?;
+                let mut rule = base.clone();
+                if let Some(level) = main.level.as_ref() {
+                    rule.insert("level".into(), level.clone().into());
+                }
                 for (k, v) in tau {
                     rule.insert(k, v);
                 }
-                if let Some(level) = sigma.level {
-                    rule.insert("level".into(), level.into());
-                }
                 rules.push(rule.into());
-            } else {
-                dangling.push(detection);
             }
+        }
+    } else {
+        let mut rule = base;
+        if let Some(detection) = main.detection {
+            let detection = prepare(detection, None)?;
+            let tau = detections_to_tau(detection)?;
+            if let Some(level) = main.level {
+                rule.insert("level".into(), level.into());
+            }
+            for (k, v) in tau {
+                rule.insert(k, v);
+            }
+            rules.push(rule.into());
         }
     }
 
-    let mut rule = base;
-    if let Some(detection) = main.detection {
-        let detection = prepare(detection, dangling);
-        let tau = detections_to_tau(detection)?;
-        if let Some(level) = main.level {
-            rule.insert("level".into(), level.into());
-        }
-        for (k, v) in tau {
-            rule.insert(k, v);
-        }
-        rules.push(rule.into());
-    }
     Ok(rules)
 }

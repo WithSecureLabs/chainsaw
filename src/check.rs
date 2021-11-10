@@ -12,6 +12,10 @@ pub struct CheckOpts {
     /// Required when using the --rule/-r flag
     #[structopt(short = "m", long = "mapping")]
     pub mapping_path: PathBuf,
+
+    /// Print verbose
+    #[structopt(short = "v", long = "verbose")]
+    pub verbose: bool,
 }
 
 pub fn run_check(opt: CheckOpts) -> Result<String> {
@@ -27,6 +31,6 @@ pub fn run_check(opt: CheckOpts) -> Result<String> {
         }
     }
     cs_println!("[+] Validating supplied detection rules...\n\r");
-    load_detection_rules(&opt.rules_path, true, &mapping_file)?;
+    load_detection_rules(&opt.rules_path, true, &mapping_file, opt.verbose)?;
     Ok("".to_string())
 }
