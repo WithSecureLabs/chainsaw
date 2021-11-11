@@ -179,10 +179,10 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
 
 fn prepare(detection: Detection, extra: Option<Detection>) -> Result<Detection> {
     let mut detection = detection;
-    let condition = detection
-        .condition
-        .clone()
-        .or(extra.as_ref().and_then(|e| e.condition.clone()));
+    let condition = extra
+        .as_ref()
+        .and_then(|e| e.condition.clone())
+        .or(detection.condition.clone());
     if let Some(c) = &condition {
         if c == "all of them" {
             let mut scratch = Sequence::new();
