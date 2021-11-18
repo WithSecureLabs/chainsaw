@@ -4,6 +4,9 @@ kind: sigma
 exclusions:
   - "Wuauclt Network Connection"
   - "Exports Registry Key To an Alternate Data Stream"
+  - "NetNTLM Downgrade Attack"
+  - "Non Interactive PowerShell"
+  - "Defense evasion via process reimaging"
 # EventID and SystemTime are automatically added to the mapping schema and show in the table output
 mappings:
   1:
