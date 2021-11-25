@@ -30,6 +30,10 @@ pub struct HuntOpts {
     #[structopt(short = "q", long = "quiet")]
     pub quiet: bool,
 
+    /// Skip EVTX file if chainsaw is unable to parse the records
+    #[structopt(long = "ignore-errors")]
+    pub ignore: bool,
+
     // Specify the detection rule directory to use
     //
     /// Specify a directory containing detection rules to use. All files matching *.yml will be used.
@@ -279,7 +283,15 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
     for evtx in &evtx_files {
         pb.tick();
         // Parse EVTX files
-        let mut parser = parse_evtx_file(evtx)?;
+        let mut parser = match parse_evtx_file(evtx) {
+            Ok(a) => a,
+            Err(e) => {
+                if opt.ignore {
+                    continue;
+                }
+                return Err(anyhow!("{:?} - {}", evtx, e));
+            }
+        };
         // Loop through records and hunt for suspicious indicators
         for record in parser.records_json_value() {
             let r = match record {

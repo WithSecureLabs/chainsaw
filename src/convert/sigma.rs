@@ -182,7 +182,7 @@ fn prepare(detection: Detection, extra: Option<Detection>) -> Result<Detection> 
     let condition = extra
         .as_ref()
         .and_then(|e| e.condition.clone())
-        .or(detection.condition.clone());
+        .or_else(|| detection.condition.clone());
     if let Some(c) = &condition {
         if c == "all of them" {
             let mut scratch = Sequence::new();
