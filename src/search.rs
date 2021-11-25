@@ -30,6 +30,10 @@ pub struct SearchOpts {
     #[structopt(short = "s", long = "string")]
     pub search_string: Option<String>,
 
+    /// Skip EVTX file if chainsaw is unable to parse the records
+    #[structopt(long = "ignore-errors")]
+    pub ignore: bool,
+
     /// Set search to case insensitive. Usable only with string searching.
     #[structopt(short = "i", long = "case-insensitive")]
     pub case_insensitive: bool,
@@ -96,7 +100,15 @@ pub fn run_search(opt: SearchOpts) -> Result<String> {
 
         // Parse EVTx files
         let settings = ParserSettings::default().num_threads(0);
-        let parser = EvtxParser::from_path(evtx)?.with_configuration(settings);
+        let parser = match EvtxParser::from_path(evtx) {
+            Ok(a) => a.with_configuration(settings),
+            Err(e) => {
+                if opt.ignore {
+                    continue;
+                }
+                return Err(anyhow!("{:?} - {}", evtx, e));
+            }
+        };
 
         // Search EVTX files for user supplied arguments
         hits += search_evtx_file(parser, &opt, hits == 0, sd_marker, ed_marker)?;
