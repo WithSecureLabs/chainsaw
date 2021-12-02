@@ -7,7 +7,7 @@ use evtx::{EvtxParser, ParserSettings};
 use regex::Regex;
 use structopt::StructOpt;
 
-use crate::util::{get_evtx_files, get_progress_bar};
+use crate::util::get_evtx_files;
 
 #[derive(StructOpt)]
 pub struct SearchOpts {
@@ -59,11 +59,8 @@ pub struct SearchOpts {
 pub fn run_search(opt: SearchOpts) -> Result<String> {
     // Load EVTX Files
     let evtx_files = get_evtx_files(&opt.evtx_path)?;
-    let pb = get_progress_bar(evtx_files.len() as u64, "Searching".to_string());
     if opt.json {
         cs_print!("[");
-    } else {
-        pb.set_draw_target(indicatif::ProgressDrawTarget::hidden());
     }
 
     let mut sd_marker = None;
@@ -95,9 +92,8 @@ pub fn run_search(opt: SearchOpts) -> Result<String> {
 
     // Loop through EVTX files and perform actions
     let mut hits = 0;
+    cs_eprintln!("[+] Searching event logs...");
     for evtx in &evtx_files {
-        pb.tick();
-
         // Parse EVTx files
         let settings = ParserSettings::default().num_threads(0);
         let parser = match EvtxParser::from_path(evtx) {
@@ -112,13 +108,10 @@ pub fn run_search(opt: SearchOpts) -> Result<String> {
 
         // Search EVTX files for user supplied arguments
         hits += search_evtx_file(parser, &opt, hits == 0, sd_marker, ed_marker)?;
-
-        pb.inc(1);
     }
     if opt.json {
         cs_println!("]");
     }
-    pb.finish();
     Ok(format!("\n[+] Found {} matching log entries", hits))
 }
 
