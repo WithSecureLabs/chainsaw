@@ -70,7 +70,11 @@ impl Sigma {
         if let Some(author) = header.author {
             tau.insert(
                 "authors".into(),
-                author.split(", ").collect::<Vec<_>>().into(),
+                author
+                    .split(",")
+                    .map(|a| a.trim())
+                    .collect::<Vec<_>>()
+                    .into(),
             );
         } else {
             tau.insert("authors".into(), vec!["unknown"].into());
