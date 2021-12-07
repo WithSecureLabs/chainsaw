@@ -1,0 +1,14 @@
+---
+title: simple
+description: A simple rule for testing
+status: experimental
+references: []
+authors: 
+  - Alex Kornitzer
+detection:
+  search:
+    CommandLine: 
+      - i* -Nop *
+  condition: search
+true_negatives: []
+true_positives: []

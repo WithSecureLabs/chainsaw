@@ -51,6 +51,7 @@ macro_rules! cs_println {
     })
 }
 
+#[macro_export]
 macro_rules! cs_eprintln {
     ($($arg:tt)*) => ({
         unsafe {
@@ -90,6 +91,7 @@ macro_rules! cs_greenln {
     };
 }
 
+#[macro_export]
 macro_rules! cs_egreenln {
     ($($arg:tt)*) => {
         unsafe {
@@ -110,6 +112,7 @@ macro_rules! cs_eyellowln {
     };
 }
 
+#[macro_export]
 macro_rules! cs_eredln {
     ($($arg:tt)*) => {
         unsafe {

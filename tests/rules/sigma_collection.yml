@@ -1,0 +1,26 @@
+---
+title: collection
+id: collection
+status: experimental
+description: A collection rule for testing
+author: Alex Kornitzer
+date: 1970/01/01
+references: []
+action: global
+detection:
+  base:
+    Image|contains:
+      - \powershell.exe
+  condition: search
+---
+detection:
+  search:
+    CommandLine|contains:
+      - ' -Nop '
+  condition: search and base
+---
+detection:
+  search:
+    CommandLine|contains:
+      - ' -encodedcommand '
+  condition: search and base
