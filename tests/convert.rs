@@ -14,10 +14,11 @@ macro_rules! convert_sigma {
             fn [< solve_ $rule >] () {
                 let rule = format!("sigma_{}.yml", $rule);
                 let root = env!("CARGO_MANIFEST_DIR");
-                let path = Path::new(root).join("tests/rules").join(&rule);
+                let path = Path::new(root).join("tests/convert").join(&rule);
                 let rules = sigma::load(&path).unwrap();
 
-                let contents = common::load_file("tests/output", &rule).unwrap();
+                let output = format!("sigma_{}_output.yml", $rule);
+                let contents = common::load_file("tests/convert", &output).unwrap();
                 let regex = Regex::new(r"---\s*\n").expect("invalid regex");
                 let yaml: Vec<Yaml> = regex
                     .split(&contents)
