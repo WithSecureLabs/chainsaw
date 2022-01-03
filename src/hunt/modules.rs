@@ -351,7 +351,7 @@ pub fn detect_group_changes(event: &serde_json::value::Value, e_id: &u64) -> Opt
     Some(ret)
 }
 
-pub fn detect_cleared_logs(event: &serde_json::value::Value, e_id: &u64) -> Option<Detection> {
+pub fn detect_cleared_securitylogs(event: &serde_json::value::Value, e_id: &u64) -> Option<Detection> {
     if event["Event"]["UserData"]["LogFileCleared"]["SubjectUserName"].is_null() {
         return None;
     }
@@ -365,7 +365,6 @@ pub fn detect_cleared_logs(event: &serde_json::value::Value, e_id: &u64) -> Opti
 
     let title = match e_id {
         1102 => "(Built-in Logic) - Security audit log was cleared".to_string(),
-        104 => "(Built-in Logic) - System log was cleared".to_string(),
         _ => return None,
     };
 
@@ -386,6 +385,43 @@ pub fn detect_cleared_logs(event: &serde_json::value::Value, e_id: &u64) -> Opti
 
     Some(ret)
 }
+pub fn detect_cleared_systemlogs(event: &serde_json::value::Value, e_id: &u64) -> Option<Detection> {
+    if event["Event"]["UserData"]["LogFileCleared"]["SubjectUserName"].is_null() {
+        return None;
+    }
+
+    let headers = vec![
+        "system_time".to_string(),
+        "channel".to_string(),
+        "id".to_string(),
+        "computer".to_string(),
+        "subject_user".to_string(),
+    ];
+
+    let title = match e_id {
+        104 => "(Built-in Logic) - One or more system logs were cleared".to_string(),
+        _ => return None,
+    };
+
+    let values = vec![
+        format_time(
+            event["Event"]["System"]["TimeCreated"]["#attributes"]["SystemTime"].to_string(),
+        ),
+        event["Event"]["UserData"]["LogFileCleared"]["Channel"].to_string(),
+        e_id.to_string(),
+        event["Event"]["System"]["Computer"].to_string(),
+        event["Event"]["UserData"]["LogFileCleared"]["SubjectUserName"].to_string(),
+    ];
+
+    let ret = Detection {
+        headers,
+        title,
+        values,
+    };
+
+    Some(ret)
+}
+
 
 pub fn detect_stopped_service(
     event: &serde_json::value::Value,
