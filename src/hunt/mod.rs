@@ -394,8 +394,10 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
                         }
                         // Detect event logs being cleared
                         Provider::EventLogAction => {
-                            if e_id == 1102 || e_id == 104 {
-                                det = modules::detect_cleared_logs(&r.data, &e_id)
+                            if e_id == 1102 {
+                                det = modules::detect_cleared_securitylogs(&r.data, &e_id)
+                            } else if e_id == 104 {
+                                det = modules::detect_cleared_systemlogs(&r.data, &e_id)
                             }
                         }
                         // Get F-Secure AV events
