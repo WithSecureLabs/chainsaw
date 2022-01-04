@@ -356,20 +356,14 @@ pub fn detect_cleared_logs(event: &serde_json::value::Value, e_id: &u64) -> Opti
         return None;
     }
 
-    let headers = vec![
+    let mut headers = vec![
         "system_time".to_string(),
         "id".to_string(),
         "computer".to_string(),
         "subject_user".to_string(),
     ];
 
-    let title = match e_id {
-        1102 => "(Built-in Logic) - Security audit log was cleared".to_string(),
-        104 => "(Built-in Logic) - System log was cleared".to_string(),
-        _ => return None,
-    };
-
-    let values = vec![
+    let mut values = vec![
         format_time(
             event["Event"]["System"]["TimeCreated"]["#attributes"]["SystemTime"].to_string(),
         ),
@@ -377,6 +371,16 @@ pub fn detect_cleared_logs(event: &serde_json::value::Value, e_id: &u64) -> Opti
         event["Event"]["System"]["Computer"].to_string(),
         event["Event"]["UserData"]["LogFileCleared"]["SubjectUserName"].to_string(),
     ];
+
+    let title = match e_id {
+        1102 => "(Built-in Logic) - Security audit log was cleared".to_string(),
+        104 => {
+            headers.push("channel".to_string());
+            values.push(event["Event"]["UserData"]["LogFileCleared"]["Channel"].to_string());
+            "(Built-in Logic) - System log was cleared".to_string()
+        }
+        _ => return None,
+    };
 
     let ret = Detection {
         headers,
