@@ -1,0 +1,13 @@
+---
+title: simple
+id: simple
+status: experimental
+description: A simple rule for testing
+author: Alex Kornitzer
+date: 1970/01/01
+references: []
+detection:
+  search:
+    CommandLine|contains:
+      - ' -Nop '
+  condition: search

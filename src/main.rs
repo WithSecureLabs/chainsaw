@@ -1,26 +1,5 @@
-#[macro_use]
-extern crate anyhow;
-extern crate evtx;
-extern crate failure;
-#[macro_use]
-extern crate prettytable;
-extern crate rayon;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_yaml;
-#[macro_use]
-extern crate serde_json;
-extern crate chrono;
-extern crate structopt;
-
-#[macro_use]
-mod write;
-mod check;
-mod convert;
-mod hunt;
-pub(crate) mod search;
-pub(crate) mod util;
+// TODO: Clean this, we have crudely split into a lib for testing purposes, this needs refinement.
+use chainsaw::*;
 
 use structopt::StructOpt;
 

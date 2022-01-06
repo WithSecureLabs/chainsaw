@@ -183,7 +183,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "chainsaw"
-version = "1.1.1"
+version = "1.1.4"
 dependencies = [
  "ajson",
  "anyhow",
@@ -198,6 +198,7 @@ dependencies = [
  "is_elevated",
  "itertools",
  "log",
+ "paste",
  "prettytable-rs",
  "rayon",
  "regex",
@@ -879,6 +880,12 @@ dependencies = [
  "smallvec",
  "winapi",
 ]
+
+[[package]]
+name = "paste"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0744126afe1a6dd7f394cb50a716dbe086cb06e255e53d8d0185d82828358fb5"
 
 [[package]]
 name = "pest"

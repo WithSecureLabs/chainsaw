@@ -8,7 +8,7 @@ use regex::Regex;
 use serde::Deserialize;
 use serde_yaml::{Mapping, Sequence, Value as Yaml};
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 struct Detection {
     #[serde(default)]
     pub condition: Option<Yaml>,
@@ -70,7 +70,11 @@ impl Sigma {
         if let Some(author) = header.author {
             tau.insert(
                 "authors".into(),
-                author.split(", ").collect::<Vec<_>>().into(),
+                author
+                    .split(",")
+                    .map(|a| a.trim())
+                    .collect::<Vec<_>>()
+                    .into(),
             );
         } else {
             tau.insert("authors".into(), vec!["unknown"].into());
@@ -338,7 +342,33 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
                     f = format!("all({})", f);
                 }
                 let v = parse_identifier(v, &modifiers)?;
-                fields.insert(f.into(), v);
+                let f = f.into();
+                match fields.remove(&f) {
+                    Some(x) => {
+                        let s = match (x, v) {
+                            (Yaml::Sequence(mut a), Yaml::Sequence(b)) => {
+                                a.extend(b);
+                                Yaml::Sequence(a)
+                            }
+                            (Yaml::Sequence(mut s), y) => {
+                                s.push(y);
+                                Yaml::Sequence(s)
+                            }
+                            (y, Yaml::Sequence(mut s)) => {
+                                s.push(y);
+                                Yaml::Sequence(s)
+                            }
+                            (Yaml::Mapping(_), _) | (_, Yaml::Mapping(_)) => {
+                                bail!("could not merge identifiers")
+                            }
+                            (a, b) => Yaml::Sequence(vec![a, b]),
+                        };
+                        fields.insert(f, s);
+                    }
+                    None => {
+                        fields.insert(f, v);
+                    }
+                }
             }
             maps.push(fields.into());
         }
@@ -431,4 +461,240 @@ pub fn load(rule: &Path) -> Result<Vec<Yaml>> {
     }
 
     Ok(rules)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_unsupported_conditions() {
+        let condition = "search_expression | aggregation_expression".to_owned();
+        assert_eq!(condition.unsupported(), true);
+
+        let condition = "selection*".to_owned();
+        assert_eq!(condition.unsupported(), true);
+
+        let condition = "1 of them".to_owned();
+        assert_eq!(condition.unsupported(), true);
+    }
+
+    #[test]
+    fn test_match_contains() {
+        let x = "foobar".to_owned();
+        assert_eq!(x.as_contains(), "i*foobar*");
+    }
+
+    #[test]
+    fn test_match_endswith() {
+        let x = "foobar".to_owned();
+        assert_eq!(x.as_endswith(), "i*foobar");
+    }
+
+    #[test]
+    fn test_match() {
+        let x = "foobar".to_owned();
+        assert_eq!(x.as_match().unwrap(), "ifoobar");
+
+        let x = "*foobar".to_owned();
+        assert_eq!(x.as_match().unwrap(), "i*foobar");
+
+        let x = "foobar*".to_owned();
+        assert_eq!(x.as_match().unwrap(), "ifoobar*");
+
+        let x = "*foobar*".to_owned();
+        assert_eq!(x.as_match().unwrap(), "i*foobar*");
+
+        // NOTE: These are none as we need to write regex to support them...
+        let x = "foo*bar".to_owned();
+        assert_eq!(x.as_match().is_none(), true);
+        let x = "foo?bar".to_owned();
+        assert_eq!(x.as_match().is_none(), true);
+    }
+
+    #[test]
+    fn test_match_regex() {
+        let x = "foobar".to_owned();
+        assert_eq!(x.as_regex().unwrap(), "?foobar");
+    }
+
+    #[test]
+    fn test_match_startswith() {
+        let x = "foobar".to_owned();
+        assert_eq!(x.as_startswith(), "ifoobar*");
+    }
+
+    #[test]
+    fn test_parse_identifier() {
+        let rule = r#"
+            array:
+            - ia
+            - ib
+            - ic
+            mapping:
+                k1: iv1
+                k2: iv2
+            number: 30
+            string: iabcd
+        "#;
+        let expected: serde_yaml::Value = serde_yaml::from_str(&rule).unwrap();
+
+        let rule = r#"
+            array:
+            - a
+            - b
+            - c
+            mapping:
+                k1: v1
+                k2: v2
+            number: 30
+            string: abcd
+        "#;
+        let yaml: serde_yaml::Value = serde_yaml::from_str(&rule).unwrap();
+        let yaml = parse_identifier(&yaml, &HashSet::new()).unwrap();
+        assert_eq!(yaml, expected);
+    }
+
+    #[test]
+    fn test_prepare() {
+        let expected = r#"
+            A:
+                string: abcd
+            condition: A
+        "#;
+        let expected: Detection = serde_yaml::from_str(&expected).unwrap();
+
+        let detection = r#"
+            A:
+                string: abcd
+            condition: A
+        "#;
+
+        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let detection = prepare(detection, None).unwrap();
+        assert_eq!(detection, expected);
+    }
+
+    #[test]
+    fn test_prepare_all_of_them() {
+        let expected = r#"
+            A:
+                - string: abcd
+                - string: efgh
+            condition: all(A)
+        "#;
+        let expected: Detection = serde_yaml::from_str(&expected).unwrap();
+
+        let detection = r#"
+            A:
+                string: abcd
+            B:
+                string: efgh
+            condition: all of them
+        "#;
+
+        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let detection = prepare(detection, None).unwrap();
+        assert_eq!(detection, expected);
+    }
+
+    #[test]
+    fn test_prepare_one_of_them() {
+        let expected = r#"
+            A:
+                - string: abcd
+                - string: efgh
+            condition: of(A, 1)
+        "#;
+        let expected: Detection = serde_yaml::from_str(&expected).unwrap();
+
+        let detection = r#"
+            A:
+                string: abcd
+            B:
+                string: efgh
+            condition: 1 of them
+        "#;
+
+        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let detection = prepare(detection, None).unwrap();
+        assert_eq!(detection, expected);
+    }
+
+    #[test]
+    fn test_prepare_group() {
+        let expected = r#"
+            A:
+                string: abcd
+            B:
+                string: efgh
+            condition: A and B
+        "#;
+        let expected: Detection = serde_yaml::from_str(&expected).unwrap();
+
+        let base = r#"
+            A:
+                string: abcd
+            condition: A
+        "#;
+        let detection = r#"
+            B:
+                string: efgh
+            condition: A and B
+        "#;
+
+        let base: Detection = serde_yaml::from_str(&base).unwrap();
+        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let detection = prepare(base, Some(detection)).unwrap();
+        assert_eq!(detection, expected);
+    }
+
+    #[test]
+    fn test_detection_to_tau() {
+        let expected = r#"
+            detection:
+                A:
+                    array:
+                    - ia
+                    - ib
+                    - ic
+                    mapping:
+                        k1: iv1
+                        k2: iv2
+                    number: 30
+                    string: iabcd
+                B:
+                    string:
+                    - i*foobar*
+                    - i*foobar
+                    - ?foobar
+                    - ifoobar*
+                condition: A and B
+            true_negatives: []
+            true_positives: []
+        "#;
+        let expected: serde_yaml::Value = serde_yaml::from_str(&expected).unwrap();
+
+        let detection = r#"
+            A:
+                array:
+                - a
+                - b
+                - c
+                mapping:
+                    k1: v1
+                    k2: v2
+                number: 30
+                string: abcd
+            B:
+                string|contains: foobar
+                string|endswith: foobar
+                string|re: foobar
+                string|startswith: foobar
+            condition: A and B
+        "#;
+        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let detection = detections_to_tau(detection).unwrap();
+        assert_eq!(detection, *expected.as_mapping().unwrap());
+    }
 }
