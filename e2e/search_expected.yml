@@ -1,7 +1,5 @@
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Id: 400B6CF7-D355-4E0C-B9AE-4E8D8C8FF6A0
     bytesTotal: 1317080
@@ -16,35 +14,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 3A7966F4-C627-4D9A-9BE6-0647DD61DB3A
+    Correlation_attributes:
+      ActivityID: 3A7966F4-C627-4D9A-9BE6-0647DD61DB3A
     EventID: 59
     EventRecordID: 8199
-    Execution:
-      "#attributes":
-        ProcessID: 4964
-        ThreadID: 2612
+    Execution_attributes:
+      ProcessID: 4964
+      ThreadID: 2612
     Keywords: "0x4000000000000000"
     Level: 4
     Opcode: 1
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-10-17T11:50:02.661365Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-10-17T11:50:02.661365Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     AdditionalInfoHr: 0
     Id: 400B6CF7-D355-4E0C-B9AE-4E8D8C8FF6A0
@@ -66,35 +59,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 3A7966F4-C627-4D9A-9BE6-0647DD61DB3A
+    Correlation_attributes:
+      ActivityID: 3A7966F4-C627-4D9A-9BE6-0647DD61DB3A
     EventID: 60
     EventRecordID: 8200
-    Execution:
-      "#attributes":
-        ProcessID: 4964
-        ThreadID: 368
+    Execution_attributes:
+      ProcessID: 4964
+      ThreadID: 368
     Keywords: "0x4000000000000000"
     Level: 4
     Opcode: 2
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-10-17T11:50:15.796214Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-10-17T11:50:15.796214Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Id: A5842CB6-8F50-4944-8AF7-2C088B21DDC3
     bytesTotal: 25802496
@@ -109,35 +97,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 9EE2B7A4-77CE-4CFC-BB31-6EBCFAE55322
+    Correlation_attributes:
+      ActivityID: 9EE2B7A4-77CE-4CFC-BB31-6EBCFAE55322
     EventID: 59
     EventRecordID: 8206
-    Execution:
-      "#attributes":
-        ProcessID: 4028
-        ThreadID: 908
+    Execution_attributes:
+      ProcessID: 4028
+      ThreadID: 908
     Keywords: "0x4000000000000000"
     Level: 4
     Opcode: 1
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-10-17T12:32:08.987914Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-10-17T12:32:08.987914Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     AdditionalInfoHr: 0
     Id: A5842CB6-8F50-4944-8AF7-2C088B21DDC3
@@ -159,35 +142,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 9EE2B7A4-77CE-4CFC-BB31-6EBCFAE55322
+    Correlation_attributes:
+      ActivityID: 9EE2B7A4-77CE-4CFC-BB31-6EBCFAE55322
     EventID: 60
     EventRecordID: 8222
-    Execution:
-      "#attributes":
-        ProcessID: 4028
-        ThreadID: 6308
+    Execution_attributes:
+      ProcessID: 4028
+      ThreadID: 6308
     Keywords: "0x4000000000000000"
     Level: 4
     Opcode: 2
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-10-17T12:36:06.775288Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-10-17T12:36:06.775288Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Id: 20160230-2E6F-428A-A61F-20740628577B
     bytesTotal: 2014464
@@ -202,35 +180,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 9B0E2C03-84A2-4A7E-8F99-0316872BA7BE
+    Correlation_attributes:
+      ActivityID: 9B0E2C03-84A2-4A7E-8F99-0316872BA7BE
     EventID: 59
     EventRecordID: 8448
-    Execution:
-      "#attributes":
-        ProcessID: 2788
-        ThreadID: 948
+    Execution_attributes:
+      ProcessID: 2788
+      ThreadID: 948
     Keywords: "0x4000000000000000"
     Level: 4
     Opcode: 1
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-10-23T21:55:59.769081Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-10-23T21:55:59.769081Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     AdditionalInfoHr: 0
     Id: 20160230-2E6F-428A-A61F-20740628577B
@@ -252,35 +225,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 9B0E2C03-84A2-4A7E-8F99-0316872BA7BE
+    Correlation_attributes:
+      ActivityID: 9B0E2C03-84A2-4A7E-8F99-0316872BA7BE
     EventID: 60
     EventRecordID: 8449
-    Execution:
-      "#attributes":
-        ProcessID: 2788
-        ThreadID: 9108
+    Execution_attributes:
+      ProcessID: 2788
+      ThreadID: 9108
     Keywords: "0x4000000000000000"
     Level: 4
     Opcode: 2
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-10-23T21:56:21.668986Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-10-23T21:56:21.668986Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Id: DE4AC99A-C567-4CAA-9703-3FFEE775C75D
     bytesTotal: 1708800
@@ -295,35 +263,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 30A3A3D8-9715-42EE-A715-CBA39B04E3A4
+    Correlation_attributes:
+      ActivityID: 30A3A3D8-9715-42EE-A715-CBA39B04E3A4
     EventID: 59
     EventRecordID: 8530
-    Execution:
-      "#attributes":
-        ProcessID: 7344
-        ThreadID: 3400
+    Execution_attributes:
+      ProcessID: 7344
+      ThreadID: 3400
     Keywords: "0x4000000000000000"
     Level: 4
     Opcode: 1
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-11-05T10:55:56.114648Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-11-05T10:55:56.114648Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     AdditionalInfoHr: 0
     Id: DE4AC99A-C567-4CAA-9703-3FFEE775C75D
@@ -345,35 +308,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 30A3A3D8-9715-42EE-A715-CBA39B04E3A4
+    Correlation_attributes:
+      ActivityID: 30A3A3D8-9715-42EE-A715-CBA39B04E3A4
     EventID: 60
     EventRecordID: 8531
-    Execution:
-      "#attributes":
-        ProcessID: 7344
-        ThreadID: 9012
+    Execution_attributes:
+      ProcessID: 7344
+      ThreadID: 9012
     Keywords: "0x4000000000000000"
     Level: 4
     Opcode: 2
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-11-05T10:56:12.615763Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-11-05T10:56:12.615763Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Id: FF56F08A-3D87-4A27-9E54-1444A29F0449
     bytesTotal: 2603264
@@ -388,35 +346,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 7E43CA01-DD5D-4814-8A56-15F509508F44
+    Correlation_attributes:
+      ActivityID: 7E43CA01-DD5D-4814-8A56-15F509508F44
     EventID: 59
     EventRecordID: 8833
-    Execution:
-      "#attributes":
-        ProcessID: 4908
-        ThreadID: 4660
+    Execution_attributes:
+      ProcessID: 4908
+      ThreadID: 4660
     Keywords: "0x4000000000000000"
     Level: 4
     Opcode: 1
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-11-12T10:56:13.148615Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-11-12T10:56:13.148615Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     AdditionalInfoHr: 0
     Id: FF56F08A-3D87-4A27-9E54-1444A29F0449
@@ -438,35 +391,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 7E43CA01-DD5D-4814-8A56-15F509508F44
+    Correlation_attributes:
+      ActivityID: 7E43CA01-DD5D-4814-8A56-15F509508F44
     EventID: 60
     EventRecordID: 8834
-    Execution:
-      "#attributes":
-        ProcessID: 4908
-        ThreadID: 5396
+    Execution_attributes:
+      ProcessID: 4908
+      ThreadID: 5396
     Keywords: "0x4000000000000000"
     Level: 4
     Opcode: 2
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-11-12T10:57:10.415576Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-11-12T10:57:10.415576Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Id: 6BFD2AD8-963A-4E3D-A596-DDB00305910F
     bytesTotal: 22209280
@@ -481,35 +429,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 3FBCCCA9-5F54-4F3C-A2DE-A805CAC185BD
+    Correlation_attributes:
+      ActivityID: 3FBCCCA9-5F54-4F3C-A2DE-A805CAC185BD
     EventID: 59
     EventRecordID: 8971
-    Execution:
-      "#attributes":
-        ProcessID: 8076
-        ThreadID: 368
+    Execution_attributes:
+      ProcessID: 8076
+      ThreadID: 368
     Keywords: "0x4000000000000000"
     Level: 4
     Opcode: 1
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-11-18T21:49:57.232015Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-11-18T21:49:57.232015Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     AdditionalInfoHr: 0
     Id: 6BFD2AD8-963A-4E3D-A596-DDB00305910F
@@ -531,35 +474,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 3FBCCCA9-5F54-4F3C-A2DE-A805CAC185BD
+    Correlation_attributes:
+      ActivityID: 3FBCCCA9-5F54-4F3C-A2DE-A805CAC185BD
     EventID: 60
     EventRecordID: 8972
-    Execution:
-      "#attributes":
-        ProcessID: 8076
-        ThreadID: 8756
+    Execution_attributes:
+      ProcessID: 8076
+      ThreadID: 8756
     Keywords: "0x4000000000000000"
     Level: 4
     Opcode: 2
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-11-18T21:53:25.998024Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-11-18T21:53:25.998024Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Id: 3774C88F-94AD-4FC0-A559-EA76B5D829D6
     bytesTotal: 1304160
@@ -574,35 +512,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 6125DC77-C387-4662-BB2F-F3816D1B4629
+    Correlation_attributes:
+      ActivityID: 6125DC77-C387-4662-BB2F-F3816D1B4629
     EventID: 59
     EventRecordID: 9404
-    Execution:
-      "#attributes":
-        ProcessID: 8100
-        ThreadID: 4424
+    Execution_attributes:
+      ProcessID: 8100
+      ThreadID: 4424
     Keywords: "0x4000000000000000"
     Level: 4
     Opcode: 1
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2021-03-15T18:55:38.049422Z"
+    TimeCreated_attributes:
+      SystemTime: "2021-03-15T18:55:38.049422Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     AdditionalInfoHr: 0
     Id: 3774C88F-94AD-4FC0-A559-EA76B5D829D6
@@ -624,35 +557,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 6125DC77-C387-4662-BB2F-F3816D1B4629
+    Correlation_attributes:
+      ActivityID: 6125DC77-C387-4662-BB2F-F3816D1B4629
     EventID: 60
     EventRecordID: 9405
-    Execution:
-      "#attributes":
-        ProcessID: 8100
-        ThreadID: 5972
+    Execution_attributes:
+      ProcessID: 8100
+      ThreadID: 5972
     Keywords: "0x4000000000000000"
     Level: 4
     Opcode: 2
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2021-03-15T18:55:51.603329Z"
+    TimeCreated_attributes:
+      SystemTime: "2021-03-15T18:55:51.603329Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Id: 78E48D71-6706-4BEF-BE13-DD6596AECB77
     bytesTotal: 44403064
@@ -667,35 +595,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 606AA2F9-84AC-48B8-B85C-1712683C075C
+    Correlation_attributes:
+      ActivityID: 606AA2F9-84AC-48B8-B85C-1712683C075C
     EventID: 59
     EventRecordID: 9408
-    Execution:
-      "#attributes":
-        ProcessID: 8100
-        ThreadID: 4396
+    Execution_attributes:
+      ProcessID: 8100
+      ThreadID: 4396
     Keywords: "0x4000000000000000"
     Level: 4
     Opcode: 1
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2021-03-15T19:01:32.985061Z"
+    TimeCreated_attributes:
+      SystemTime: "2021-03-15T19:01:32.985061Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     AdditionalInfoHr: 0
     Id: 78E48D71-6706-4BEF-BE13-DD6596AECB77
@@ -717,35 +640,30 @@ Event:
   System:
     Channel: Microsoft-Windows-Bits-Client/Operational
     Computer: MSEDGEWIN10
-    Correlation:
-      "#attributes":
-        ActivityID: 606AA2F9-84AC-48B8-B85C-1712683C075C
+    Correlation_attributes:
+      ActivityID: 606AA2F9-84AC-48B8-B85C-1712683C075C
     EventID: 61
     EventRecordID: 9409
-    Execution:
-      "#attributes":
-        ProcessID: 8100
-        ThreadID: 3656
+    Execution_attributes:
+      ProcessID: 8100
+      ThreadID: 3656
     Keywords: "0x4000000000000000"
     Level: 3
     Opcode: 2
-    Provider:
-      "#attributes":
-        Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
-        Name: Microsoft-Windows-Bits-Client
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: EF1CC15B-46C1-414E-BB95-E76B077BD51E
+      Name: Microsoft-Windows-Bits-Client
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 0
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2021-03-15T19:29:05.990760Z"
+    TimeCreated_attributes:
+      SystemTime: "2021-03-15T19:29:05.990760Z"
     Version: 1
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: regsvcser.Bypass
     EventType: SetValue
@@ -761,30 +679,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 3622
-    Execution:
-      "#attributes":
-        ProcessID: 2796
-        ThreadID: 3592
+    Execution_attributes:
+      ProcessID: 2796
+      ThreadID: 3592
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-07-19T14:46:20.787648Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-07-19T14:46:20.787648Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: regsvcser.Bypass
     EventType: SetValue
@@ -800,30 +714,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 3626
-    Execution:
-      "#attributes":
-        ProcessID: 2796
-        ThreadID: 3592
+    Execution_attributes:
+      ProcessID: 2796
+      ThreadID: 3592
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-07-19T14:46:20.830945Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-07-19T14:46:20.830945Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: DWORD (0x00000001)
     EventType: SetValue
@@ -839,30 +749,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 424060
-    Execution:
-      "#attributes":
-        ProcessID: 3208
-        ThreadID: 4804
+    Execution_attributes:
+      ProcessID: 3208
+      ThreadID: 4804
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-10-23T21:57:36.375368Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-10-23T21:57:36.375368Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: DWORD (0x00000001)
     EventType: SetValue
@@ -878,30 +784,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 424064
-    Execution:
-      "#attributes":
-        ProcessID: 3208
-        ThreadID: 4804
+    Execution_attributes:
+      ProcessID: 3208
+      ThreadID: 4804
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-10-23T21:57:36.376024Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-10-23T21:57:36.376024Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: DWORD (0x00000001)
     EventType: SetValue
@@ -917,30 +819,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 424244
-    Execution:
-      "#attributes":
-        ProcessID: 3208
-        ThreadID: 4804
+    Execution_attributes:
+      ProcessID: 3208
+      ThreadID: 4804
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-10-23T21:58:21.930237Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-10-23T21:58:21.930237Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: DWORD (0x00000001)
     EventType: SetValue
@@ -956,30 +854,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 424248
-    Execution:
-      "#attributes":
-        ProcessID: 3208
-        ThreadID: 4804
+    Execution_attributes:
+      ProcessID: 3208
+      ThreadID: 4804
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-10-23T21:58:21.931190Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-10-23T21:58:21.931190Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     CommandLine: "\"C:\\Windows\\system32\\mmc.exe\" \"C:\\Windows\\system32\\eventvwr.msc\" "
     Company: Microsoft Corporation
@@ -1008,30 +902,26 @@ Event:
     Correlation: ~
     EventID: 1
     EventRecordID: 15
-    Execution:
-      "#attributes":
-        ProcessID: 3192
-        ThreadID: 3288
+    Execution_attributes:
+      ProcessID: 3192
+      ThreadID: 3288
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 1
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-04-18T16:57:04.681038Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-04-18T16:57:04.681038Z"
     Version: 5
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     EventType: CreateKey
     Image: "C:\\Windows\\system32\\reg.exe"
@@ -1046,30 +936,26 @@ Event:
     Correlation: ~
     EventID: 12
     EventRecordID: 18618
-    Execution:
-      "#attributes":
-        ProcessID: 1780
-        ThreadID: 2204
+    Execution_attributes:
+      ProcessID: 1780
+      ThreadID: 2204
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 12
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-05-16T14:17:15.763712Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-05-16T14:17:15.763712Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: DWORD (0x00000000)
     EventType: SetValue
@@ -1085,30 +971,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 18619
-    Execution:
-      "#attributes":
-        ProcessID: 1780
-        ThreadID: 2204
+    Execution_attributes:
+      ProcessID: 1780
+      ThreadID: 2204
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-05-16T14:17:15.763712Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-05-16T14:17:15.763712Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     CommandLine: "\"c:\\windows\\system32\\wscript.exe\" /E:vbs c:\\windows\\temp\\icon.ico \"powershell -exec bypass -c \"\"IEX ([System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String('JFhYPUlFWCgoJ1snICsgW2NoYXJdMHg1MyArICd5c3RlbS5UZXh0LkVuYycgKyBbY2hhcl0weDZmICsgJ2RpbmddOjpBJyArIFtjaGFyXTB4NTMgKyAnQ0lJLkdldCcgKyBbY2hhcl0weDUzICsgJ3RyaW5nKFsnICsgW2NoYXJdMHg1MyArICd5c3RlbS5DJyArIFtjaGFyXTB4NmYgKyAnbnZlcnRdOjpGcicgKyBbY2hhcl0weDZmICsgJ21CYXNlNicgKyBbY2hhcl0weDM0ICsgJycgKyBbY2hhcl0weDUzICsgJ3RyaW5nKChnZXQtYycgKyBbY2hhcl0weDZmICsgJ250ZW50IC1wYXRoICcnYzpcd2luZCcgKyBbY2hhcl0weDZmICsgJ3dzXHRlbXBccGljdHVyZS5qcGcnJykpKScpKTskQkI9SUVYKCgnc3RhcnQtc2xlZXAgMTA7JHM9JFhYOyRkID0gQCgpOyR2ID0gMDskYyA9IDA7d2hpbGUoJGMgLW5lICRzLmxlbmd0aCl7JHY9KCR2KjUyKSsoW0ludDMyXVtjaGFyXSRzWyRjXS0nICsgW2NoYXJdMHgzNCArICcwKTtpZigoKCRjKzEpJTMpIC1lcSAwKXt3aGlsZSgkdiAtbmUgMCl7JHZ2PSR2JTI1NjtpZigkdnYgLWd0IDApeyRkKz1bY2hhcl1bSW50MzJdJHZ2fSR2PVtJbnQzMl0oJHYvMjU2KX19JGMrPTE7fTtbYXJyYXldOjpSZXZlcnNlKCRkKTtJRVgoWycgKyBbY2hhcl0weDUzICsgJ3RyaW5nXTo6SicgKyBbY2hhcl0weDZmICsgJ2luKCcnJycsJGQpKTs7JykpO0lFWCgkQkIp')))\"\"\""
     Company: Microsoft Corporation
@@ -1137,30 +1019,26 @@ Event:
     Correlation: ~
     EventID: 1
     EventRecordID: 10675
-    Execution:
-      "#attributes":
-        ProcessID: 2004
-        ThreadID: 4480
+    Execution_attributes:
+      ProcessID: 2004
+      ThreadID: 4480
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 1
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-14T12:17:14.893930Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-14T12:17:14.893930Z"
     Version: 5
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     CommandLine: "\"c:\\windows\\system32\\wscript.exe\" /E:vbs c:\\windows\\temp\\icon.ico \"powershell -exec bypass -c \"\"IEX ([System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String('JFhYPUlFWCgoJ1snICsgW2NoYXJdMHg1MyArICd5c3RlbS5UZXh0LkVuYycgKyBbY2hhcl0weDZmICsgJ2RpbmddOjpBJyArIFtjaGFyXTB4NTMgKyAnQ0lJLkdldCcgKyBbY2hhcl0weDUzICsgJ3RyaW5nKFsnICsgW2NoYXJdMHg1MyArICd5c3RlbS5DJyArIFtjaGFyXTB4NmYgKyAnbnZlcnRdOjpGcicgKyBbY2hhcl0weDZmICsgJ21CYXNlNicgKyBbY2hhcl0weDM0ICsgJycgKyBbY2hhcl0weDUzICsgJ3RyaW5nKChnZXQtYycgKyBbY2hhcl0weDZmICsgJ250ZW50IC1wYXRoICcnYzpcd2luZCcgKyBbY2hhcl0weDZmICsgJ3dzXHRlbXBccGljdHVyZS5qcGcnJykpKScpKTskQkI9SUVYKCgnc3RhcnQtc2xlZXAgMTA7JHM9JFhYOyRkID0gQCgpOyR2ID0gMDskYyA9IDA7d2hpbGUoJGMgLW5lICRzLmxlbmd0aCl7JHY9KCR2KjUyKSsoW0ludDMyXVtjaGFyXSRzWyRjXS0nICsgW2NoYXJdMHgzNCArICcwKTtpZigoKCRjKzEpJTMpIC1lcSAwKXt3aGlsZSgkdiAtbmUgMCl7JHZ2PSR2JTI1NjtpZigkdnYgLWd0IDApeyRkKz1bY2hhcl1bSW50MzJdJHZ2fSR2PVtJbnQzMl0oJHYvMjU2KX19JGMrPTE7fTtbYXJyYXldOjpSZXZlcnNlKCRkKTtJRVgoWycgKyBbY2hhcl0weDUzICsgJ3RyaW5nXTo6SicgKyBbY2hhcl0weDZmICsgJ2luKCcnJycsJGQpKTs7JykpO0lFWCgkQkIp')))\"\"\""
     Company: Microsoft Corporation
@@ -1189,30 +1067,26 @@ Event:
     Correlation: ~
     EventID: 1
     EventRecordID: 10662
-    Execution:
-      "#attributes":
-        ProcessID: 2004
-        ThreadID: 4480
+    Execution_attributes:
+      ProcessID: 2004
+      ThreadID: 4480
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 1
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-14T11:53:30.022856Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-14T11:53:30.022856Z"
     Version: 5
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     CreationUtcTime: "2019-08-03 11:23:15.519"
     Image: "C:\\Windows\\explorer.exe"
@@ -1227,30 +1101,26 @@ Event:
     Correlation: ~
     EventID: 11
     EventRecordID: 5401
-    Execution:
-      "#attributes":
-        ProcessID: 2780
-        ThreadID: 3676
+    Execution_attributes:
+      ProcessID: 2780
+      ThreadID: 3676
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 11
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-03T11:23:15.560614Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-03T11:23:15.560614Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Company: Yokai Ltd.
     Description: Yamabiko Proxy
@@ -1272,30 +1142,26 @@ Event:
     Correlation: ~
     EventID: 7
     EventRecordID: 17728
-    Execution:
-      "#attributes":
-        ProcessID: 2024
-        ThreadID: 2004
+    Execution_attributes:
+      ProcessID: 2024
+      ThreadID: 2004
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 7
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-05-14T02:32:51.831307Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-05-14T02:32:51.831307Z"
     Version: 3
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Company: "?"
     Description: "?"
@@ -1317,30 +1183,26 @@ Event:
     Correlation: ~
     EventID: 7
     EventRecordID: 15975
-    Execution:
-      "#attributes":
-        ProcessID: 2008
-        ThreadID: 1992
+    Execution_attributes:
+      ProcessID: 2008
+      ThreadID: 1992
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 7
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-05-11T16:46:26.203657Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-05-11T16:46:26.203657Z"
     Version: 3
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: (Empty)
     EventType: SetValue
@@ -1356,30 +1218,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 5944
-    Execution:
-      "#attributes":
-        ProcessID: 2780
-        ThreadID: 3676
+    Execution_attributes:
+      ProcessID: 2780
+      ThreadID: 3676
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-04T10:16:31.476803Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-04T10:16:31.476803Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: "C:\\Windows\\system32\\cmd.exe /c start C:\\Windows\\system32\\cmd.exe"
     EventType: SetValue
@@ -1395,30 +1253,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 5946
-    Execution:
-      "#attributes":
-        ProcessID: 2780
-        ThreadID: 3676
+    Execution_attributes:
+      ProcessID: 2780
+      ThreadID: 3676
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-04T10:16:31.609571Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-04T10:16:31.609571Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: "C:\\Windows\\system32\\cmd.exe /c start C:\\Windows\\system32\\cmd.exe"
     EventType: SetValue
@@ -1434,30 +1288,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 5953
-    Execution:
-      "#attributes":
-        ProcessID: 2780
-        ThreadID: 3676
+    Execution_attributes:
+      ProcessID: 2780
+      ThreadID: 3676
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-04T10:16:55.441262Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-04T10:16:55.441262Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: "{4ED3A719-CEA8-4BD9-910D-E252F997AFC2}"
     EventType: SetValue
@@ -1473,30 +1323,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 5955
-    Execution:
-      "#attributes":
-        ProcessID: 2780
-        ThreadID: 3676
+    Execution_attributes:
+      ProcessID: 2780
+      ThreadID: 3676
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-04T10:16:55.643799Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-04T10:16:55.643799Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     CommandLine: "\"C:\\Users\\IEUser\\Downloads\\UACBypass.exe\" "
     Company: "?"
@@ -1525,30 +1371,26 @@ Event:
     Correlation: ~
     EventID: 1
     EventRecordID: 4723
-    Execution:
-      "#attributes":
-        ProcessID: 2748
-        ThreadID: 3376
+    Execution_attributes:
+      ProcessID: 2748
+      ThreadID: 3376
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 1
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-07-27T22:43:41.424255Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-07-27T22:43:41.424255Z"
     Version: 5
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     CreationUtcTime: "2019-07-27 22:43:41.627"
     Image: "C:\\Users\\IEUser\\Downloads\\UACBypass.exe"
@@ -1563,30 +1405,26 @@ Event:
     Correlation: ~
     EventID: 11
     EventRecordID: 4724
-    Execution:
-      "#attributes":
-        ProcessID: 2748
-        ThreadID: 3376
+    Execution_attributes:
+      ProcessID: 2748
+      ThreadID: 3376
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 11
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-07-27T22:43:41.755254Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-07-27T22:43:41.755254Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     CreationUtcTime: "2019-07-27 22:43:41.627"
     Image: "C:\\Users\\IEUser\\Downloads\\UACBypass.exe"
@@ -1601,30 +1439,26 @@ Event:
     Correlation: ~
     EventID: 11
     EventRecordID: 4725
-    Execution:
-      "#attributes":
-        ProcessID: 2748
-        ThreadID: 3376
+    Execution_attributes:
+      ProcessID: 2748
+      ThreadID: 3376
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 11
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-07-27T22:43:41.755406Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-07-27T22:43:41.755406Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     CreationUtcTime: "2019-07-27 22:43:41.641"
     Image: "C:\\Users\\IEUser\\Downloads\\UACBypass.exe"
@@ -1639,30 +1473,26 @@ Event:
     Correlation: ~
     EventID: 11
     EventRecordID: 4726
-    Execution:
-      "#attributes":
-        ProcessID: 2748
-        ThreadID: 3376
+    Execution_attributes:
+      ProcessID: 2748
+      ThreadID: 3376
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 11
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-07-27T22:43:41.757216Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-07-27T22:43:41.757216Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     CommandLine: "\"C:\\Windows \\System32\\winSAT.exe\" formal"
     Company: Microsoft Corporation
@@ -1691,30 +1521,26 @@ Event:
     Correlation: ~
     EventID: 1
     EventRecordID: 4727
-    Execution:
-      "#attributes":
-        ProcessID: 2748
-        ThreadID: 3376
+    Execution_attributes:
+      ProcessID: 2748
+      ThreadID: 3376
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 1
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-07-27T22:43:42.033042Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-07-27T22:43:42.033042Z"
     Version: 5
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     CallTrace: "C:\\Windows\\SYSTEM32\\ntdll.dll+a0fb4|C:\\Windows\\System32\\KERNELBASE.dll+47241|C:\\Windows\\System32\\KERNELBASE.dll+46196|C:\\Windows\\System32\\KERNEL32.DLL+1c2e3|C:\\Windows\\System32\\windows.storage.dll+19f330|C:\\Windows\\System32\\windows.storage.dll+14ce7e|C:\\Windows\\System32\\windows.storage.dll+efad8|C:\\Windows\\System32\\windows.storage.dll+ef8b7|C:\\Windows\\System32\\windows.storage.dll+ef51d|C:\\Windows\\System32\\windows.storage.dll+14b0ad|C:\\Windows\\System32\\windows.storage.dll+145da4|C:\\Windows\\System32\\windows.storage.dll+147c7a|C:\\Windows\\System32\\windows.storage.dll+14432d|C:\\Windows\\System32\\windows.storage.dll+144225|C:\\Windows\\System32\\SHELL32.dll+a880f|C:\\Windows\\System32\\SHELL32.dll+a86ca|C:\\Windows\\System32\\SHELL32.dll+484e7|C:\\Windows\\System32\\SHELL32.dll+52549|C:\\Windows\\System32\\SHELL32.dll+a8393|C:\\Windows\\System32\\SHELL32.dll+a826b|C:\\Windows\\System32\\SHELL32.dll+50666|C:\\Windows\\System32\\SHELL32.dll+c2e1e|C:\\Windows\\System32\\shcore.dll+2c315|C:\\Windows\\System32\\KERNEL32.DLL+17974"
     GrantedAccess: "0x1fffff"
@@ -1733,30 +1559,26 @@ Event:
     Correlation: ~
     EventID: 10
     EventRecordID: 4728
-    Execution:
-      "#attributes":
-        ProcessID: 2748
-        ThreadID: 3376
+    Execution_attributes:
+      ProcessID: 2748
+      ThreadID: 3376
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 10
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-07-27T22:43:42.033420Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-07-27T22:43:42.033420Z"
     Version: 3
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     CommandLine: "\"C:\\Windows \\System32\\winSAT.exe\" formal"
     Company: Microsoft Corporation
@@ -1785,30 +1607,26 @@ Event:
     Correlation: ~
     EventID: 1
     EventRecordID: 4730
-    Execution:
-      "#attributes":
-        ProcessID: 2748
-        ThreadID: 3376
+    Execution_attributes:
+      ProcessID: 2748
+      ThreadID: 3376
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 1
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-07-27T22:43:42.392880Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-07-27T22:43:42.392880Z"
     Version: 5
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Image: "C:\\Users\\IEUser\\Downloads\\UACBypass.exe"
     ProcessGuid: 747F3D96-D39D-5D3C-0000-001026F55500
@@ -1821,30 +1639,26 @@ Event:
     Correlation: ~
     EventID: 5
     EventRecordID: 4731
-    Execution:
-      "#attributes":
-        ProcessID: 2748
-        ThreadID: 3376
+    Execution_attributes:
+      ProcessID: 2748
+      ThreadID: 3376
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 5
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-07-27T22:43:42.938088Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-07-27T22:43:42.938088Z"
     Version: 3
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Company: "?"
     Description: "?"
@@ -1866,30 +1680,26 @@ Event:
     Correlation: ~
     EventID: 7
     EventRecordID: 4732
-    Execution:
-      "#attributes":
-        ProcessID: 2748
-        ThreadID: 3384
+    Execution_attributes:
+      ProcessID: 2748
+      ThreadID: 3384
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 7
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-07-27T22:43:43.016956Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-07-27T22:43:43.016956Z"
     Version: 3
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: "c:\\Windows\\System32\\cmd.exe"
     EventType: SetValue
@@ -1905,30 +1715,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 112814
-    Execution:
-      "#attributes":
-        ProcessID: 2888
-        ThreadID: 3384
+    Execution_attributes:
+      ProcessID: 2888
+      ThreadID: 3384
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-05-07T13:13:01.683498Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-05-07T13:13:01.683498Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Company: "?"
     Description: "?"
@@ -1950,30 +1756,26 @@ Event:
     Correlation: ~
     EventID: 7
     EventRecordID: 15882
-    Execution:
-      "#attributes":
-        ProcessID: 2000
-        ThreadID: 1748
+    Execution_attributes:
+      ProcessID: 2000
+      ThreadID: 1748
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 7
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-05-11T09:50:27.030880Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-05-11T09:50:27.030880Z"
     Version: 3
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: "C:\\Users\\IEUser\\AppData\\Local\\Temp\\DNeruK"
     EventType: SetValue
@@ -1989,30 +1791,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 143174
-    Execution:
-      "#attributes":
-        ProcessID: 2856
-        ThreadID: 3608
+    Execution_attributes:
+      ProcessID: 2856
+      ThreadID: 3608
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2020-05-12T15:06:49.183867Z"
+    TimeCreated_attributes:
+      SystemTime: "2020-05-12T15:06:49.183867Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Company: "?"
     Description: "?"
@@ -2034,30 +1832,26 @@ Event:
     Correlation: ~
     EventID: 7
     EventRecordID: 15992
-    Execution:
-      "#attributes":
-        ProcessID: 2008
-        ThreadID: 1992
+    Execution_attributes:
+      ProcessID: 2008
+      ThreadID: 1992
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 7
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-05-11T16:54:18.069438Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-05-11T16:54:18.069438Z"
     Version: 3
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     CreationUtcTime: "2019-08-03 12:06:53.846"
     Image: "C:\\Windows\\explorer.exe"
@@ -2072,30 +1866,26 @@ Event:
     Correlation: ~
     EventID: 11
     EventRecordID: 5429
-    Execution:
-      "#attributes":
-        ProcessID: 2780
-        ThreadID: 3676
+    Execution_attributes:
+      ProcessID: 2780
+      ThreadID: 3676
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 11
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-03T12:06:53.933988Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-03T12:06:53.933988Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     CreationUtcTime: "2019-08-03 12:08:13.721"
     Image: "C:\\Windows\\explorer.exe"
@@ -2110,30 +1900,26 @@ Event:
     Correlation: ~
     EventID: 11
     EventRecordID: 5438
-    Execution:
-      "#attributes":
-        ProcessID: 2780
-        ThreadID: 3676
+    Execution_attributes:
+      ProcessID: 2780
+      ThreadID: 3676
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 11
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-03T12:08:13.818381Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-03T12:08:13.818381Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: "\"C:\\Windows\\system32\\cmd.exe\""
     EventType: SetValue
@@ -2149,30 +1935,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 5132
-    Execution:
-      "#attributes":
-        ProcessID: 2780
-        ThreadID: 3676
+    Execution_attributes:
+      ProcessID: 2780
+      ThreadID: 3676
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-03T09:46:48.726304Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-03T09:46:48.726304Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     EventType: DeleteValue
     Image: "C:\\Windows\\explorer.exe"
@@ -2187,30 +1969,26 @@ Event:
     Correlation: ~
     EventID: 12
     EventRecordID: 5135
-    Execution:
-      "#attributes":
-        ProcessID: 2780
-        ThreadID: 3676
+    Execution_attributes:
+      ProcessID: 2780
+      ThreadID: 3676
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 12
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-03T09:46:49.436856Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-03T09:46:49.436856Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: (Empty)
     EventType: SetValue
@@ -2226,30 +2004,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 5272
-    Execution:
-      "#attributes":
-        ProcessID: 2780
-        ThreadID: 3676
+    Execution_attributes:
+      ProcessID: 2780
+      ThreadID: 3676
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-03T10:14:02.929209Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-03T10:14:02.929209Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: "C:\\Windows\\system32\\cmd.exe"
     EventType: SetValue
@@ -2265,30 +2039,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 5273
-    Execution:
-      "#attributes":
-        ProcessID: 2780
-        ThreadID: 3676
+    Execution_attributes:
+      ProcessID: 2780
+      ThreadID: 3676
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-03T10:14:02.934826Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-03T10:14:02.934826Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     EventType: DeleteKey
     Image: "C:\\Windows\\explorer.exe"
@@ -2303,30 +2073,26 @@ Event:
     Correlation: ~
     EventID: 12
     EventRecordID: 5278
-    Execution:
-      "#attributes":
-        ProcessID: 2780
-        ThreadID: 3676
+    Execution_attributes:
+      ProcessID: 2780
+      ThreadID: 3676
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 12
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-03T10:14:08.681363Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-03T10:14:08.681363Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     CreationUtcTime: "2019-08-03 10:51:46.599"
     Image: "C:\\Windows\\explorer.exe"
@@ -2341,30 +2107,26 @@ Event:
     Correlation: ~
     EventID: 11
     EventRecordID: 5305
-    Execution:
-      "#attributes":
-        ProcessID: 2780
-        ThreadID: 3676
+    Execution_attributes:
+      ProcessID: 2780
+      ThreadID: 3676
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 11
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-03T10:51:46.647421Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-03T10:51:46.647421Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: "c:\\Windows\\SysWOW64\\notepad.exe"
     EventType: SetValue
@@ -2380,30 +2142,26 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 5664
-    Execution:
-      "#attributes":
-        ProcessID: 2780
-        ThreadID: 3676
+    Execution_attributes:
+      ProcessID: 2780
+      ThreadID: 3676
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-04T08:56:16.650581Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-04T08:56:16.650581Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 
 ---
 Event:
-  "#attributes":
-    xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
   EventData:
     Details: "C:\\Windows\\system32\\cmd.exe"
     EventType: SetValue
@@ -2419,23 +2177,21 @@ Event:
     Correlation: ~
     EventID: 13
     EventRecordID: 5698
-    Execution:
-      "#attributes":
-        ProcessID: 2780
-        ThreadID: 3676
+    Execution_attributes:
+      ProcessID: 2780
+      ThreadID: 3676
     Keywords: "0x8000000000000000"
     Level: 4
     Opcode: 0
-    Provider:
-      "#attributes":
-        Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
-        Name: Microsoft-Windows-Sysmon
-    Security:
-      "#attributes":
-        UserID: S-1-5-18
+    Provider_attributes:
+      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+      Name: Microsoft-Windows-Sysmon
+    Security_attributes:
+      UserID: S-1-5-18
     Task: 13
-    TimeCreated:
-      "#attributes":
-        SystemTime: "2019-08-04T09:10:29.060588Z"
+    TimeCreated_attributes:
+      SystemTime: "2019-08-04T09:10:29.060588Z"
     Version: 2
+Event_attributes:
+  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
 

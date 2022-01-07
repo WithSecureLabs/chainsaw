@@ -303,7 +303,7 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
             // Perform start/end datetime filtering
             if sd_marker.is_some() || ed_marker.is_some() {
                 let event_time = match NaiveDateTime::parse_from_str(
-                    r.data["Event"]["System"]["TimeCreated"]["#attributes"]["SystemTime"]
+                    r.data["Event"]["System"]["TimeCreated_attributes"]["SystemTime"]
                         .as_str()
                         .unwrap(),
                     "%Y-%m-%dT%H:%M:%S%.6fZ",
@@ -375,10 +375,8 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
                 // or collect events for analysis across multiple evtx files
                 // e.g. password-spraying
                 //
-                let raw_provider = ajson::get(
-                    &r.data.to_string(),
-                    "Event.System.Provider.#attributes.Name",
-                );
+                let raw_provider =
+                    ajson::get(&r.data.to_string(), "Event.System.Provider_attributes.Name");
                 if let Some(provider) = Provider::resolve(raw_provider) {
                     match provider {
                         // Get Defender AV Events
