@@ -8,6 +8,7 @@ readme = "README.md"
 license = "GPL3"
 edition = "2018"
 
+
 [dependencies]
 ajson = "0.2"
 anyhow = "1.0"
@@ -32,3 +33,7 @@ serde_yaml = "0.8"
 structopt = "0.3"
 tau-engine = { version = "1.0", features = ["json"] }
 walkdir = "2.3"
+
+
+[dev-dependencies]
+paste = "1.0"

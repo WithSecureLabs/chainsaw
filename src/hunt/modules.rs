@@ -107,9 +107,7 @@ pub fn extract_logon_fields(event: &serde_json::value::Value) -> Option<HashMap<
     );
     values.insert(
         "system_time".to_string(),
-        format_time(
-            event["Event"]["System"]["TimeCreated"]["#attributes"]["SystemTime"].to_string(),
-        ),
+        format_time(event["Event"]["System"]["TimeCreated_attributes"]["SystemTime"].to_string()),
     );
     values.insert(
         "process_name".to_string(),
@@ -128,9 +126,7 @@ pub fn detect_created_users(event: &serde_json::value::Value, event_id: &u64) ->
         "user_sid".to_string(),
     ];
     let values = vec![
-        format_time(
-            event["Event"]["System"]["TimeCreated"]["#attributes"]["SystemTime"].to_string(),
-        ),
+        format_time(event["Event"]["System"]["TimeCreated_attributes"]["SystemTime"].to_string()),
         event_id.to_string(),
         event["Event"]["System"]["Computer"].to_string(),
         event["Event"]["EventData"]["TargetUserName"].to_string(),
@@ -190,7 +186,7 @@ pub fn detect_tau_matches(
             // Get the provider and make sure it matches the mapping file this EventID
             // This allows us to make sure that we don't process EventIDs from other providers
             if let Some(provider) =
-                ajson::get(&event.to_string(), "Event.System.Provider.#attributes.Name")
+                ajson::get(&event.to_string(), "Event.System.Provider_attributes.Name")
             {
                 if provider.to_string() != fields.provider {
                     return None;
@@ -247,7 +243,7 @@ pub fn detect_tau_matches(
             headers.push("system_time".to_string());
             match ajson::get(
                 &event.to_string(),
-                "Event.System.TimeCreated.#attributes.SystemTime",
+                "Event.System.TimeCreated_attributes.SystemTime",
             ) {
                 // The normal event time includes milliseconds which is un-necessary
                 Some(time) => {
@@ -331,9 +327,7 @@ pub fn detect_group_changes(event: &serde_json::value::Value, e_id: &u64) -> Opt
     }
 
     let values = vec![
-        format_time(
-            event["Event"]["System"]["TimeCreated"]["#attributes"]["SystemTime"].to_string(),
-        ),
+        format_time(event["Event"]["System"]["TimeCreated_attributes"]["SystemTime"].to_string()),
         e_id.to_string(),
         event["Event"]["System"]["Computer"].to_string(),
         change_type,
@@ -364,9 +358,7 @@ pub fn detect_cleared_logs(event: &serde_json::value::Value, e_id: &u64) -> Opti
     ];
 
     let mut values = vec![
-        format_time(
-            event["Event"]["System"]["TimeCreated"]["#attributes"]["SystemTime"].to_string(),
-        ),
+        format_time(event["Event"]["System"]["TimeCreated_attributes"]["SystemTime"].to_string()),
         e_id.to_string(),
         event["Event"]["System"]["Computer"].to_string(),
         event["Event"]["UserData"]["LogFileCleared"]["SubjectUserName"].to_string(),
@@ -414,9 +406,7 @@ pub fn detect_stopped_service(
     ];
 
     let values = vec![
-        format_time(
-            event["Event"]["System"]["TimeCreated"]["#attributes"]["SystemTime"].to_string(),
-        ),
+        format_time(event["Event"]["System"]["TimeCreated_attributes"]["SystemTime"].to_string()),
         event_id.to_string(),
         event["Event"]["System"]["Computer"].to_string(),
         service_name,
@@ -453,9 +443,7 @@ pub fn detect_defender_detections(
     threat_path = format_field_length(threat_path, &full_output, col_width as usize);
 
     let values = vec![
-        format_time(
-            event["Event"]["System"]["TimeCreated"]["#attributes"]["SystemTime"].to_string(),
-        ),
+        format_time(event["Event"]["System"]["TimeCreated_attributes"]["SystemTime"].to_string()),
         e_id.to_string(),
         event["Event"]["System"]["Computer"].to_string(),
         event["Event"]["EventData"]["Threat Name"].to_string(),
@@ -504,9 +492,7 @@ pub fn detect_ultralight_detections(
     );
 
     let values = vec![
-        format_time(
-            event["Event"]["System"]["TimeCreated"]["#attributes"]["SystemTime"].to_string(),
-        ),
+        format_time(event["Event"]["System"]["TimeCreated_attributes"]["SystemTime"].to_string()),
         e_id.to_string(),
         event["Event"]["System"]["Computer"].to_string(),
         detection_data["iname"].to_string(),
@@ -542,7 +528,7 @@ pub fn detect_kaspersky_detections(
     let threat_name;
 
     // Kaspersky puts the relevant data in a Vec. Here we locate it and extract the key fields
-    if let Some(threat_data) = ajson::get(&event.to_string(), "Event.EventData.Data.#text") {
+    if let Some(threat_data) = ajson::get(&event.to_string(), "Event.EventData.Data") {
         threat_path = match threat_data.to_vec().get(0) {
             Some(a) => a.clone(),
             None => return None,
@@ -559,9 +545,7 @@ pub fn detect_kaspersky_detections(
         format_field_length(threat_path.to_string(), &full_output, col_width as usize);
 
     let values = vec![
-        format_time(
-            event["Event"]["System"]["TimeCreated"]["#attributes"]["SystemTime"].to_string(),
-        ),
+        format_time(event["Event"]["System"]["TimeCreated_attributes"]["SystemTime"].to_string()),
         e_id.to_string(),
         event["Event"]["System"]["Computer"].to_string(),
         threat_path,
@@ -598,7 +582,7 @@ pub fn detect_sophos_detections(
     let threat_type;
 
     // Sophos puts the relevant data in a Vec. Here we locate it and extract the key fields
-    if let Some(threat_data) = ajson::get(&event.to_string(), "Event.EventData.Data.#text") {
+    if let Some(threat_data) = ajson::get(&event.to_string(), "Event.EventData.Data") {
         threat_type = match threat_data.to_vec().get(0) {
             Some(a) => a.clone(),
             None => return None,
@@ -619,9 +603,7 @@ pub fn detect_sophos_detections(
         format_field_length(threat_path.to_string(), &full_output, col_width as usize);
 
     let values = vec![
-        format_time(
-            event["Event"]["System"]["TimeCreated"]["#attributes"]["SystemTime"].to_string(),
-        ),
+        format_time(event["Event"]["System"]["TimeCreated_attributes"]["SystemTime"].to_string()),
         e_id.to_string(),
         event["Event"]["System"]["Computer"].to_string(),
         threat_type.to_string(),

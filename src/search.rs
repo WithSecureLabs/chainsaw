@@ -95,7 +95,9 @@ pub fn run_search(opt: SearchOpts) -> Result<String> {
     cs_eprintln!("[+] Searching event logs...");
     for evtx in &evtx_files {
         // Parse EVTx files
-        let settings = ParserSettings::default().num_threads(0);
+        let settings = ParserSettings::default()
+            .separate_json_attributes(true)
+            .num_threads(0);
         let parser = match EvtxParser::from_path(evtx) {
             Ok(a) => a.with_configuration(settings),
             Err(e) => {
@@ -138,7 +140,7 @@ pub fn search_evtx_file(
         // Perform start/end datetime filtering
         if sd_marker.is_some() || ed_marker.is_some() {
             let event_time = match NaiveDateTime::parse_from_str(
-                r.data["Event"]["System"]["TimeCreated"]["#attributes"]["SystemTime"]
+                r.data["Event"]["System"]["TimeCreated_attributes"]["SystemTime"]
                     .as_str()
                     .unwrap(),
                 "%Y-%m-%dT%H:%M:%S%.6fZ",

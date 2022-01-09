@@ -1,0 +1,34 @@
+---
+title: collection
+description: A collection rule for testing
+status: experimental
+references: []
+authors:
+  - Alex Kornitzer
+detection:
+  base:
+    Image:
+      - 'i*\powershell.exe*'
+  search:
+    CommandLine:
+      - 'i* -Nop *'
+  condition: search and base
+true_negatives: []
+true_positives: []
+---
+title: collection
+description: A collection rule for testing
+status: experimental
+references: []
+authors:
+  - Alex Kornitzer
+detection:
+  base:
+    Image:
+      - 'i*\powershell.exe*'
+  search:
+    CommandLine:
+      - 'i* -encodedcommand *'
+  condition: search and base
+true_negatives: []
+true_positives: []
