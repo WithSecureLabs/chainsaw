@@ -1,6 +1,6 @@
 [package]
 name = "chainsaw"
-version = "1.1.4"
+version = "1.1.5"
 repository = "https://github.com/countercept/chainsaw"
 description = "Rapidly Search and Hunt Through Windows Event Logs"
 authors = ["James Dorgan <james.dorgan@f-secure.com>","Alex Kornitzer <alex.kornitzer@f-secure.com>"]
