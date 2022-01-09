@@ -13,7 +13,7 @@ use walkdir::WalkDir;
 pub const RULE_PREFIX: &str = "‣ ";
 
 #[cfg(windows)]
-pub const RULE_PREFIX: &str = "+ ";
+pub const RULE_PREFIX: &str = "‣ ";
 
 #[cfg(not(windows))]
 const TICK_SETTINGS: (&str, u64) = ("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ ", 80);

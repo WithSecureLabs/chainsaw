@@ -6,6 +6,7 @@ use crate::util::RULE_PREFIX;
 use regex::Regex;
 use serde_json::Value;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use tau_engine::Value as Tau;
 use tau_engine::{AsValue, Document};
 extern crate ajson;
@@ -35,6 +36,7 @@ fn split_tag(tag_name: String, target: usize) -> String {
 fn get_tau_matches(
     mut data: serde_json::Value,
     chainsaw_rules: &[ChainsawRule],
+    csv: &Option<PathBuf>,
 ) -> Option<(String, String)> {
     let mut matches = vec![];
     let mut authors = vec![];
@@ -49,17 +51,24 @@ fn get_tau_matches(
     // Check the doc for any tau rule matches
     for rule in chainsaw_rules {
         if rule.logic.matches(&Wrapper(&data)) {
-            if rule.tag.len() > 20 {
-                let title = split_tag(rule.tag.clone(), 20);
-                matches.push(format!("{}{}", RULE_PREFIX, title));
+            if csv.is_none() {
+                if rule.tag.len() > 20 {
+                    let title = split_tag(rule.tag.clone(), 20);
+                    matches.push(format!("{}{}", RULE_PREFIX, title));
+                } else {
+                    matches.push(format!("{}{}", RULE_PREFIX, rule.tag.clone()));
+                }
+                // To comply to the sigma DRL we need to display rule author information
+                if let Some(x) = &rule.authors {
+                    authors.push(format!("{}{}", RULE_PREFIX, x.join("\n")))
+                } else {
+                    authors.push(format!("{}Unknown", RULE_PREFIX));
+                }
             } else {
-                matches.push(format!("{}{}", RULE_PREFIX, rule.tag.clone()));
-            }
-            // To comply to the sigma DRL we need to display rule author information
-            if let Some(x) = &rule.authors {
-                authors.push(format!("{}{}", RULE_PREFIX, x.join("\n")))
-            } else {
-                authors.push(format!("{}Unknown", RULE_PREFIX));
+                matches.push(rule.tag.clone());
+                if let Some(x) = &rule.authors {
+                    authors.push(x.join(","))
+                }
             }
         } else {
             continue;
@@ -172,6 +181,7 @@ pub fn detect_tau_matches(
     chainsaw_rules: &[ChainsawRule],
     id_mappings: &HashMap<u64, Events>,
     full_output: &bool,
+    csv: &Option<PathBuf>,
     col_width: i32,
     show_authors: &bool,
 ) -> Option<Detection> {
@@ -228,7 +238,7 @@ pub fn detect_tau_matches(
         None => return None,
     };
 
-    let (hits, authors) = match get_tau_matches(doc, chainsaw_rules) {
+    let (hits, authors) = match get_tau_matches(doc, chainsaw_rules, csv) {
         Some(ret) => ret,
         None => return None,
     };

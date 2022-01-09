@@ -353,6 +353,7 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
                             rules,
                             &mapping.mappings,
                             &opt.full_output,
+                            &opt.csv,
                             opt.col_width,
                             &opt.show_authors,
                         ) {
