@@ -6,7 +6,6 @@ use crate::util::RULE_PREFIX;
 use regex::Regex;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::path::PathBuf;
 use tau_engine::Value as Tau;
 use tau_engine::{AsValue, Document};
 extern crate ajson;
@@ -36,7 +35,7 @@ fn split_tag(tag_name: String, target: usize) -> String {
 fn get_tau_matches(
     mut data: serde_json::Value,
     chainsaw_rules: &[ChainsawRule],
-    csv: &Option<PathBuf>,
+    stdout: &bool,
 ) -> Option<(String, String)> {
     let mut matches = vec![];
     let mut authors = vec![];
@@ -51,7 +50,7 @@ fn get_tau_matches(
     // Check the doc for any tau rule matches
     for rule in chainsaw_rules {
         if rule.logic.matches(&Wrapper(&data)) {
-            if csv.is_none() {
+            if *stdout {
                 if rule.tag.len() > 20 {
                     let title = split_tag(rule.tag.clone(), 20);
                     matches.push(format!("{}{}", RULE_PREFIX, title));
@@ -181,7 +180,7 @@ pub fn detect_tau_matches(
     chainsaw_rules: &[ChainsawRule],
     id_mappings: &HashMap<u64, Events>,
     full_output: &bool,
-    csv: &Option<PathBuf>,
+    stdout: &bool,
     col_width: i32,
     show_authors: &bool,
 ) -> Option<Detection> {
@@ -227,7 +226,11 @@ pub fn detect_tau_matches(
                         if v.to_string().is_empty() {
                             "<empty>".to_string()
                         } else {
-                            format_field_length(v.to_string(), full_output, col_width as usize)
+                            if *stdout {
+                                format_field_length(v.to_string(), full_output, col_width as usize)
+                            } else {
+                                v.to_string()
+                            }
                         }
                     }
                     None => "context_field not found!".to_string(),
@@ -238,7 +241,7 @@ pub fn detect_tau_matches(
         None => return None,
     };
 
-    let (hits, authors) = match get_tau_matches(doc, chainsaw_rules, csv) {
+    let (hits, authors) = match get_tau_matches(doc, chainsaw_rules, stdout) {
         Some(ret) => ret,
         None => return None,
     };
@@ -293,7 +296,12 @@ pub fn detect_tau_matches(
                         if b.is_empty() {
                             values.push("<empty>".to_string())
                         } else {
-                            values.push(format_field_length(b, full_output, col_width as usize))
+                            if *stdout {
+                                values.push(format_field_length(b, full_output, col_width as usize))
+                            // If the output is CSV then don't format the field length
+                            } else {
+                                values.push(b)
+                            }
                         }
                     }
                     None => values.push("Invalid Mapping".to_string()),
@@ -437,6 +445,7 @@ pub fn detect_defender_detections(
     e_id: &u64,
     full_output: bool,
     col_width: i32,
+    stdout: &bool,
 ) -> Option<Detection> {
     let headers = vec![
         "system_time".to_string(),
@@ -450,7 +459,10 @@ pub fn detect_defender_detections(
 
     let mut threat_path = event["Event"]["EventData"]["Path"].to_string();
 
-    threat_path = format_field_length(threat_path, &full_output, col_width as usize);
+    // if outputting to stdout then format field length
+    if *stdout {
+        threat_path = format_field_length(threat_path, &full_output, col_width as usize);
+    }
 
     let values = vec![
         format_time(event["Event"]["System"]["TimeCreated_attributes"]["SystemTime"].to_string()),
@@ -475,6 +487,7 @@ pub fn detect_ultralight_detections(
     e_id: &u64,
     full_output: bool,
     col_width: i32,
+    stdout: &bool,
 ) -> Option<Detection> {
     let headers = vec![
         "system_time".to_string(),
@@ -495,11 +508,16 @@ pub fn detect_ultralight_detections(
         None => return None,
     };
 
-    let threat_path = format_field_length(
-        detection_data["obj"]["ref"].to_string(),
-        &full_output,
-        col_width as usize,
-    );
+    let threat_path;
+    if *stdout {
+        threat_path = format_field_length(
+            detection_data["obj"]["ref"].to_string(),
+            &full_output,
+            col_width as usize,
+        )
+    } else {
+        threat_path = detection_data["obj"]["ref"].to_string()
+    }
 
     let values = vec![
         format_time(event["Event"]["System"]["TimeCreated_attributes"]["SystemTime"].to_string()),
@@ -524,6 +542,7 @@ pub fn detect_kaspersky_detections(
     e_id: &u64,
     full_output: bool,
     col_width: i32,
+    stdout: &bool,
 ) -> Option<Detection> {
     let headers = vec![
         "system_time".to_string(),
@@ -540,7 +559,7 @@ pub fn detect_kaspersky_detections(
     // Kaspersky puts the relevant data in a Vec. Here we locate it and extract the key fields
     if let Some(threat_data) = ajson::get(&event.to_string(), "Event.EventData.Data") {
         threat_path = match threat_data.to_vec().get(0) {
-            Some(a) => a.clone(),
+            Some(a) => a.clone().to_string(),
             None => return None,
         };
         threat_name = match threat_data.to_vec().get(1) {
@@ -550,9 +569,9 @@ pub fn detect_kaspersky_detections(
     } else {
         return None;
     }
-
-    let threat_path =
+    if *stdout {
         format_field_length(threat_path.to_string(), &full_output, col_width as usize);
+    }
 
     let values = vec![
         format_time(event["Event"]["System"]["TimeCreated_attributes"]["SystemTime"].to_string()),
@@ -576,6 +595,7 @@ pub fn detect_sophos_detections(
     e_id: &u64,
     full_output: bool,
     col_width: i32,
+    stdout: &bool,
 ) -> Option<Detection> {
     let headers = vec![
         "system_time".to_string(),
@@ -587,7 +607,7 @@ pub fn detect_sophos_detections(
     ];
     let title = String::from("(Built-in Logic) - Sophos AV Detections");
 
-    let threat_path;
+    let mut threat_path;
     let threat_name;
     let threat_type;
 
@@ -598,7 +618,7 @@ pub fn detect_sophos_detections(
             None => return None,
         };
         threat_path = match threat_data.to_vec().get(1) {
-            Some(a) => a.clone(),
+            Some(a) => a.clone().to_string(),
             None => return None,
         };
         threat_name = match threat_data.to_vec().get(2) {
@@ -609,8 +629,10 @@ pub fn detect_sophos_detections(
         return None;
     }
 
-    let threat_path =
-        format_field_length(threat_path.to_string(), &full_output, col_width as usize);
+    if *stdout {
+        threat_path =
+            format_field_length(threat_path.to_string(), &full_output, col_width as usize);
+    }
 
     let values = vec![
         format_time(event["Event"]["System"]["TimeCreated_attributes"]["SystemTime"].to_string()),

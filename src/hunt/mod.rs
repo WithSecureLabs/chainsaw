@@ -207,8 +207,15 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
     let mut mapping_file = None;
     let mut sd_marker = None;
     let mut ed_marker = None;
+    let mut stdout = false;
 
     let time_format = "%Y-%m-%dT%H:%M:%S";
+
+    // If we're outputting to stdout then we need to do some data formatting
+    // this variable is used to track that state if neither CSV or JSON option is specified
+    if opt.csv.is_none() && !opt.json {
+        stdout = true;
+    }
 
     // if start date filter is provided, validate that the provided string is a valid timestamp
     if let Some(x) = &opt.start_date {
@@ -353,7 +360,7 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
                             rules,
                             &mapping.mappings,
                             &opt.full_output,
-                            &opt.csv,
+                            &stdout,
                             opt.col_width,
                             &opt.show_authors,
                         ) {
@@ -388,6 +395,7 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
                                     &e_id,
                                     opt.full_output,
                                     opt.col_width,
+                                    &stdout,
                                 )
                             }
                         }
@@ -405,6 +413,7 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
                                     &e_id,
                                     opt.full_output,
                                     opt.col_width,
+                                    &stdout,
                                 )
                             }
                         }
@@ -416,6 +425,7 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
                                     &e_id,
                                     opt.full_output,
                                     opt.col_width,
+                                    &stdout,
                                 )
                             }
                         }
@@ -446,6 +456,7 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
                                     &e_id,
                                     opt.full_output,
                                     opt.col_width,
+                                    &stdout,
                                 )
                             }
                         }
