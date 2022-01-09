@@ -74,7 +74,9 @@ pub fn get_evtx_files(mut path: &Path) -> Result<Vec<PathBuf>> {
 }
 
 pub fn parse_evtx_file(evtx_file: &Path) -> Result<evtx::EvtxParser<File>> {
-    let settings = ParserSettings::default().num_threads(0);
+    let settings = ParserSettings::default()
+        .separate_json_attributes(true)
+        .num_threads(0);
     let parser = EvtxParser::from_path(evtx_file)?.with_configuration(settings);
     Ok(parser)
 }
