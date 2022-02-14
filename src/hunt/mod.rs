@@ -466,6 +466,19 @@ pub fn run_hunt(opt: HuntOpts) -> Result<String> {
     // Print or Write results
     if let Some(res) = post_process_hunt(grouped_events, &opt) {
         for r in res {
+            if opt.json {
+                // TODO: Decide on how to show the raw events...
+                let mut fake = serde_json::Map::new();
+                for (i, k) in r.headers.iter().enumerate() {
+                    // FIXME: All this data will be strings due to how post_process_hunt is running...
+                    fake.insert(k.to_owned(), serde_json::json!(r.values[i]));
+                }
+                json_detections.push(det_to_json(
+                    r.clone(),
+                    serde_json::Value::Object(fake),
+                    "title",
+                )?);
+            }
             hunt_detections.push(r);
         }
     };
@@ -492,20 +505,22 @@ fn post_process_hunt(
     //
     // Process 4625 Events
     let mut results = Vec::new();
-    if let Some(a) = grouped_events.get(&4625) {
-        let detections = match modules::detect_login_attacks(a) {
-            Some(b) => b,
-            None => vec![],
-        };
-        results.push(detections);
-    }
-    // Process 4624 Events
-    if let Some(a) = grouped_events.get(&4624) {
-        let detections = match modules::filter_lateral_movement(a, hunts) {
-            Some(b) => b,
-            None => vec![],
-        };
-        results.push(detections);
+    if !hunts.disable_inbuilt_logic {
+        if let Some(a) = grouped_events.get(&4625) {
+            let detections = match modules::detect_login_attacks(a) {
+                Some(b) => b,
+                None => vec![],
+            };
+            results.push(detections);
+        }
+        // Process 4624 Events
+        if let Some(a) = grouped_events.get(&4624) {
+            let detections = match modules::filter_lateral_movement(a, hunts) {
+                Some(b) => b,
+                None => vec![],
+            };
+            results.push(detections);
+        }
     }
     if results.is_empty() {
         return None;
