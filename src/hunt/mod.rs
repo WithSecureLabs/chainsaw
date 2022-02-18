@@ -492,20 +492,22 @@ fn post_process_hunt(
     //
     // Process 4625 Events
     let mut results = Vec::new();
-    if let Some(a) = grouped_events.get(&4625) {
-        let detections = match modules::detect_login_attacks(a) {
-            Some(b) => b,
-            None => vec![],
-        };
-        results.push(detections);
-    }
-    // Process 4624 Events
-    if let Some(a) = grouped_events.get(&4624) {
-        let detections = match modules::filter_lateral_movement(a, hunts) {
-            Some(b) => b,
-            None => vec![],
-        };
-        results.push(detections);
+    if !hunts.disable_inbuilt_logic {
+        if let Some(a) = grouped_events.get(&4625) {
+            let detections = match modules::detect_login_attacks(a) {
+                Some(b) => b,
+                None => vec![],
+            };
+            results.push(detections);
+        }
+        // Process 4624 Events
+        if let Some(a) = grouped_events.get(&4624) {
+            let detections = match modules::filter_lateral_movement(a, hunts) {
+                Some(b) => b,
+                None => vec![],
+            };
+            results.push(detections);
+        }
     }
     if results.is_empty() {
         return None;
