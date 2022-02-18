@@ -1,9 +1,11 @@
+use std::fs::File;
 use std::path::PathBuf;
 
 use anyhow::Result;
 
 pub static mut WRITER: Writer = Writer {
     format: Format::Std,
+    output: None,
     quiet: false,
 };
 
@@ -19,10 +21,20 @@ impl Default for Format {
     }
 }
 
-#[derive(Default)]
 pub struct Writer {
     pub format: Format,
+    pub output: Option<File>,
     pub quiet: bool,
+}
+
+impl Default for Writer {
+    fn default() -> Self {
+        Self {
+            format: Format::Std,
+            output: None,
+            quiet: false,
+        }
+    }
 }
 
 pub fn set_writer(writer: Writer) -> Result<()> {
@@ -65,29 +77,66 @@ macro_rules! cs_eprintln {
 macro_rules! cs_print_json {
     ($value:expr) => {{
         use std::io::Write;
-        $crate::serde_json::to_writer(std::io::stdout(), $value)?;
-        std::io::stdout().flush()
+        unsafe {
+            match $crate::write::WRITER.output.as_ref() {
+                Some(mut f) => {
+                    $crate::serde_json::to_writer(f, $value)?;
+                    f.flush()
+                }
+                None => {
+                    $crate::serde_json::to_writer(std::io::stdout(), $value)?;
+                    std::io::stdout().flush()
+                }
+            }
+        }
     }};
 }
 
 macro_rules! cs_print_yaml {
     ($value:expr) => {{
         use std::io::Write;
-        $crate::serde_yaml::to_writer(std::io::stdout(), $value)?;
-        println!();
-        std::io::stdout().flush()
+        unsafe {
+            match $crate::write::WRITER.output.as_ref() {
+                Some(mut f) => {
+                    $crate::serde_yaml::to_writer(f, $value)?;
+                    f.write(b"\n")?;
+                    f.flush()
+                }
+                None => {
+                    $crate::serde_yaml::to_writer(std::io::stdout(), $value)?;
+                    println!();
+                    std::io::stdout().flush()
+                }
+            }
+        }
     }};
 }
 
 macro_rules! cs_print_table {
     ($table:ident) => {
-        $table.printstd();
+        unsafe {
+            match $crate::write::WRITER.output.as_ref() {
+                Some(mut f) => $table.print(&mut f).expect("could not write table to file"),
+                None => $table.printstd(),
+            }
+        }
     };
 }
 
 macro_rules! cs_greenln {
     ($($arg:tt)*) => {
-        colour::unnamed::write(Some(colour::unnamed::Colour::Green), &format!($($arg)*), true);
+        use std::io::Write;
+        unsafe {
+            match $crate::write::WRITER.output.as_ref() {
+                Some(mut f) => {
+                    f.write(format!($($arg)*).as_bytes()).expect("could not write to file");
+                    f.write(b"\n").expect("could not write to file");
+                }
+                None => {
+                    colour::unnamed::write(Some(colour::unnamed::Colour::Green), &format!($($arg)*), true);
+                }
+            }
+        }
     };
 }
 

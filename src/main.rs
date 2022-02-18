@@ -1,3 +1,5 @@
+use std::fs::File;
+
 // TODO: Clean this, we have crudely split into a lib for testing purposes, this needs refinement.
 use chainsaw::*;
 
@@ -48,27 +50,57 @@ fn main() {
     // Load up the writer
     let writer = match &opt.cmd {
         Chainsaw::Hunt(args) => {
+            let output = match &args.output {
+                Some(path) => {
+                    let file = match File::create(path) {
+                        Ok(f) => f,
+                        Err(e) => {
+                            panic!("could not create file - {}", e);
+                        }
+                    };
+                    Some(file)
+                }
+                None => None,
+            };
             if args.json {
                 write::Writer {
                     format: write::Format::Json,
+                    output,
                     quiet: args.quiet,
                 }
             } else if let Some(dir) = &args.csv {
                 write::Writer {
                     format: write::Format::Csv(dir.clone()),
+                    output,
                     quiet: args.quiet,
                 }
             } else {
                 write::Writer {
                     format: write::Format::Std,
+                    output,
                     quiet: args.quiet,
                 }
             }
         }
-        Chainsaw::Search(args) => write::Writer {
-            format: write::Format::Std,
-            quiet: args.quiet,
-        },
+        Chainsaw::Search(args) => {
+            let output = match &args.output {
+                Some(path) => {
+                    let file = match File::create(path) {
+                        Ok(f) => f,
+                        Err(e) => {
+                            panic!("could not create file - {}", e);
+                        }
+                    };
+                    Some(file)
+                }
+                None => None,
+            };
+            write::Writer {
+                format: write::Format::Std,
+                output,
+                quiet: args.quiet,
+            }
+        }
         _ => write::Writer::default(),
     };
     write::set_writer(writer).unwrap();

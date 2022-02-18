@@ -54,6 +54,10 @@ pub struct SearchOpts {
     /// End date for including events (UTC). Anything newer than this is dropped. Format: YYYY-MM-DDTHH:MM:SS. Example: 2019-11-17T17:55:11
     #[structopt(long = "end-date")]
     pub end_date: Option<String>,
+
+    /// File to write output to
+    #[structopt(long = "output")]
+    pub output: Option<PathBuf>,
 }
 
 pub fn run_search(opt: SearchOpts) -> Result<String> {

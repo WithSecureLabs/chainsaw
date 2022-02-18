@@ -52,7 +52,7 @@ pub struct HuntOpts {
     pub lateral_all: bool,
 
     /// Save hunt output to individual CSV files in the specified directory
-    #[structopt(long = "csv", group = "output")]
+    #[structopt(long = "csv", group = "format")]
     pub csv: Option<PathBuf>,
 
     /// Show rule author information in table output
@@ -64,7 +64,7 @@ pub struct HuntOpts {
     pub full_output: bool,
 
     /// Save the full event log and associated detections to disk in a JSON format to the specified path
-    #[structopt(short, long = "json", group = "output")]
+    #[structopt(short, long = "json", group = "format")]
     pub json: bool,
 
     /// Do not use inbuilt detection logic, only use the specified rules for detection
@@ -82,6 +82,10 @@ pub struct HuntOpts {
     /// End date for including events (UTC). Anything newer than this is dropped. Format: YYYY-MM-DDTHH:MM:SS. Example: 2019-11-17T17:55:11
     #[structopt(long = "end-date")]
     pub end_date: Option<String>,
+
+    /// File to write output to, this is ignored by --csv
+    #[structopt(long = "output")]
+    pub output: Option<PathBuf>,
 }
 
 #[derive(Serialize)]
