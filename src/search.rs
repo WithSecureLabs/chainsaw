@@ -38,7 +38,7 @@ pub struct SearchOpts {
     #[structopt(short = "i", long = "case-insensitive")]
     pub case_insensitive: bool,
 
-    /// Save the full event log and associated detections to disk in a JSON format to the specified path
+    /// Output matching event log entries in a JSON format
     #[structopt(short, long = "json", group = "output")]
     pub json: bool,
 

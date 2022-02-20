@@ -63,7 +63,7 @@ pub struct HuntOpts {
     #[structopt(long = "full")]
     pub full_output: bool,
 
-    /// Save the full event log and associated detections to disk in a JSON format to the specified path
+    /// For each detection, output the associated event log entry and detection information in a JSON format
     #[structopt(short, long = "json", group = "output")]
     pub json: bool,
 
