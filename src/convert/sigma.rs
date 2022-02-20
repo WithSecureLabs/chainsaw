@@ -71,7 +71,7 @@ impl Sigma {
             tau.insert(
                 "authors".into(),
                 author
-                    .split(",")
+                    .split(',')
                     .map(|a| a.trim())
                     .collect::<Vec<_>>()
                     .into(),

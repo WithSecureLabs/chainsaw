@@ -1,3 +1,6 @@
+use anyhow::Result;
+use std::fs::File;
+
 // TODO: Clean this, we have crudely split into a lib for testing purposes, this needs refinement.
 use chainsaw::*;
 
@@ -48,27 +51,65 @@ fn main() {
     // Load up the writer
     let writer = match &opt.cmd {
         Chainsaw::Hunt(args) => {
+            let output = match &args.output {
+                Some(path) => {
+                    let file = match File::create(path) {
+                        Ok(f) => f,
+                        Err(e) => {
+                            return exit_chainsaw(Err(anyhow::anyhow!(
+                                "Unable to write to specified output file - {} - {}",
+                                path.display(),
+                                e
+                            )));
+                        }
+                    };
+                    Some(file)
+                }
+                None => None,
+            };
             if args.json {
                 write::Writer {
                     format: write::Format::Json,
+                    output,
                     quiet: args.quiet,
                 }
             } else if let Some(dir) = &args.csv {
                 write::Writer {
                     format: write::Format::Csv(dir.clone()),
+                    output,
                     quiet: args.quiet,
                 }
             } else {
                 write::Writer {
                     format: write::Format::Std,
+                    output,
                     quiet: args.quiet,
                 }
             }
         }
-        Chainsaw::Search(args) => write::Writer {
-            format: write::Format::Std,
-            quiet: args.quiet,
-        },
+        Chainsaw::Search(args) => {
+            let output = match &args.output {
+                Some(path) => {
+                    let file = match File::create(path) {
+                        Ok(f) => f,
+                        Err(e) => {
+                            return exit_chainsaw(Err(anyhow::anyhow!(
+                                "Unable to write to specified output file - {} - {}",
+                                path.display(),
+                                e
+                            )));
+                        }
+                    };
+                    Some(file)
+                }
+                None => None,
+            };
+            write::Writer {
+                format: write::Format::Std,
+                output,
+                quiet: args.quiet,
+            }
+        }
         _ => write::Writer::default(),
     };
     write::set_writer(writer).unwrap();
@@ -79,6 +120,10 @@ fn main() {
         Chainsaw::Hunt(args) => hunt::run_hunt(args),
         Chainsaw::Check(args) => check::run_check(args),
     };
+    exit_chainsaw(result);
+}
+
+fn exit_chainsaw(result: Result<String>) {
     // Handle successful/failed status messages returned by chainsaw
     std::process::exit(match result {
         Ok(m) => {
