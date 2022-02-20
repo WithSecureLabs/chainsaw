@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::fs::File;
 
 // TODO: Clean this, we have crudely split into a lib for testing purposes, this needs refinement.
@@ -55,7 +56,11 @@ fn main() {
                     let file = match File::create(path) {
                         Ok(f) => f,
                         Err(e) => {
-                            panic!("could not create file - {}", e);
+                            return exit_chainsaw(Err(anyhow::anyhow!(
+                                "Unable to write to specified output file - {} - {}",
+                                path.display(),
+                                e
+                            )));
                         }
                     };
                     Some(file)
@@ -88,7 +93,11 @@ fn main() {
                     let file = match File::create(path) {
                         Ok(f) => f,
                         Err(e) => {
-                            panic!("could not create file - {}", e);
+                            return exit_chainsaw(Err(anyhow::anyhow!(
+                                "Unable to write to specified output file - {} - {}",
+                                path.display(),
+                                e
+                            )));
                         }
                     };
                     Some(file)
@@ -111,6 +120,10 @@ fn main() {
         Chainsaw::Hunt(args) => hunt::run_hunt(args),
         Chainsaw::Check(args) => check::run_check(args),
     };
+    exit_chainsaw(result);
+}
+
+fn exit_chainsaw(result: Result<String>) {
     // Handle successful/failed status messages returned by chainsaw
     std::process::exit(match result {
         Ok(m) => {

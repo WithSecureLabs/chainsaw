@@ -99,7 +99,7 @@ macro_rules! cs_print_yaml {
             match $crate::write::WRITER.output.as_ref() {
                 Some(mut f) => {
                     $crate::serde_yaml::to_writer(f, $value)?;
-                    f.write(b"\n")?;
+                    f.write_all(b"\n")?;
                     f.flush()
                 }
                 None => {
@@ -129,8 +129,8 @@ macro_rules! cs_greenln {
         unsafe {
             match $crate::write::WRITER.output.as_ref() {
                 Some(mut f) => {
-                    f.write(format!($($arg)*).as_bytes()).expect("could not write to file");
-                    f.write(b"\n").expect("could not write to file");
+                    f.write_all(format!($($arg)*).as_bytes()).expect("could not write to file");
+                    f.write_all(b"\n").expect("could not write to file");
                 }
                 None => {
                     colour::unnamed::write(Some(colour::unnamed::Colour::Green), &format!($($arg)*), true);
