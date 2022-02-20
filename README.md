@@ -67,24 +67,6 @@ When using Sigma rule detection logic, Chainsaw requires a 'mapping file' to tel
 ## Examples
 ---
 ### Searching
-*Help Output:*
-
-    USAGE:
-        chainsaw search [FLAGS] [OPTIONS] <evtx-path>
-
-    FLAGS:
-        -i, --case_insensitive
-        -h, --help                Prints help information
-        -V, --version             Prints version information
-
-    OPTIONS:
-        -e, --event <event-id>
-        -o, --output <output-file>
-        -r, --regex_search <search-regex>
-        -s, --string <search-string>
-
-    ARGS:
-        <evtx-path>
 
 #### Command Examples
 
@@ -102,78 +84,32 @@ When using Sigma rule detection logic, Chainsaw requires a 'mapping file' to tel
 
 
 ### Hunting
-*Help Output:*
-
-	USAGE:
-		chainsaw hunt [FLAGS] [OPTIONS] <evtx-path>
-
-	FLAGS:
-	        --csv
-	            Save hunt output to individual CSV file, otherwise output in a table format
-
-	        --no-builtin
-	            Do not use inbuilt detection logic, only use the specified rules for detection
-
-	        --full
-	            Show full event output, otherwise output is trunctated to improve readability
-
-	    -h, --help
-	            Prints help information
-
-	        --lateral-all
-	            List additional 4624 events potentially relating to lateral movement
-
-	    -V, --version
-	            Prints version information
-
-
-	OPTIONS:
-	        --col-width <col-width>
-	            Change the maximum column width (default 40). Use this option if the table output is un-readable [default:
-	            40]
-	        --json <json-output>
-	            Save the full event log and associated detections to disk in a JSON format to the specified path
-
-	    -m, --mapping <mapping-path>
-	            Specify the mapping file to use to with the specified detection rules. Required when using the --rule/-r
-	            flag
-	    -r, --rules <rules-path>
-	            Specify a directory containing detection rules to use. All files matching *.yml will be used
-
-
-	ARGS:
-	    <evtx-path>
-	            Specify an EVTX file, or a directory containing the EVTX files to search. If you specify a directory, all
-	            files matching *.evtx will be used.
-
-	            Specifying "win_default" will use "C:\Windows\System32\winevt\Logs\"
 
 #### Command Examples
 *Hunt through all event logs in a specific path, show additional information relating to potential lateral movement, and save results to individual CSV files*
 
-    -> % ./chainsaw hunt evtx_attack_samples/ --lateral-all --csv
+	-> % ./chainsaw hunt evtx_attack_samples --lateral-all --csv chainsaw_output
 
-     ██████╗██╗  ██╗ █████╗ ██╗███╗   ██╗███████╗ █████╗ ██╗    ██╗
-    ██╔════╝██║  ██║██╔══██╗██║████╗  ██║██╔════╝██╔══██╗██║    ██║
-    ██║     ███████║███████║██║██╔██╗ ██║███████╗███████║██║ █╗ ██║
-    ██║     ██╔══██║██╔══██║██║██║╚██╗██║╚════██║██╔══██║██║███╗██║
-    ╚██████╗██║  ██║██║  ██║██║██║ ╚████║███████║██║  ██║╚███╔███╔╝
-     ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝
-        By F-Secure Countercept (Author: @FranticTyping)
-    [+] Found 20 EVTX files
-    [!] Continuing without Detection rules, no path provided
-    [+] Saving results to CSV files
+	 ██████╗██╗  ██╗ █████╗ ██╗███╗   ██╗███████╗ █████╗ ██╗    ██╗
+	██╔════╝██║  ██║██╔══██╗██║████╗  ██║██╔════╝██╔══██╗██║    ██║
+	██║     ███████║███████║██║██╔██╗ ██║███████╗███████║██║ █╗ ██║
+	██║     ██╔══██║██╔══██║██║██║╚██╗██║╚════██║██╔══██║██║███╗██║
+	╚██████╗██║  ██║██║  ██║██║██║ ╚████║███████║██║  ██║╚███╔███╔╝
+	 ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝
+	    By F-Secure Countercept (@FranticTyping, @AlexKornitzer)
 
-    [+] Created chainsaw_2021-06-28T20-42-25/system_log_was_cleared.csv
-    [+] Created chainsaw_2021-06-28T20-42-25/event_log_service_stopped.csv
-    [+] Created chainsaw_2021-06-28T20-42-25/new_user_created.csv
-    [+] Created chainsaw_2021-06-28T20-42-25/4624_logins.csv
-    [+] Created chainsaw_2021-06-28T20-42-25/user_added_to_interesting_group.csv
-    [+] Created chainsaw_2021-06-28T20-42-25/audit_log_was_cleared.csv
-    [+] Created chainsaw_2021-06-28T20-42-25/account_brute_forcing.csv
+	[+] Found 268 EVTX files
+	[!] Continuing without detection rules, no path provided
+	[+] Hunting: [========================================] 268/268
 
-    [+] 18 Detections found
+	[+] Created security_audit_log_was_cleared.csv
+	[+] Created windows_defender_detections.csv
+	[+] Created system_log_was_cleared.csv
+	[+] Created new_user_created.csv
+	[+] Created user_added_to_interesting_group.csv
+	[+] Created 4624_logins.csv
 
+	[+] 51 Detections found
 
 *Hunt through all event logs in a specific path, apply detection logic and TAU rules from the specified path*
 
@@ -572,4 +508,3 @@ When using Sigma rule detection logic, Chainsaw requires a 'mapping file' to tel
  - [Sigma](https://github.com/SigmaHQ/sigma) detection rules
  - [EVTX parser](https://github.com/omerbenamram/evtx) library by [@OBenamram](https://twitter.com/obenamram?lang=en)
  - [TAU Engine](https://github.com/countercept/tau-engine) Library by [@AlexKornitzer](https://twitter.com/AlexKornitzer?lang=en)
-
