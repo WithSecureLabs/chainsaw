@@ -55,7 +55,7 @@ pub struct SearchOpts {
     #[structopt(long = "end-date")]
     pub end_date: Option<String>,
 
-    /// File to write output to
+    /// Output with be saved to the specified file path, this is ignored by --csv
     #[structopt(long = "output")]
     pub output: Option<PathBuf>,
 }
