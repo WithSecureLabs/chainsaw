@@ -78,9 +78,9 @@ When using Sigma rule detection logic, Chainsaw requires a 'mapping file' to tel
 
     ./chainsaw search ~/Downloads/evtx_files/security.evtx -e 4624 -s "bob" -i
 
-   *Search a specific evtx log for logon events, with a matching regex pattern. Save results to file*
+   *Search a specific evtx log for logon events, with a matching regex pattern, output in JSON format*
 
-     ./chainsaw search ~/Downloads/evtx_files/security.evtx -e 4624 -r "bob[a-zA-Z]" -o out.txt
+     ./chainsaw search ~/Downloads/evtx_files/security.evtx -e 4624 -r "bob[a-zA-Z]" --json
 
 
 ### Hunting
