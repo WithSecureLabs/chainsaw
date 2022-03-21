@@ -192,7 +192,7 @@ pub fn detect_tau_matches(
                     return None;
                 }
             } else {
-                //cs_println!("ERROR Could not find provider")
+                //cs_eprintln!("ERROR Could not find provider")
                 return None;
             }
 
@@ -201,8 +201,8 @@ pub fn detect_tau_matches(
                 let h = match ajson::get(&event.to_string(), v) {
                     Some(h) => h.to_string(),
                     None => {
-                        // cs_println!("{} - could not match: {}", event_id, v);
-                        // cs_println!("{:?}", event);
+                        // cs_eprintln!("{} - could not match: {}", event_id, v);
+                        // cs_eprintln!("{:?}", event);
                         continue;
                     }
                 };

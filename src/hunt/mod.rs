@@ -628,7 +628,7 @@ fn save_hunt_results(dir: PathBuf, detections: &[Detection]) -> Result<()> {
             }
             if !header {
                 // Write headers to CSV
-                cs_println!("[+] Created {}", filename);
+                cs_eprintln!("[+] Created {}", filename);
                 writer.write_record(&detection.headers)?;
                 header = true;
             }

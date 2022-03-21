@@ -53,14 +53,48 @@ where
 
 macro_rules! cs_print {
     ($($arg:tt)*) => ({
-        print!($($arg)*);
+        use std::io::Write;
+        unsafe {
+            match $crate::write::WRITER.output.as_ref() {
+                Some(mut f) => {
+                    f.write_all(format!($($arg)*).as_bytes()).expect("could not write to file");
+                }
+                None => {
+                    print!($($arg)*);
+                }
+            }
+        }
     })
 }
 
 macro_rules! cs_println {
-    ($($arg:tt)*) => ({
-        println!($($arg)*);
-    })
+    () => {
+        use std::io::Write;
+        unsafe {
+            match $crate::write::WRITER.output.as_ref() {
+                Some(mut f) => {
+                    f.write_all(b"\n").expect("could not write to file");
+                }
+                None => {
+                    println!();
+                }
+            }
+        }
+    };
+    ($($arg:tt)*) => {
+        use std::io::Write;
+        unsafe {
+            match $crate::write::WRITER.output.as_ref() {
+                Some(mut f) => {
+                    f.write_all(format!($($arg)*).as_bytes()).expect("could not write to file");
+                    f.write_all(b"\n").expect("could not write to file");
+                }
+                None => {
+                    println!($($arg)*);
+                }
+            }
+        }
+    }
 }
 
 #[macro_export]

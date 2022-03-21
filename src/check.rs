@@ -30,7 +30,7 @@ pub fn run_check(opt: CheckOpts) -> Result<String> {
             ))
         }
     }
-    cs_println!("[+] Validating supplied detection rules...\n\r");
+    cs_eprintln!("[+] Validating supplied detection rules...\n\r");
     load_detection_rules(&opt.rules_path, true, &mapping_file, opt.verbose)?;
     Ok("".to_string())
 }
