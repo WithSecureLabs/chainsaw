@@ -39,7 +39,7 @@ pub struct SearchOpts {
     pub case_insensitive: bool,
 
     /// Output matching event log entries in a JSON format
-    #[structopt(short, long = "json", group = "output")]
+    #[structopt(short, long = "json")]
     pub json: bool,
 
     /// Use this option to search EVTx files for the regex pattern supplied. If a pattern match is found, the
