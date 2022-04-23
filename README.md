@@ -61,8 +61,7 @@ If you want to quickly see what Chainsaw looks like when it runs, you can use th
 ./chainsaw hunt evtx_attack_samples/ --rules sigma_rules/ --mapping mapping_files/sigma-mapping.yml
 ```
 
-## Supporting Additional Event IDs (via Mapping Files)
-When using Sigma rule detection logic, Chainsaw requires a 'mapping file' to tell it which event IDs to check, what fields are important, and which fields to output in the table view. The included sigma mapping in the "mapping_files" directory already supports most of the key Event IDs, but if you want to add support for additional event IDs you can use this mapping file as a template.
+
 
 ## Examples
 ---
@@ -502,6 +501,215 @@ When using Sigma rule detection logic, Chainsaw requires a 'mapping file' to tel
     │ 2019-09-22 11:23:19 │ 4732 │ "MSEDGEWIN10" │ User added to local group │ "S-1-5-20"                                      │ "Administrators" │
     └─────────────────────┴──────┴───────────────┴───────────────────────────┴─────────────────────────────────────────────────┴──────────────────┘
 
+
+## Implementing Your Own Rules
+The following sections will guide you through how to work with Chainsaw's mapping files in order to add support for additional Sigma rules that may be unsupported by Chainsaw's default configuration.
+
+### What is the mapping file?
+In order to support Sigma rule detection logic, Chainsaw requires a 'mapping file' to specify:
+
+ - Which event IDs to process
+ - Which fields in the event logs are important
+ - Which fields to include when displaying the output of Chainsaw
+
+The included sigma mapping in the "mapping_files" directory already supports most of the key Event IDs, but if you want to add support for additional event IDs or use additional event log fields in a Sigma rule then you'll need to augment the mapping file. 
+
+Let's take a look at the default mapping file that ships with Chainsaw. The mapping file is written in Yaml and contains three top level keys:
+
+ - kind
+ - exclusions
+ - mappings
+
+#### Kind
+
+	# Supported values are Stalker and Sigma
+	kind: sigma
+
+The 'kind' key tells Chainsaw whether the specified rules are in a Sigma rule format, or in a Stalker rule format. For the vast majority of Chainsaw users you're going to be using the Sigma rule format. Stalker rules are a custom rule format that are used at F-Secure and are not publicly available. 
+
+*Tl;Dr - Unless you know what you're doing, leave this key set to 'sigma'*
+
+#### Exclusions
+
+	exclusions:
+	  - "Wuauclt Network Connection"
+	  - "Exports Registry Key To an Alternate Data Stream"
+	  - "NetNTLM Downgrade Attack"
+	  - "Non Interactive PowerShell"
+
+The exclusions key tells Chainsaw to ignore certain rules by their name. For example, in testing we found that the 'Non Interactive PowerShell' Sigma rule is very noisy and resulted in significant bloat to the output of Chainsaw. The default mapping files specifies this rule name in the 'exclusions' key to skip this rule if it's provided. 
+
+Tl;Dr - *You can use the exclusions sections of the mapping file to skip certain rules by name*
+
+#### Mappings
+ 
+	mappings:
+	  1: <----- Event ID
+	    title: "Suspicious Process Creation"
+	    provider: "Microsoft-Windows-Sysmon" <----- Event Provider
+	    search_fields: <---- Map Sigma fields to Event Log Fields
+	      Image: "Event.EventData.Image"
+	      CommandLine: "Event.EventData.CommandLine"
+	      ParentImage: "Event.EventData.ParentImage"
+	      ParentCommandLine: "Event.EventData.ParentCommandLine"
+	      OriginalFileName: "Event.EventData.OriginalFileName"
+	    table_headers: <------- Which fields to output in table/csv/json 
+	      context_field: "Event.EventData.Image"
+	      command_line: "Event.EventData.CommandLine"
+
+The mappings key is the core part of the mappings file. This section tells Chainsaw:
+
+ - What event IDs to process (e.g. Event ID 4104)
+ - What event ID provider to process  (e.g. Microsoft-Windows-Sysmon)
+ - What fields in those event logs to care process (e.g. Event.EventData.OriginalFileName)
+ - What fields to display in the table output when a rule matches 
+
+Let's take a look at each of the sub-keys in turn:
+
+##### Event ID
+
+If we look at the example mapping file shown a few lines above, this snippet is telling Chainsaw to process all of the Windows Event Logs that have the ID of '1'.  **When Chainsaw parses event logs in 'hunt' mode, if the event ID is not listed in the mapping file, it will be ignored.** This approach helps to drastically speed up the execution time of Chainsaw, because it means that we only perform rule matching on the event logs that we definitely care about.
+
+##### Provider
+
+Only specifying the event ID is not granular enough; random Windows applications can specify their own event ID so if we want to target just the process creation event logs for sysmon (which is what we're looking for with Event ID 1) then we need to be more specific about which event logs we're interested in. This is why we also need to specify the provider as well:
+
+	provider: "Microsoft-Windows-Sysmon"
+
+So in this case, Chainsaw will only process Windows event log entries if the event ID is "1" AND the provider is "Microsoft-Windows-Sysmon".
+
+##### Title
+
+The *title* key specifies what text Chainsaw should put at the top of each section of output relating to detections for these event IDs. So in this example, all detections relating to EventID: 1 from the Sysmon provider will be titled "Suspicious Process Creation":
+
+	[+] Detection: Suspicious Process Creation
+	    ┌─────────────────────┬────┬──────────────────────────────────────────┬────────────────────────────────┬────────────────────────────────────────────────────┬────────────────────────────────────────────────────┐
+	    │     system_time     │ id │             detection_rules              │         computer_name          │               Event.EventData.Image                │                    command_line                    │
+	    ├─────────────────────┼────┼──────────────────────────────────────────┼────────────────────────────────┼────────────────────────────────────────────────────┼────────────────────────────────────────────────────┤
+	    │ 2019-02-16 10:02:21 │ 1  │ ‣ Exfiltration and Tunneling             │ "PC01.example.corp"            │ C:\Users\IEUser\Desktop\plink.exe                  │ plink.exe 10.0.2.18 -P 80 -C -R 127.0.0.3:4444:127 │
+	    │                     │    │ Tools Execution                          │                                │                                                    │ .0.0.2:3389 -l test -pw test                       │
+    
+##### search_fields
+
+The search fields sub-key tells chainsaw which fields in the event log to process, and how they should be mapped to the Sigma rule format. Let's look at an example, let's say we want to run the following Sigma rule over all Process Creation events from Sysmon:
+
+	title: Suspicious AdFind Execution
+	id: 75df3b17-8bcc-4565-b89b-c9898acef911
+	status: experimental
+	description: Detects the execution of a AdFind for Active Directory enumeration
+	references:
+	    - https://social.technet.microsoft.com/wiki/contents/articles/7535.adfind-command-examples.aspx
+	    - https://github.com/center-for-threat-informed-defense/adversary_emulation_library/blob/master/fin6/Emulation_Plan/Phase1.md
+	    - https://thedfirreport.com/2020/05/08/adfind-recon/
+	author: FPT.EagleEye Team, omkar72, oscd.community
+	date: 2020/09/26
+	modified: 2021/05/12
+	tags:
+	    - attack.discovery
+	    - attack.t1018
+	    - attack.t1087.002
+	    - attack.t1482
+	    - attack.t1069.002
+	logsource:
+	    product: windows
+	    category: process_creation
+	detection:
+	    selection:
+	        CommandLine|contains:
+	            - 'objectcategory'
+	            - 'trustdmp'
+	            - 'dcmodes'
+	            - 'dclist'
+	            - 'computers_pwdnotreqd'
+	        Image|endswith: '\adfind.exe'
+	    condition: selection
+	falsepositives:
+	    - Administrative activity
+	level: medium
+
+In the Sigma rule above, we can see that the detection criteria relies on two key fields:
+
+ - CommandLine
+ - Image
+
+Without a mapping file, Chainsaw wouldn't know which fields in the event log (they're not always named the same) to apply this logic to. So we need to tell Chainsaw which event log fields are the CommandLine and the Image. Fortunately Chainsaw gives us a way to find out this information, let's look at an example event ID 1 log:
+
+	> % ./chainsaw search -e 1 ~/chainsaw/evtx_attack_samples/ -q | head -n 50
+	---
+	Event:
+	  EventData:
+	    CommandLine: "plink.exe  10.0.2.18 -P 80 -C -R  127.0.0.3:4444:127.0.0.2:3389 -l test -pw test" <------ Command Line
+	    Company: Simon Tatham
+	    CurrentDirectory: "C:\\Users\\IEUser\\Desktop\\"
+	    Description: "Command-line SSH, Telnet, and Rlogin client"
+	    FileVersion: Release 0.70
+	    Hashes: SHA1=7806AD24F669CD8BB9EBE16F87E90173047F8EE4
+	    Image: "C:\\Users\\IEUser\\Desktop\\plink.exe" <----- Process Name
+	    IntegrityLevel: High
+	    LogonGuid: 365ABB72-D6AB-5C67-0000-002056660200
+	    LogonId: "0x26656"
+	    ParentCommandLine: "\"C:\\Windows\\system32\\cmd.exe\" "
+	    ParentImage: "C:\\Windows\\System32\\cmd.exe"
+	    ParentProcessGuid: 365ABB72-D92A-5C67-0000-0010CB580900
+	    ParentProcessId: 3904
+	    ProcessGuid: 365ABB72-DFAD-5C67-0000-0010E0811500
+	    ProcessId: 2312
+	    Product: PuTTY suite
+	    RuleName: ""
+	    TerminalSessionId: 1
+	    User: "PC01\\IEUser"
+	    UtcTime: "2019-02-16 10:02:21.934"
+	  System:
+	    Channel: Microsoft-Windows-Sysmon/Operational
+	    Computer: PC01.example.corp
+	    Correlation: ~
+	    EventID: 1
+	    EventRecordID: 1940899
+	    Execution_attributes:
+	      ProcessID: 1728
+	      ThreadID: 412
+	    Keywords: "0x8000000000000000"
+	    Level: 4
+	    Opcode: 0
+	    Provider_attributes:
+	      Guid: 5770385F-C22A-43E0-BF4C-06F5698FFBD9
+	      Name: Microsoft-Windows-Sysmon <----- Provider
+	    Security_attributes:
+	      UserID: S-1-5-18
+	    Task: 1
+	    TimeCreated_attributes:
+	      SystemTime: "2019-02-16T10:02:21.934438Z"
+	    Version: 5
+	Event_attributes:
+	  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
+	
+Looking at the output of Chainsaw above, we can see that the fields that we need to map are:
+
+ - CommandLine == Event.EventData.CommandLine
+ - Image == Event.EventData.Image
+
+By adding this information to the mapping file, Chainsaw can now run this sigma rule against the process creation event logs.
+
+##### table_headers
+
+The table_headers key in the mapping file tells Chainsaw which fields to output when displaying detections. Displaying all the fields in the event log would be difficult to format and would be difficult for analysts to view, so instead we specify the key fields that we care about.
+
+This section **must** contain at least one sub-key named: *context_field*. The field specified in this key will always be placed in the left most position on the table output. All other specified fields will be placed after that. Let's take a look at an example:
+
+	    table_headers: <------- Which fields to output in table/csv
+	      context_field: "Event.EventData.Image"
+	      command_line: "Event.EventData.CommandLine"
+
+This means that for every detection for Event ID: 1 (sysmon process creation) events, the  **Event.EventData.Image** and **Event.EventData.CommandLine** fields from the matching event log will be shown in the output of Chainsaw:
+
+	[+] Detection: Suspicious Process Creation
+	    ┌─────────────────────┬────┬──────────────────────────────────────────┬────────────────────────────────┬────────────────────────────────────────────────────┬────────────────────────────────────────────────────┐
+	    │     system_time     │ id │             detection_rules              │         computer_name          │               Event.EventData.Image                │                    command_line                    │
+	    ├─────────────────────┼────┼──────────────────────────────────────────┼────────────────────────────────┼────────────────────────────────────────────────────┼────────────────────────────────────────────────────┤
+	    │ 2019-02-16 10:02:21 │ 1  │ ‣ Exfiltration and Tunneling             │ "PC01.example.corp"            │ C:\Users\IEUser\Desktop\plink.exe                  │ plink.exe 10.0.2.18 -P 80 -C -R 127.0.0.3:4444:127 │
+	    │                     │    │ Tools Execution                          │                                │                                                    │ .0.0.2:3389 -l test -pw test                       │
+
+(Note: the system_time, event ID, detection_rule and computer name will always be shown in addition to the fields specified in the table_headers section) 
 
 ### Acknowledgements
  - [EVTX-ATTACK-SAMPLES](https://github.com/sbousseaden/EVTX-ATTACK-SAMPLES) by [SBousseaden](https://twitter.com/SBousseaden)
