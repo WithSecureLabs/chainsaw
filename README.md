@@ -502,7 +502,7 @@ If you want to quickly see what Chainsaw looks like when it runs, you can use th
     └─────────────────────┴──────┴───────────────┴───────────────────────────┴─────────────────────────────────────────────────┴──────────────────┘
 
 
-## Implementing Your Own Rules
+## How to add support for more rules
 The following sections will guide you through how to work with Chainsaw's mapping files in order to add support for additional Sigma rules that may be unsupported by Chainsaw's default configuration.
 
 ### What is the mapping file?
@@ -512,7 +512,7 @@ In order to support Sigma rule detection logic, Chainsaw requires a 'mapping fil
  - Which fields in the event logs are important
  - Which fields to include when displaying the output of Chainsaw
 
-The included sigma mapping in the "mapping_files" directory already supports most of the key Event IDs, but if you want to add support for additional event IDs or use additional event log fields in a Sigma rule then you'll need to augment the mapping file. 
+The included sigma mapping in the "mapping_files" directory already supports most of the key Event IDs, but if you want to add support for additional event IDs or use additional event log fields in a Sigma rule then you'll need to augment the mapping file.
 
 Let's take a look at the default mapping file that ships with Chainsaw. The mapping file is written in Yaml and contains three top level keys:
 
@@ -525,7 +525,7 @@ Let's take a look at the default mapping file that ships with Chainsaw. The mapp
 	# Supported values are Stalker and Sigma
 	kind: sigma
 
-The 'kind' key tells Chainsaw whether the specified rules are in a Sigma rule format, or in a Stalker rule format. For the vast majority of Chainsaw users you're going to be using the Sigma rule format. Stalker rules are a custom rule format that are used at F-Secure and are not publicly available. 
+The 'kind' key tells Chainsaw whether the specified rules are in a Sigma rule format, or in a Stalker rule format. For the vast majority of Chainsaw users you're going to be using the Sigma rule format. Stalker rules are a custom rule format that are used at F-Secure and are not publicly available.
 
 *Tl;Dr - Unless you know what you're doing, leave this key set to 'sigma'*
 
@@ -537,12 +537,12 @@ The 'kind' key tells Chainsaw whether the specified rules are in a Sigma rule fo
 	  - "NetNTLM Downgrade Attack"
 	  - "Non Interactive PowerShell"
 
-The exclusions key tells Chainsaw to ignore certain rules by their name. For example, in testing we found that the 'Non Interactive PowerShell' Sigma rule is very noisy and resulted in significant bloat to the output of Chainsaw. The default mapping files specifies this rule name in the 'exclusions' key to skip this rule if it's provided. 
+The exclusions key tells Chainsaw to ignore certain rules by their name. For example, in testing we found that the 'Non Interactive PowerShell' Sigma rule is very noisy and resulted in significant bloat to the output of Chainsaw. The default mapping files specifies this rule name in the 'exclusions' key to skip this rule if it's provided.
 
 Tl;Dr - *You can use the exclusions sections of the mapping file to skip certain rules by name*
 
 #### Mappings
- 
+
 	mappings:
 	  1: <----- Event ID
 	    title: "Suspicious Process Creation"
@@ -553,7 +553,7 @@ Tl;Dr - *You can use the exclusions sections of the mapping file to skip certain
 	      ParentImage: "Event.EventData.ParentImage"
 	      ParentCommandLine: "Event.EventData.ParentCommandLine"
 	      OriginalFileName: "Event.EventData.OriginalFileName"
-	    table_headers: <------- Which fields to output in table/csv/json 
+	    table_headers: <------- Which fields to output in table/csv/json
 	      context_field: "Event.EventData.Image"
 	      command_line: "Event.EventData.CommandLine"
 
@@ -562,7 +562,7 @@ The mappings key is the core part of the mappings file. This section tells Chain
  - What event IDs to process (e.g. Event ID 4104)
  - What event ID provider to process  (e.g. Microsoft-Windows-Sysmon)
  - What fields in those event logs to care process (e.g. Event.EventData.OriginalFileName)
- - What fields to display in the table output when a rule matches 
+ - What fields to display in the table output when a rule matches
 
 Let's take a look at each of the sub-keys in turn:
 
@@ -588,7 +588,7 @@ The *title* key specifies what text Chainsaw should put at the top of each secti
 	    ├─────────────────────┼────┼──────────────────────────────────────────┼────────────────────────────────┼────────────────────────────────────────────────────┼────────────────────────────────────────────────────┤
 	    │ 2019-02-16 10:02:21 │ 1  │ ‣ Exfiltration and Tunneling             │ "PC01.example.corp"            │ C:\Users\IEUser\Desktop\plink.exe                  │ plink.exe 10.0.2.18 -P 80 -C -R 127.0.0.3:4444:127 │
 	    │                     │    │ Tools Execution                          │                                │                                                    │ .0.0.2:3389 -l test -pw test                       │
-    
+
 ##### search_fields
 
 The search fields sub-key tells chainsaw which fields in the event log to process, and how they should be mapped to the Sigma rule format. Let's look at an example, let's say we want to run the following Sigma rule over all Process Creation events from Sysmon:
@@ -682,7 +682,7 @@ Without a mapping file, Chainsaw wouldn't know which fields in the event log (th
 	    Version: 5
 	Event_attributes:
 	  xmlns: "http://schemas.microsoft.com/win/2004/08/events/event"
-	
+
 Looking at the output of Chainsaw above, we can see that the fields that we need to map are:
 
  - CommandLine == Event.EventData.CommandLine
@@ -709,7 +709,7 @@ This means that for every detection for Event ID: 1 (sysmon process creation) ev
 	    │ 2019-02-16 10:02:21 │ 1  │ ‣ Exfiltration and Tunneling             │ "PC01.example.corp"            │ C:\Users\IEUser\Desktop\plink.exe                  │ plink.exe 10.0.2.18 -P 80 -C -R 127.0.0.3:4444:127 │
 	    │                     │    │ Tools Execution                          │                                │                                                    │ .0.0.2:3389 -l test -pw test                       │
 
-(Note: the system_time, event ID, detection_rule and computer name will always be shown in addition to the fields specified in the table_headers section) 
+(Note: the system_time, event ID, detection_rule and computer name will always be shown in addition to the fields specified in the table_headers section)
 
 ### Acknowledgements
  - [EVTX-ATTACK-SAMPLES](https://github.com/sbousseaden/EVTX-ATTACK-SAMPLES) by [SBousseaden](https://twitter.com/SBousseaden)
