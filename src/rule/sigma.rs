@@ -16,16 +16,6 @@ struct Detection {
     pub identifiers: Mapping,
 }
 
-//#[derive(Clone, Deserialize)]
-//struct LogSource {
-//    #[serde(default)]
-//    pub category: Option<String>,
-//    #[serde(default)]
-//    pub product: Option<String>,
-//    #[serde(default)]
-//    pub service: Option<String>,
-//}
-
 #[derive(Clone, Deserialize)]
 struct Header {
     pub title: String,
@@ -46,8 +36,6 @@ struct Sigma {
     pub header: Option<Header>,
     #[serde(default)]
     pub level: Option<String>,
-    //#[serde(default)]
-    //pub logsource: Option<LogSource>,
     #[serde(default)]
     pub detection: Option<Detection>,
 }

@@ -1,0 +1,166 @@
+---
+name: Chainsaw's Sigma mappings for Event Logs
+kind: evtx
+rules: sigma
+
+ignore:
+  - Defense evasion via process reimaging
+  - Exports Registry Key To an Alternate Data Stream
+  - NetNTLM Downgrade Attack
+  - Non Interactive PowerShell
+  - Wuauclt Network Connection
+
+groups:
+  - name: Suspicious Process Creation
+    timestamp: Event.System.TimeCreated
+    filter:
+      - Event.System.EventID: 1
+        Event.System.Provider: Microsoft-Windows-Sysmon
+    fields:
+      CommandLine: Event.EventData.CommandLine
+      Computer: Event.System.Computer
+      EventID: Event.System.EventID
+      Image: Event.EventData.Image
+      OriginalFileName: Event.EventData.OriginalFileName
+      ParentCommandLine: Event.EventData.ParentCommandLine
+      ParentImage: Event.EventData.ParentImage
+    default:
+      - EventID
+      - Computer
+      - Image
+      - CommandLine
+
+  - name: Suspicious Network Connection
+    timestamp: Event.System.TimeCreated
+    filter:
+      - Event.System.EventID: 3
+        Event.System.Provider: Microsoft-Windows-Sysmon
+    fields:
+      Computer: Event.System.Computer
+      DestinationIp: Event.EventData.DestinationIp
+      DestinationHostname: Event.EventData.DestinationHostname
+      DestinationPort: Event.EventData.DestinationPort
+      DestinationIsIpv6: Event.EventData.DestinationIsIpv6
+      EventID: Event.System.EventID
+      Image: Event.EventData.Image
+      Initiated: Event.EventData.Initiated
+      SourcePort: Event.EventData.SourcePort
+      User: Event.EventData.User
+    default:
+      - EventID
+      - Computer
+      - Image
+      - DestinationIp
+      - DestinationPort
+
+  - name: Suspicious Image Load
+    timestamp: Event.System.TimeCreated
+    filter:
+      - Event.System.EventID: 7
+        Event.System.Provider: Microsoft-Windows-Sysmon
+    fields:
+      Computer: Event.System.Computer
+      EventID: Event.System.EventID
+      Image: Event.EventData.Image
+      ImageLoaded: Event.EventData.ImageLoaded
+    default:
+      - EventID
+      - Computer
+      - Image
+      - ImageLoaded
+
+  - name: Suspicious File Creation
+    timestamp: Event.System.TimeCreated
+    filter:
+      - Event.System.EventID: 11
+        Event.System.Provider: Microsoft-Windows-Sysmon
+    fields:
+      Computer: Event.System.Computer
+      EventID: Event.System.EventID
+      Image: Event.EventData.Image
+      TargetFilename: Event.EventData.TargetFilename
+    default:
+      - EventID
+      - Computer
+      - TargetFilename
+      - Image
+
+  - name: Suspicious Registry Event
+    timestamp: Event.System.TimeCreated
+    filter:
+      - Event.System.EventID: 13
+        Event.System.Provider: Microsoft-Windows-Sysmon
+    fields:
+      Computer: Event.System.Computer
+      Details: Event.EventData.Details
+      EventID: Event.System.EventID
+      Image: Event.EventData.Image
+      TargetObject: Event.EventData.TargetObject
+    default:
+      - EventID
+      - Computer
+      - Details
+      - TargetObject
+
+  - name: Suspicious Service Installed
+    timestamp: Event.System.TimeCreated
+    filter:
+      - Event.System.EventID: 7045
+        Event.System.Provider: Service Control Manager
+    fields:
+      CommandLine: Event.EventData.ImagePath
+      Computer: Event.System.Computer
+      EventID: Event.System.EventID
+      ServiceName: Event.EventData.ServiceName
+    default:
+      - EventID
+      - Computer
+      - CommandLine
+      - ServiceName
+
+  - name: Suspicious Command Line
+    timestamp: Event.System.TimeCreated
+    filter:
+      - Event.System.EventID: 4688
+        Event.System.Provider: Microsoft-Windows-Security-Auditing
+    fields:
+      CommandLine: Event.EventData.CommandLine
+      Computer: Event.System.Computer
+      EventID: Event.System.EventID
+      Image: Event.EventData.NewProcessName
+      UserName: Event.EventData.SubjectUserName
+    default:
+      - EventID
+      - Computer
+      - CommandLine
+      - Image
+
+  - name: Suspicious Powershell ScriptBlock
+    timestamp: Event.System.TimeCreated
+    filter:
+      - Event.System.EventID: 4104
+        Event.System.Provider: Microsoft-Windows-PowerShell
+    fields:
+      Computer: Event.System.Computer
+      EventID: Event.System.EventID
+      ScriptBlockText: Event.EventData.ScriptBlockText
+    default:
+      - EventID
+      - Computer
+      - ScriptBlockText
+
+  - name: Suspicious Scheduled Task Created
+    timestamp: Event.System.TimeCreated
+    filter:
+      - Event.System.EventID: 4698
+        Event.System.Provider: Microsoft-Windows-Security-Auditing
+    fields:
+      CommandLine: Event.EventData.TaskContent
+      Computer: Event.System.Computer
+      EventID: Event.System.EventID
+      UserName: Event.EventData.SubjectUserName
+    default:
+      - EventID
+      - Computer
+      - CommandLine
+      - UserName

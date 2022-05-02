@@ -1,38 +1,30 @@
 [package]
 name = "chainsaw"
-version = "1.1.7"
+version = "2.0.0-alpha.0"
 repository = "https://github.com/countercept/chainsaw"
 description = "Rapidly Search and Hunt Through Windows Event Logs"
 authors = ["James Dorgan <james.dorgan@f-secure.com>","Alex Kornitzer <alex.kornitzer@f-secure.com>"]
 readme = "README.md"
 license = "GPL3"
-edition = "2018"
+edition = "2021"
 
 
 [dependencies]
-ajson = "0.2"
+aho-corasick = "0.7"
 anyhow = "1.0"
 chrono = "0.4"
+chrono-tz = { version = "0.4", features = ["serde"] }
 colour = "0.6"
-csv = "1.1"
-env_logger = "0.6"
 evtx = "0.7"
-failure = "0.1"
-glob = "0.3"
 indicatif = "0.16"
-is_elevated = "0.1.2"
-itertools = "0.10"
-log = "0.4"
-prettytable-rs = "0.7"
+prettytable-rs = "0.8"
 rayon = "1.5"
-regex = "1.4"
-serde = { version = "=1.0.117", features = ["derive"]}
-serde_derive = "1.0"
+regex = "1.5"
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.8"
 structopt = "0.3"
-tau-engine = { version = "1.0", features = ["json"] }
-walkdir = "2.3"
+tau-engine = { version = "1.0", features = ["core", "json"] }
 
 
 [dev-dependencies]
