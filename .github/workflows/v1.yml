@@ -1,9 +1,9 @@
-name: ci
+name: v1
 
 on:
   push:
     tags:
-        - v*
+        - v1*
 jobs:
   build-linux:
     runs-on: ubuntu-latest
@@ -13,10 +13,6 @@ jobs:
         uses: actions/checkout@v2
         with:
           submodules: recursive
-
-      - name: Exit if not on master branch
-        if: endsWith(github.ref, 'master') == false
-        run: exit -1
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
