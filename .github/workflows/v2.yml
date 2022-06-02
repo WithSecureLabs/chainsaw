@@ -29,7 +29,7 @@ jobs:
         run: cargo build --all --release --target x86_64-unknown-linux-gnu && strip target/x86_64-unknown-linux-gnu/release/chainsaw
 
       - name: Move files to artifacts
-        run: mv target/x86_64-unknown-linux-gnu/release/chainsaw mapping_files LICENCE README.md chainsaw/
+        run: mv target/x86_64-unknown-linux-gnu/release/chainsaw mappings LICENCE README.md chainsaw/
 
       - name: Create ZIP File
         run: tar -czf chainsaw_x86_64-unknown-linux-gnu.tar.gz chainsaw/*
@@ -66,7 +66,7 @@ jobs:
         run: cargo build --all --release --target x86_64-unknown-linux-musl && strip target/x86_64-unknown-linux-musl/release/chainsaw
 
       - name: Move files to artifacts
-        run: mv target/x86_64-unknown-linux-musl/release/chainsaw mapping_files LICENCE README.md chainsaw/
+        run: mv target/x86_64-unknown-linux-musl/release/chainsaw mappings LICENCE README.md chainsaw/
 
       - name: Create ZIP File
         run: tar -czf chainsaw_x86_64-unknown-linux-musl.tar.gz chainsaw/*
@@ -102,7 +102,7 @@ jobs:
         run: mkdir chainsaw
 
       - name: Move files to artifacts
-        run: move target/release/chainsaw.exe chainsaw/ ; move chainsaw/ ; move mapping_files chainsaw; move LICENCE chainsaw; move README.md chainsaw/
+        run: move target/release/chainsaw.exe chainsaw/ ; move chainsaw/ ; move mappings chainsaw; move LICENCE chainsaw; move README.md chainsaw/
 
       - name: Create ZIP File
         shell: pwsh
@@ -140,7 +140,7 @@ jobs:
         run: cargo build --all --release && strip target/release/chainsaw
 
       - name: Move files to artifacts
-        run: mv target/release/chainsaw mapping_files LICENCE README.md chainsaw/
+        run: mv target/release/chainsaw mappings LICENCE README.md chainsaw/
 
       - name: Create ZIP File
         run: zip -qq -r chainsaw_x86_64-apple-darwin.zip chainsaw
