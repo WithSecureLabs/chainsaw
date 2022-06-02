@@ -1,15 +1,18 @@
 use std::fs::File;
+use std::path::PathBuf;
 
 use anyhow::Result;
 
 pub static mut WRITER: Writer = Writer {
     format: Format::Std,
     output: None,
+    path: None,
     quiet: false,
 };
 
 pub enum Format {
     Std,
+    Csv,
     Json,
 }
 
@@ -22,6 +25,7 @@ impl Default for Format {
 pub struct Writer {
     pub format: Format,
     pub output: Option<File>,
+    pub path: Option<PathBuf>,
     pub quiet: bool,
 }
 
@@ -30,6 +34,7 @@ impl Default for Writer {
         Self {
             format: Format::Std,
             output: None,
+            path: None,
             quiet: false,
         }
     }

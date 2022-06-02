@@ -105,14 +105,49 @@ impl Reader {
     }
 }
 
-pub fn get_files(path: &PathBuf, extension: &Option<String>) -> crate::Result<Vec<PathBuf>> {
+pub fn get_files(
+    path: &PathBuf,
+    extension: &Option<String>,
+    skip_errors: bool,
+) -> crate::Result<Vec<PathBuf>> {
     let mut files: Vec<PathBuf> = vec![];
     if path.exists() {
-        let metadata = fs::metadata(&path)?;
+        let metadata = match fs::metadata(&path) {
+            Ok(metadata) => metadata,
+            Err(e) => {
+                if skip_errors {
+                    cs_eyellowln!("failed to get metadata for file - {}", e);
+                    return Ok(files);
+                } else {
+                    anyhow::bail!(e);
+                }
+            }
+        };
         if metadata.is_dir() {
-            let directory = path.read_dir()?;
+            let directory = match path.read_dir() {
+                Ok(directory) => directory,
+                Err(e) => {
+                    if skip_errors {
+                        cs_eyellowln!("failed to read directory - {}", e);
+                        return Ok(files);
+                    } else {
+                        anyhow::bail!(e);
+                    }
+                }
+            };
             for dir in directory {
-                files.extend(get_files(&dir?.path(), &extension)?);
+                let dir = match dir {
+                    Ok(dir) => dir,
+                    Err(e) => {
+                        if skip_errors {
+                            cs_eyellowln!("failed to enter directory - {}", e);
+                            return Ok(files);
+                        } else {
+                            anyhow::bail!(e);
+                        }
+                    }
+                };
+                files.extend(get_files(&dir.path(), &extension, skip_errors)?);
             }
         } else {
             if let Some(extension) = extension {

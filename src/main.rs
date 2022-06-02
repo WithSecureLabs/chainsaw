@@ -46,6 +46,9 @@ enum Command {
         /// Set the column width for the tabular output.
         #[structopt(long = "column-width", conflicts_with = "json")]
         column_width: Option<u32>,
+        /// Print the output in csv format.
+        #[structopt(group = "format", long = "csv", requires("output"))]
+        csv: bool,
         /// Only hunt through files with the provided extension.
         #[structopt(long = "extension")]
         extension: Option<String>,
@@ -67,7 +70,7 @@ enum Command {
         /// Apply addional metadata for the tablar output.
         #[structopt(long = "metadata", conflicts_with = "json")]
         metadata: bool,
-        /// The file to output to.
+        /// The file/directory to output to.
         #[structopt(short = "o", long = "output")]
         output: Option<PathBuf>,
         /// Supress informational output.
@@ -162,27 +165,38 @@ fn print_title() {
     );
 }
 
-fn init_writer(output: Option<PathBuf>, json: bool, quiet: bool) -> crate::Result<()> {
-    let output = match &output {
+fn init_writer(output: Option<PathBuf>, csv: bool, json: bool, quiet: bool) -> crate::Result<()> {
+    let (path, output) = match &output {
         Some(path) => {
-            let file = match File::create(path) {
-                Ok(f) => f,
-                Err(e) => {
-                    return Err(anyhow::anyhow!(
-                        "Unable to write to specified output file - {} - {}",
-                        path.display(),
-                        e
-                    ));
-                }
-            };
-            Some(file)
+            if csv {
+                (Some(path.to_path_buf()), None)
+            } else {
+                let file = match File::create(path) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        return Err(anyhow::anyhow!(
+                            "Unable to write to specified output file - {} - {}",
+                            path.display(),
+                            e
+                        ));
+                    }
+                };
+                (None, Some(file))
+            }
         }
-        None => None,
+        None => (None, None),
     };
-    let format = if json { Format::Json } else { Format::Std };
+    let format = if csv {
+        Format::Csv
+    } else if json {
+        Format::Json
+    } else {
+        Format::Std
+    };
     let writer = Writer {
         format,
         output,
+        path,
         quiet,
     };
     set_writer(writer).expect("could not set writer");
@@ -201,6 +215,7 @@ fn run() -> Result<()> {
 
             load_unknown,
             column_width,
+            csv,
             extension,
             from,
             full,
@@ -213,7 +228,7 @@ fn run() -> Result<()> {
             timezone,
             to,
         } => {
-            init_writer(output, json, quiet)?;
+            init_writer(output, csv, json, quiet)?;
             if !opts.no_banner {
                 print_title();
             }
@@ -226,7 +241,7 @@ fn run() -> Result<()> {
             let mut count = 0;
             let mut rs = vec![];
             for path in &rules {
-                for file in get_files(path, &None)? {
+                for file in get_files(path, &None, skip_errors)? {
                     match load_rule(&RuleKind::Sigma, &file) {
                         Ok(mut r) => {
                             count += 1;
@@ -266,7 +281,7 @@ fn run() -> Result<()> {
             let hunter = hunter.build()?;
             let mut files = vec![];
             for path in &path {
-                files.extend(get_files(path, &extension)?);
+                files.extend(get_files(path, &extension, skip_errors)?);
             }
             let mut detections = vec![];
             let pb = cli::init_progress_bar(files.len() as u64, "Hunting".to_string());
@@ -276,7 +291,9 @@ fn run() -> Result<()> {
                 pb.inc(1);
             }
             pb.finish();
-            if json {
+            if csv {
+                cli::print_csv(&detections, hunter.mappings(), local, timezone)?;
+            } else if json {
                 cli::print_json(&detections, hunter.rules(), local, timezone)?;
             } else {
                 cli::print_detections(
@@ -297,14 +314,14 @@ fn run() -> Result<()> {
             );
         }
         Command::Lint { path, kind } => {
-            init_writer(None, false, false)?;
+            init_writer(None, false, false, false)?;
             if !opts.no_banner {
                 print_title();
             }
             cs_eprintln!("[+] Validating supplied detection rules...");
             let mut count = 0;
             let mut failed = 0;
-            for file in get_files(&path, &None)? {
+            for file in get_files(&path, &None, false)? {
                 if let Err(e) = lint_rule(&kind, &file) {
                     failed += 1;
                     cs_eprintln!("[!] {}", e);
@@ -338,7 +355,7 @@ fn run() -> Result<()> {
             timezone,
             to,
         } => {
-            init_writer(output, json, quiet)?;
+            init_writer(output, false, json, quiet)?;
             if !opts.no_banner {
                 print_title();
             }
@@ -359,7 +376,7 @@ fn run() -> Result<()> {
             }
             let mut files = vec![];
             for path in &paths {
-                files.extend(get_files(path, &extension)?);
+                files.extend(get_files(path, &extension, skip_errors)?);
             }
             let mut searcher = Searcher::builder()
                 .ignore_case(ignore_case)

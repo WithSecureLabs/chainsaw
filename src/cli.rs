@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs;
 
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
@@ -8,6 +9,7 @@ use tau_engine::Document;
 
 use crate::hunt::{Detection, Detections, Kind, Mapping};
 use crate::rule::Rule;
+use crate::write::WRITER;
 
 #[cfg(not(windows))]
 pub const RULE_PREFIX: &str = "‣";
@@ -100,7 +102,7 @@ pub fn print_detections(
         .collect();
     let rules: HashMap<_, _> = rules.iter().map(|r| (&r.tag, r)).collect();
 
-    // Do a signle unfold...
+    // Do a single unfold...
     let mut grouped: HashMap<
         (&Option<String>, &String),
         Vec<(&NaiveDateTime, &Kind, Vec<&String>)>,
@@ -214,6 +216,118 @@ pub fn print_detections(
         cs_greenln!("\n[+] Group: {}", key.1);
         cs_print_table!(table);
     }
+}
+
+pub fn print_csv(
+    detections: &[Detections],
+    mappings: &[Mapping],
+    local: bool,
+    timezone: Option<Tz>,
+) -> crate::Result<()> {
+    let directory = unsafe {
+        WRITER
+            .path
+            .as_ref()
+            .expect("could not get output directory")
+    };
+    fs::create_dir_all(directory)?;
+    let mappings: HashMap<_, HashMap<_, _>> = mappings
+        .iter()
+        .map(|m| (&m.name, m.groups.iter().map(|g| (&g.name, g)).collect()))
+        .collect();
+    // Do a single unfold...
+    let mut grouped: HashMap<
+        (&Option<String>, &String),
+        Vec<(&NaiveDateTime, &Kind, Vec<&String>)>,
+    > = HashMap::new();
+    for detection in detections {
+        let mut tags: HashMap<(&Option<String>, &String), (&NaiveDateTime, Vec<&String>)> =
+            HashMap::new();
+        for hit in &detection.hits {
+            let tags = tags
+                .entry((&hit.mapping, &hit.group))
+                .or_insert((&hit.timestamp, vec![]));
+            (*tags).1.push(&hit.tag);
+        }
+        for (k, v) in tags {
+            let grouped = grouped.entry(k).or_insert(vec![]);
+            (*grouped).push((&v.0, &detection.kind, v.1));
+        }
+    }
+    let mut keys = grouped.keys().cloned().collect::<Vec<_>>();
+    keys.sort();
+    for key in keys {
+        let mut grouped = grouped.remove(&key).expect("could not get grouped!");
+        grouped.sort_by(|x, y| x.0.cmp(&y.0));
+        // FIXME: Handle name clashes
+        let filename = format!("{}.csv", key.1.replace(" ", "_").to_lowercase());
+        let path = directory.join(&filename);
+        let mut csv = prettytable::csv::Writer::from_path(path)?;
+        cs_eprintln!("[+] Created {}", filename);
+        let (mapping, group) = key;
+        if let Some(mapping) = mapping {
+            if let Some(groups) = mappings.get(mapping) {
+                let group = groups.get(&group).expect("could not get group!");
+                let mut header = vec!["timestamp", "detections"];
+                if let Some(default) = group.default.as_ref() {
+                    for field in default {
+                        header.push(field);
+                    }
+                } else {
+                    header.push("data");
+                }
+                csv.write_record(header)?;
+                for (timestamp, kind, mut tags) in grouped {
+                    tags.sort();
+                    let localised = if let Some(timezone) = timezone {
+                        timezone
+                            .from_local_datetime(timestamp)
+                            .single()
+                            .expect("failed to localise timestamp")
+                            .to_rfc3339()
+                    } else if local {
+                        Utc.from_local_datetime(timestamp)
+                            .single()
+                            .expect("failed to localise timestamp")
+                            .to_rfc3339()
+                    } else {
+                        DateTime::<Utc>::from_utc(timestamp.clone(), Utc).to_rfc3339()
+                    };
+                    let mut cells = vec![localised];
+                    cells.push(
+                        tags.iter()
+                            .map(|tag| format!("{}", tag.as_str()))
+                            .collect::<Vec<_>>()
+                            .join(";"),
+                    );
+                    let document = match kind {
+                        Kind::Individual { document } => document,
+                        _ => continue,
+                    };
+                    if let Some(default) = group.default.as_ref() {
+                        for field in default {
+                            if let Some(value) = group
+                                .fields
+                                .get(field)
+                                .and_then(|k| document.data.find(k))
+                                .and_then(|v| v.to_string())
+                            {
+                                cells.push(value);
+                            } else {
+                                cells.push("".to_owned());
+                            }
+                        }
+                    } else {
+                        let json = serde_json::to_string(&document.data)
+                            .expect("could not serialise document");
+                        cells.push(json);
+                    }
+                    csv.write_record(cells)?;
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 pub fn print_json(
