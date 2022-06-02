@@ -5,7 +5,7 @@ pub(crate) use anyhow::Result;
 
 pub use file::{evtx, get_files, Reader};
 pub use hunt::{Detection, Hunter, HunterBuilder};
-pub use rule::{lint_rule, load_rule, Kind as RuleKind};
+pub use rule::{lint_rule, load_rule, sigma, Kind as RuleKind};
 pub use search::{Searcher, SearcherBuilder};
 pub use write::{set_writer, Format, Writer, WRITER};
 

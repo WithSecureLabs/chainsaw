@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use serde::Deserialize;
 
-pub use chainsaw::Rule;
+pub use self::chainsaw::Rule;
 
 pub mod chainsaw;
 pub mod sigma;

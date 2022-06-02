@@ -3,7 +3,7 @@ use std::path::Path;
 use regex::Regex;
 use serde_yaml::Value as Yaml;
 
-use chainsaw::convert::sigma;
+use chainsaw::sigma;
 
 mod common;
 
