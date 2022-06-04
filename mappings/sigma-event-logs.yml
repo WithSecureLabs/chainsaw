@@ -23,6 +23,9 @@ groups:
       - name: Event ID
         from: EventID
         to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
       - name: Computer
         from: Computer
         to: Event.System.Computer
@@ -54,6 +57,9 @@ groups:
       - name: Event ID
         from: EventID
         to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
       - name: Computer
         from: Computer
         to: Event.System.Computer
@@ -95,6 +101,9 @@ groups:
       - name: Event ID
         from: EventID
         to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
       - name: Computer
         from: Computer
         to: Event.System.Computer
@@ -117,6 +126,9 @@ groups:
       - name: Event ID
         from: EventID
         to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
       - name: Computer
         from: Computer
         to: Event.System.Computer
@@ -139,6 +151,9 @@ groups:
       - name: Event ID
         from: EventID
         to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
       - name: Computer
         from: Computer
         to: Event.System.Computer
@@ -164,6 +179,9 @@ groups:
       - name: Event ID
         from: EventID
         to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
       - name: Computer
         from: Computer
         to: Event.System.Computer
@@ -187,6 +205,9 @@ groups:
       - name: Event ID
         from: EventID
         to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
       - name: Computer
         from: Computer
         to: Event.System.Computer
@@ -213,6 +234,9 @@ groups:
       - name: Event ID
         from: EventID
         to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
       - name: Computer
         from: Computer
         to: Event.System.Computer
@@ -232,6 +256,9 @@ groups:
       - name: Event ID
         from: EventID
         to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
       - name: Computer
         from: Computer
         to: Event.System.Computer

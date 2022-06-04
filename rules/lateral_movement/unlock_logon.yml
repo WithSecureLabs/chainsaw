@@ -14,6 +14,8 @@ status: stable
 fields:
   - name: Event ID
     to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
   - name: Computer
     to: Event.System.Computer
   - name: User
