@@ -1,4 +1,3 @@
-use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::path::Path;
 
@@ -7,8 +6,6 @@ use regex::RegexSet;
 use serde_json::Value as Json;
 use tau_engine::{Document, Value as Tau};
 
-use crate::hunt::{Group, Huntable};
-use crate::rule::Rule;
 use crate::search::Searchable;
 
 pub type Evtx = SerializedEvtxRecord<Json>;
@@ -33,13 +30,6 @@ impl Parser {
     }
 }
 
-pub struct Mapper<'a>(&'a HashMap<String, String>, &'a Wrapper<'a>);
-impl<'a> Document for Mapper<'a> {
-    fn find(&self, key: &str) -> Option<Tau<'_>> {
-        self.0.get(key).and_then(|v| self.1.find(v))
-    }
-}
-
 pub struct Wrapper<'a>(pub &'a Json);
 impl<'a> Document for Wrapper<'a> {
     fn find(&self, key: &str) -> Option<Tau<'_>> {
@@ -59,30 +49,6 @@ impl<'a> Document for Wrapper<'a> {
                 .find("Event.System.TimeCreated_attributes.SystemTime"),
             _ => self.0.find(key),
         }
-    }
-}
-
-impl Huntable for &SerializedEvtxRecord<Json> {
-    fn hits(
-        &self,
-        rules: &[Rule],
-        exclusions: &HashSet<String>,
-        group: &Group,
-    ) -> Option<Vec<String>> {
-        let wrapper = Wrapper(&self.data);
-        if tau_engine::core::solve(&group.filter, &wrapper) {
-            let mut tags = vec![];
-            for rule in rules {
-                if exclusions.contains(&rule.tag) {
-                    continue;
-                }
-                if rule.tau.matches(&Mapper(&group.fields, &wrapper)) {
-                    tags.push(rule.tag.clone());
-                }
-            }
-            return Some(tags);
-        }
-        None
     }
 }
 

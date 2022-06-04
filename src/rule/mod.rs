@@ -1,15 +1,19 @@
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-pub use self::chainsaw::Rule;
+use crate::file::Kind as FileKind;
+
+pub use self::chainsaw::Rule as Chainsaw;
+pub use self::sigma::Rule as Sigma;
+pub use self::stalker::Rule as Stalker;
 
 pub mod chainsaw;
 pub mod sigma;
 pub mod stalker;
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Kind {
     Chainsaw,
@@ -37,27 +41,96 @@ impl FromStr for Kind {
     }
 }
 
-pub fn load_rule(kind: &Kind, path: &PathBuf) -> crate::Result<Vec<Rule>> {
+#[derive(Debug)]
+pub struct Rule {
+    pub chainsaw: Chainsaw,
+    pub kind: Kind,
+}
+
+pub fn load_rule(path: &PathBuf) -> crate::Result<Vec<Rule>> {
     if let Some(x) = path.extension() {
         if x != "yml" && x != "yaml" {
             anyhow::bail!("rule must have a yaml file extension");
         }
     }
-    let rules = match kind {
-        Kind::Chainsaw => {
-            unimplemented!()
-        }
-        Kind::Sigma => match sigma::load(&path) {
-            Ok(rules) => rules
-                .into_iter()
-                .filter_map(|r| serde_yaml::from_value(r).ok())
-                .collect(),
-            Err(e) => anyhow::bail!(e),
-        },
-        Kind::Stalker => match stalker::load(&path) {
-            Ok(rule) => vec![rule],
-            Err(e) => anyhow::bail!(e),
-        },
+    // This is a bit crude but we try all formats then report the errors...
+    let rules = if let Ok(rule) = chainsaw::load(&path) {
+        vec![Rule {
+            chainsaw: rule,
+            kind: Kind::Chainsaw,
+        }]
+    } else if let Ok(rules) = sigma::load(&path) {
+        rules
+            .into_iter()
+            .filter_map(|r| serde_yaml::from_value(r).ok())
+            .map(|rule: Sigma| Rule {
+                chainsaw: Chainsaw {
+                    name: rule.name,
+                    group: "".to_owned(),
+                    description: rule.description,
+                    authors: rule.authors,
+                    // NOTE: A fake value as this is not used for non chainsaw rules
+                    kind: FileKind::Evtx,
+                    level: rule
+                        .level
+                        .map(|l| match l.as_str() {
+                            "critical" => chainsaw::Level::Critical,
+                            "high" => chainsaw::Level::High,
+                            "medium" => chainsaw::Level::Medium,
+                            "low" => chainsaw::Level::Low,
+                            _ => chainsaw::Level::Info,
+                        })
+                        .unwrap_or_else(|| chainsaw::Level::Info),
+                    status: rule
+                        .status
+                        .map(|s| match s.as_str() {
+                            "stable" => chainsaw::Status::Stable,
+                            _ => chainsaw::Status::Testing,
+                        })
+                        .unwrap_or_else(|| chainsaw::Status::Testing),
+                    timestamp: "".to_owned(),
+
+                    fields: vec![],
+
+                    filter: chainsaw::Filter::Detection(rule.tau.detection),
+
+                    aggregate: None,
+                },
+                kind: Kind::Sigma,
+            })
+            .collect()
+    } else if let Ok(rule) = stalker::load(&path) {
+        vec![Rule {
+            chainsaw: Chainsaw {
+                name: rule.tag,
+                group: "".to_owned(),
+                description: rule.description,
+                authors: rule.authors,
+                // NOTE: A fake value as this is not used for non chainsaw rules
+                kind: FileKind::Evtx,
+                level: match rule.level.as_str() {
+                    "critical" => chainsaw::Level::Critical,
+                    "high" => chainsaw::Level::High,
+                    "medium" => chainsaw::Level::Medium,
+                    "low" => chainsaw::Level::Low,
+                    _ => chainsaw::Level::Info,
+                },
+                status: match rule.status.as_str() {
+                    "stable" => chainsaw::Status::Stable,
+                    _ => chainsaw::Status::Testing,
+                },
+                timestamp: "".to_owned(),
+
+                fields: vec![],
+
+                filter: chainsaw::Filter::Detection(rule.tau.detection),
+
+                aggregate: None,
+            },
+            kind: Kind::Stalker,
+        }]
+    } else {
+        anyhow::bail!("failed to load rule, run the linter for more information");
     };
     Ok(rules)
 }

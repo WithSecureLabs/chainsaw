@@ -1,16 +1,26 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use serde::{Deserialize, Serialize};
+
 use self::evtx::{Evtx, Parser as EvtxParser};
 
 pub mod evtx;
 
+#[derive(Clone)]
 pub enum Document {
     Evtx(Evtx),
 }
 
 pub struct Documents<'a> {
     iterator: Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Kind {
+    Evtx,
+    Unknown,
 }
 
 impl<'a> Iterator for Documents<'a> {
@@ -102,6 +112,13 @@ impl Reader {
             }
         };
         Documents { iterator }
+    }
+
+    pub fn kind(&self) -> Kind {
+        match self.parser {
+            Parser::Evtx(_) => Kind::Evtx,
+            Parser::Unknown => Kind::Unknown,
+        }
     }
 }
 

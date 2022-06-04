@@ -99,7 +99,7 @@ enum Command {
     /// Search through event logs for specific event IDs and/or keywords
     Search {
         /// A pattern to search for.
-        #[structopt(required_unless = "regexp")]
+        #[structopt(required_unless_one=&["regexp", "tau"])]
         pattern: Option<String>,
 
         /// The paths to search through.
@@ -137,7 +137,7 @@ enum Command {
         #[structopt(long = "skip-errors")]
         skip_errors: bool,
         /// Tau expressions to search with.
-        #[structopt(short = "t", long = "tau")]
+        #[structopt(short = "t", long = "tau", number_of_values = 1)]
         tau: Option<Vec<String>>,
         /// The field that contains the timestamp.
         #[structopt(long = "timestamp", requires_if("from", "to"))]
@@ -242,7 +242,7 @@ fn run() -> Result<()> {
             let mut rs = vec![];
             for path in &rules {
                 for file in get_files(path, &None, skip_errors)? {
-                    match load_rule(&RuleKind::Sigma, &file) {
+                    match load_rule(&file) {
                         Ok(mut r) => {
                             count += 1;
                             rs.append(&mut r)
@@ -292,12 +292,20 @@ fn run() -> Result<()> {
             }
             pb.finish();
             if csv {
-                cli::print_csv(&detections, hunter.mappings(), local, timezone)?;
+                cli::print_csv(
+                    &detections,
+                    hunter.hunts(),
+                    hunter.mappings(),
+                    hunter.rules(),
+                    local,
+                    timezone,
+                )?;
             } else if json {
                 cli::print_json(&detections, hunter.rules(), local, timezone)?;
             } else {
                 cli::print_detections(
                     &detections,
+                    hunter.hunts(),
                     hunter.mappings(),
                     hunter.rules(),
                     column_width.unwrap_or(40),
@@ -338,7 +346,7 @@ fn run() -> Result<()> {
         Command::Search {
             path,
 
-            pattern,
+            mut pattern,
             regexp,
 
             extension,
@@ -359,9 +367,9 @@ fn run() -> Result<()> {
             if !opts.no_banner {
                 print_title();
             }
-            let mut paths = if regexp.is_some() {
+            let mut paths = if regexp.is_some() || tau.is_some() {
                 let mut scratch = pattern
-                    .as_ref()
+                    .take()
                     .map(|p| vec![PathBuf::from(p)])
                     .unwrap_or_default();
                 scratch.extend(path);

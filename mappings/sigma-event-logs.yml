@@ -14,153 +14,231 @@ groups:
   - name: Suspicious Process Creation
     timestamp: Event.System.TimeCreated
     filter:
-      - Event.System.EventID: 1
-        Event.System.Provider: Microsoft-Windows-Sysmon
+      EventID: 1
+      Provider: Microsoft-Windows-Sysmon
     fields:
-      CommandLine: Event.EventData.CommandLine
-      Computer: Event.System.Computer
-      EventID: Event.System.EventID
-      Image: Event.EventData.Image
-      OriginalFileName: Event.EventData.OriginalFileName
-      ParentCommandLine: Event.EventData.ParentCommandLine
-      ParentImage: Event.EventData.ParentImage
-    default:
-      - EventID
-      - Computer
-      - Image
-      - CommandLine
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: Image
+        from: Image
+        to: Event.EventData.Image
+      - name: Command Line
+        from: CommandLine
+        to: Event.EventData.CommandLine
+      - name: Original File Name
+        from: OriginalFileName
+        to: Event.EventData.OriginalFileName
+      - name: Parent Image
+        from: ParentImage
+        to: Event.EventData.ParentImage
+      - name: Parent Command Line
+        from: ParentCommandLine
+        to: Event.EventData.ParentCommandLine
 
   - name: Suspicious Network Connection
     timestamp: Event.System.TimeCreated
     filter:
-      - Event.System.EventID: 3
-        Event.System.Provider: Microsoft-Windows-Sysmon
+      EventID: 3
+      Provider: Microsoft-Windows-Sysmon
     fields:
-      Computer: Event.System.Computer
-      DestinationIp: Event.EventData.DestinationIp
-      DestinationHostname: Event.EventData.DestinationHostname
-      DestinationPort: Event.EventData.DestinationPort
-      DestinationIsIpv6: Event.EventData.DestinationIsIpv6
-      EventID: Event.System.EventID
-      Image: Event.EventData.Image
-      Initiated: Event.EventData.Initiated
-      SourcePort: Event.EventData.SourcePort
-      User: Event.EventData.User
-    default:
-      - EventID
-      - Computer
-      - Image
-      - DestinationIp
-      - DestinationPort
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: User
+        from: User
+        to: Event.EventData.User
+      - name: Image
+        from: Image
+        to: Event.EventData.Image
+      - name: Destination IP
+        from: DestinationIp
+        to: Event.EventData.DestinationIp
+      - name: Destination Port
+        from: DestinationPort
+        to: Event.EventData.DestinationPort
+      - name: Destination Hostname
+        from: DestinationHostname
+        to: Event.EventData.DestinationHostname
+      - name: Destination Is IPv6
+        from: DestinationIsIpv6
+        to: Event.EventData.DestinationIsIpv6
+        visible: false
+      - name: Initiated
+        from: Initiated
+        to: Event.EventData.Initiated
+      - name: Source Port
+        from: SourcePort
+        to: Event.EventData.SourcePort
 
   - name: Suspicious Image Load
     timestamp: Event.System.TimeCreated
     filter:
-      - Event.System.EventID: 7
-        Event.System.Provider: Microsoft-Windows-Sysmon
+      EventID: 7
+      Provider: Microsoft-Windows-Sysmon
     fields:
-      Computer: Event.System.Computer
-      EventID: Event.System.EventID
-      Image: Event.EventData.Image
-      ImageLoaded: Event.EventData.ImageLoaded
-    default:
-      - EventID
-      - Computer
-      - Image
-      - ImageLoaded
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: Image
+        from: Image
+        to: Event.EventData.Image
+      - name: Image Loaded
+        from: ImageLoaded
+        to: Event.EventData.ImageLoaded
 
   - name: Suspicious File Creation
     timestamp: Event.System.TimeCreated
     filter:
-      - Event.System.EventID: 11
-        Event.System.Provider: Microsoft-Windows-Sysmon
+      EventID: 11
+      Provider: Microsoft-Windows-Sysmon
     fields:
-      Computer: Event.System.Computer
-      EventID: Event.System.EventID
-      Image: Event.EventData.Image
-      TargetFilename: Event.EventData.TargetFilename
-    default:
-      - EventID
-      - Computer
-      - TargetFilename
-      - Image
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: Image
+        from: Image
+        to: Event.EventData.Image
+      - name: Target File Name
+        from: TargetFilename
+        to: Event.EventData.TargetFilename
 
   - name: Suspicious Registry Event
     timestamp: Event.System.TimeCreated
     filter:
-      - Event.System.EventID: 13
-        Event.System.Provider: Microsoft-Windows-Sysmon
+      EventID: 13
+      Provider: Microsoft-Windows-Sysmon
     fields:
-      Computer: Event.System.Computer
-      Details: Event.EventData.Details
-      EventID: Event.System.EventID
-      Image: Event.EventData.Image
-      TargetObject: Event.EventData.TargetObject
-    default:
-      - EventID
-      - Computer
-      - Details
-      - TargetObject
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: Image
+        from: Image
+        to: Event.EventData.Image
+      - name: Details
+        from: Details
+        to: Event.EventData.Details
+      - name: Target Object
+        from: TargetObject
+        to: Event.EventData.TargetObject
 
   - name: Suspicious Service Installed
     timestamp: Event.System.TimeCreated
     filter:
-      - Event.System.EventID: 7045
-        Event.System.Provider: Service Control Manager
+      EventID: 7045
+      Provider: Service Control Manager
     fields:
-      CommandLine: Event.EventData.ImagePath
-      Computer: Event.System.Computer
-      EventID: Event.System.EventID
-      ServiceName: Event.EventData.ServiceName
-    default:
-      - EventID
-      - Computer
-      - CommandLine
-      - ServiceName
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: Service
+        from: ServiceName
+        to: Event.EventData.ServiceName
+      # TODO: Can someone check if this is a typo...?
+      - name: Command Line
+        from: CommandLine
+        to: Event.EventData.ImagePath
 
   - name: Suspicious Command Line
     timestamp: Event.System.TimeCreated
     filter:
-      - Event.System.EventID: 4688
-        Event.System.Provider: Microsoft-Windows-Security-Auditing
+      EventID: 4688
+      Provider: Microsoft-Windows-Security-Auditing
     fields:
-      CommandLine: Event.EventData.CommandLine
-      Computer: Event.System.Computer
-      EventID: Event.System.EventID
-      Image: Event.EventData.NewProcessName
-      UserName: Event.EventData.SubjectUserName
-    default:
-      - EventID
-      - Computer
-      - CommandLine
-      - Image
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: User
+        from: UserName
+        to: Event.EventData.SubjectUserName
+      # TODO: Can someone check if this is a typo...?
+      - name: Process
+        from: Image
+        to: Event.EventData.NewProcessName
+      - name: Command Line
+        from: CommandLine
+        to: Event.EventData.CommandLine
 
   - name: Suspicious Powershell ScriptBlock
     timestamp: Event.System.TimeCreated
     filter:
-      - Event.System.EventID: 4104
-        Event.System.Provider: Microsoft-Windows-PowerShell
+      EventID: 4104
+      Provider: Microsoft-Windows-PowerShell
     fields:
-      Computer: Event.System.Computer
-      EventID: Event.System.EventID
-      ScriptBlockText: Event.EventData.ScriptBlockText
-    default:
-      - EventID
-      - Computer
-      - ScriptBlockText
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: Script Block
+        from: ScriptBlockText
+        to: Event.EventData.ScriptBlockText
 
   - name: Suspicious Scheduled Task Created
     timestamp: Event.System.TimeCreated
     filter:
-      - Event.System.EventID: 4698
-        Event.System.Provider: Microsoft-Windows-Security-Auditing
+      EventID: 4698
+      Provider: Microsoft-Windows-Security-Auditing
     fields:
-      CommandLine: Event.EventData.TaskContent
-      Computer: Event.System.Computer
-      EventID: Event.System.EventID
-      UserName: Event.EventData.SubjectUserName
-    default:
-      - EventID
-      - Computer
-      - CommandLine
-      - UserName
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: User
+        from: UserName
+        to: Event.EventData.SubjectUserName
+      # TODO: Can someone check if this is a typo...?
+      - name: Command Line
+        from: CommandLine
+        to: Event.EventData.TaskContent

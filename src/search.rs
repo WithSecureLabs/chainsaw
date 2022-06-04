@@ -135,6 +135,9 @@ impl<'a> Iterator for Iter<'a> {
                 if !tau_engine::core::solve(&expression, &crate::evtx::Wrapper(&r.data)) {
                     continue;
                 }
+                if self.searcher.regex.len() == 0 {
+                    return Some(Ok(r.data));
+                }
             }
             if r.matches(&self.searcher.regex) {
                 return Some(Ok(r.data));

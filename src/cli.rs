@@ -1,14 +1,20 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use prettytable::{cell, format, Row, Table};
+use serde::Serialize;
 use tau_engine::Document;
+use uuid::Uuid;
 
-use crate::hunt::{Detection, Detections, Kind, Mapping};
-use crate::rule::Rule;
+use crate::file::Kind as FileKind;
+use crate::hunt::{Detections, Group, Hunt, Kind, Mapper, Mapping};
+use crate::rule::{
+    chainsaw::{Level, Rule as Chainsaw, Status},
+    Kind as RuleKind,
+};
 use crate::write::WRITER;
 
 #[cfg(not(windows))]
@@ -68,10 +74,13 @@ pub fn format_field_length(data: &str, full_output: bool, length: u32) -> String
     data
 }
 
+// FIXME: All the table stuff needs a little think due to the field complexities...
+
 pub fn print_detections(
     detections: &[Detections],
+    hunts: &[Hunt],
     mappings: &[Mapping],
-    rules: &[Rule],
+    rules: &HashMap<RuleKind, Vec<(Uuid, Chainsaw)>>,
     column_width: u32,
     full: bool,
     local: bool,
@@ -96,25 +105,38 @@ pub fn print_detections(
         .padding(1, 1)
         .build();
 
-    let mappings: HashMap<_, HashMap<_, _>> = mappings
-        .iter()
-        .map(|m| (&m.name, m.groups.iter().map(|g| (&g.name, g)).collect()))
-        .collect();
-    let rules: HashMap<_, _> = rules.iter().map(|r| (&r.tag, r)).collect();
+    // Build headers
+    let mut headers: HashMap<&String, (Vec<&String>, HashSet<&String>)> = HashMap::new();
+    for hunt in hunts {
+        let headers = headers
+            .entry(&hunt.group)
+            .or_insert((vec![], HashSet::new()));
+        for header in &hunt.headers {
+            if !headers.1.contains(&header) {
+                (*headers).0.push(&header);
+                (*headers).1.insert(&header);
+            }
+        }
+    }
+    // Build lookups
+    let mut groups: HashMap<&Uuid, &Group> = HashMap::new();
+    for mapping in mappings {
+        for group in &mapping.groups {
+            groups.insert(&group.id, group);
+        }
+    }
+    let hunts: HashMap<_, _> = hunts.iter().map(|h| (&h.id, h)).collect();
+    let rules: HashMap<_, _> = rules.values().flatten().map(|r| (&r.0, &r.1)).collect();
 
-    // Do a single unfold...
-    let mut grouped: HashMap<
-        (&Option<String>, &String),
-        Vec<(&NaiveDateTime, &Kind, Vec<&String>)>,
-    > = HashMap::new();
+    // Do a single unfold... <Group, Vec<(Timestamp, Kind, Vec<(Hunt ID, Rule ID)>>>
+    let mut grouped: HashMap<&String, Vec<(&NaiveDateTime, &Kind, Vec<(&Uuid, &Uuid)>)>> =
+        HashMap::new();
     for detection in detections {
-        let mut tags: HashMap<(&Option<String>, &String), (&NaiveDateTime, Vec<&String>)> =
-            HashMap::new();
+        let mut tags: HashMap<&String, (&NaiveDateTime, Vec<(&Uuid, &Uuid)>)> = HashMap::new();
         for hit in &detection.hits {
-            let tags = tags
-                .entry((&hit.mapping, &hit.group))
-                .or_insert((&hit.timestamp, vec![]));
-            (*tags).1.push(&hit.tag);
+            let group = &hunts.get(&hit.hunt).expect("could not get hunt").group;
+            let tags = tags.entry(&group).or_insert((&hit.timestamp, vec![]));
+            (*tags).1.push((&hit.hunt, &hit.rule));
         }
         for (k, v) in tags {
             let grouped = grouped.entry(k).or_insert(vec![]);
@@ -129,98 +151,135 @@ pub fn print_detections(
         grouped.sort_by(|x, y| x.0.cmp(&y.0));
         let mut table = Table::new();
         table.set_format(format);
-        let (mapping, group) = key;
-        if let Some(mapping) = mapping {
-            if let Some(groups) = mappings.get(mapping) {
-                let group = groups.get(&group).expect("could not get group!");
-                let mut header = vec![
-                    cell!("timestamp").style_spec("c"),
-                    cell!("detections").style_spec("c"),
-                ];
-                if let Some(default) = group.default.as_ref() {
-                    for field in default {
-                        header.push(cell!(field).style_spec("c"));
-                    }
-                } else {
-                    header.push(cell!("data").style_spec("c"));
-                }
-                table.add_row(Row::new(header));
-                for (timestamp, kind, mut tags) in grouped {
-                    tags.sort();
-                    let localised = if let Some(timezone) = timezone {
-                        timezone
-                            .from_local_datetime(timestamp)
-                            .single()
-                            .expect("failed to localise timestamp")
-                            .to_rfc3339()
-                    } else if local {
-                        Utc.from_local_datetime(timestamp)
-                            .single()
-                            .expect("failed to localise timestamp")
-                            .to_rfc3339()
-                    } else {
-                        DateTime::<Utc>::from_utc(timestamp.clone(), Utc).to_rfc3339()
-                    };
-                    let mut cells = vec![cell!(localised)];
-                    if metadata {
-                        let mut table = Table::new();
-                        table.add_row(Row::new(vec![
-                            cell!("name").style_spec("c"),
-                            cell!("authors").style_spec("c"),
-                            cell!("level").style_spec("c"),
-                            cell!("status").style_spec("c"),
-                        ]));
-                        for tag in tags {
-                            let rule = rules.get(&tag).expect("could not get rule");
-                            table.add_row(Row::new(vec![
-                                cell!(tag),
-                                cell!(rule.authors.join("\n")),
-                                cell!(rule.level),
-                                cell!(rule.status),
-                            ]));
-                        }
-                        cells.push(cell!(table));
-                    } else {
-                        cells.push(cell!(tags
-                            .iter()
-                            .map(|tag| format!("{} {}", RULE_PREFIX, tag.as_str()))
-                            .collect::<Vec<_>>()
-                            .join("\n")));
-                    }
-                    let document = match kind {
-                        Kind::Individual { document } => document,
-                        _ => continue,
-                    };
-                    if let Some(default) = group.default.as_ref() {
-                        for field in default {
-                            if let Some(value) = group
-                                .fields
-                                .get(field)
-                                .and_then(|k| document.data.find(k))
-                                .and_then(|v| v.to_string())
-                            {
-                                cells.push(cell!(format_field_length(&value, full, column_width)));
-                            } else {
-                                cells.push(cell!(""));
-                            }
-                        }
-                    } else {
-                        let json = serde_json::to_string(&document.data)
-                            .expect("could not serialise document");
-                        cells.push(cell!(format_field_length(&json, false, column_width)));
-                    }
-                    table.add_row(Row::new(cells));
+        if let Some((headers, _)) = headers.remove(key) {
+            let mut cells = vec![
+                cell!("timestamp").style_spec("c"),
+                cell!("detections").style_spec("c"),
+            ];
+            if headers.is_empty() {
+                cells.push(cell!("data").style_spec("c"));
+            } else {
+                for header in &headers {
+                    cells.push(cell!(header).style_spec("c"));
                 }
             }
+            table.add_row(Row::new(cells));
+            for (timestamp, kind, ids) in grouped {
+                // FIXME: Sort rules
+                //ids.sort();
+                let localised = if let Some(timezone) = timezone {
+                    timezone
+                        .from_local_datetime(timestamp)
+                        .single()
+                        .expect("failed to localise timestamp")
+                        .to_rfc3339()
+                } else if local {
+                    Utc.from_local_datetime(timestamp)
+                        .single()
+                        .expect("failed to localise timestamp")
+                        .to_rfc3339()
+                } else {
+                    DateTime::<Utc>::from_utc(timestamp.clone(), Utc).to_rfc3339()
+                };
+                let mut cells = vec![cell!(localised)];
+                if metadata {
+                    let mut table = Table::new();
+                    table.add_row(Row::new(vec![
+                        cell!("name").style_spec("c"),
+                        cell!("authors").style_spec("c"),
+                        cell!("level").style_spec("c"),
+                        cell!("status").style_spec("c"),
+                    ]));
+                    for (_, rid) in &ids {
+                        let rule = rules.get(rid).expect("could not get rule");
+                        table.add_row(Row::new(vec![
+                            cell!(rule.name),
+                            cell!(rule.authors.join("\n")),
+                            cell!(rule.level),
+                            cell!(rule.status),
+                        ]));
+                    }
+                    cells.push(cell!(table));
+                } else {
+                    cells.push(cell!(ids
+                        .iter()
+                        .map(|(_, rid)| format!(
+                            "{} {}",
+                            RULE_PREFIX,
+                            rules.get(rid).expect("could not get rule").name.as_str()
+                        ))
+                        .collect::<Vec<_>>()
+                        .join("\n")));
+                }
+                let document = match kind {
+                    Kind::Individual { document } => document,
+                    Kind::Aggregate { documents } => {
+                        documents.first().expect("could not get document")
+                    }
+                };
+                if headers.is_empty() {
+                    let json = serde_json::to_string(&document.data)
+                        .expect("could not serialise document");
+                    cells.push(cell!(format_field_length(&json, false, column_width)));
+                } else {
+                    // This is really complicated, we could land in the same group but be from
+                    // different hunts that have different headers, that also could even overlap...
+                    // Because we group we won't be able to reliably handle clashes.
+                    let mut hids = HashSet::new();
+                    for (hid, _) in &ids {
+                        hids.insert(hid);
+                    }
+                    let wrapper = match &document.kind {
+                        FileKind::Evtx => crate::evtx::Wrapper(&document.data),
+                        _ => continue,
+                    };
+                    let mut hdrs = HashMap::new();
+                    for hid in hids {
+                        let hunt = hunts.get(hid).expect("could not get hunt");
+                        let fields = match &hunt.kind {
+                            crate::hunt::HuntKind::Group { .. } => {
+                                &groups.get(&hunt.id).expect("could not get group").fields
+                            }
+                            crate::hunt::HuntKind::Rule { .. } => {
+                                &rules.get(&hunt.id).expect("could not get rule").fields
+                            }
+                        };
+                        let flds: HashMap<_, _> =
+                            fields.iter().map(|f| (&f.name, &f.from)).collect();
+                        for header in &headers {
+                            if let Some(from) = flds.get(header) {
+                                let mapper = Mapper(&hunt.mapper, &wrapper);
+                                if let Some(value) = mapper.find(&from).and_then(|v| v.to_string())
+                                {
+                                    hdrs.insert(
+                                        header,
+                                        format_field_length(&value, full, column_width),
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    for header in &headers {
+                        if let Some(value) = hdrs.get(header) {
+                            cells.push(cell!(value));
+                        } else {
+                            cells.push(cell!(""));
+                        }
+                    }
+                }
+                table.add_row(Row::new(cells));
+            }
         }
-        cs_greenln!("\n[+] Group: {}", key.1);
+        cs_greenln!("\n[+] Group: {}", key);
         cs_print_table!(table);
     }
 }
 
 pub fn print_csv(
     detections: &[Detections],
+    hunts: &[Hunt],
     mappings: &[Mapping],
+    rules: &HashMap<RuleKind, Vec<(Uuid, Chainsaw)>>,
     local: bool,
     timezone: Option<Tz>,
 ) -> crate::Result<()> {
@@ -231,23 +290,37 @@ pub fn print_csv(
             .expect("could not get output directory")
     };
     fs::create_dir_all(directory)?;
-    let mappings: HashMap<_, HashMap<_, _>> = mappings
-        .iter()
-        .map(|m| (&m.name, m.groups.iter().map(|g| (&g.name, g)).collect()))
-        .collect();
+    // Build headers
+    let mut headers: HashMap<&String, (Vec<&String>, HashSet<&String>)> = HashMap::new();
+    for hunt in hunts {
+        let headers = headers
+            .entry(&hunt.group)
+            .or_insert((vec![], HashSet::new()));
+        for header in &hunt.headers {
+            if !headers.1.contains(&header) {
+                (*headers).0.push(&header);
+                (*headers).1.insert(&header);
+            }
+        }
+    }
+    // Build lookups
+    let mut groups: HashMap<&Uuid, &Group> = HashMap::new();
+    for mapping in mappings {
+        for group in &mapping.groups {
+            groups.insert(&group.id, group);
+        }
+    }
+    let hunts: HashMap<_, _> = hunts.iter().map(|h| (&h.id, h)).collect();
+    let rules: HashMap<_, _> = rules.values().flatten().map(|r| (&r.0, &r.1)).collect();
     // Do a single unfold...
-    let mut grouped: HashMap<
-        (&Option<String>, &String),
-        Vec<(&NaiveDateTime, &Kind, Vec<&String>)>,
-    > = HashMap::new();
+    let mut grouped: HashMap<&String, Vec<(&NaiveDateTime, &Kind, Vec<(&Uuid, &Uuid)>)>> =
+        HashMap::new();
     for detection in detections {
-        let mut tags: HashMap<(&Option<String>, &String), (&NaiveDateTime, Vec<&String>)> =
-            HashMap::new();
+        let mut tags: HashMap<&String, (&NaiveDateTime, Vec<(&Uuid, &Uuid)>)> = HashMap::new();
         for hit in &detection.hits {
-            let tags = tags
-                .entry((&hit.mapping, &hit.group))
-                .or_insert((&hit.timestamp, vec![]));
-            (*tags).1.push(&hit.tag);
+            let group = &hunts.get(&hit.hunt).expect("could not get hunt").group;
+            let tags = tags.entry(&group).or_insert((&hit.timestamp, vec![]));
+            (*tags).1.push((&hit.hunt, &hit.rule));
         }
         for (k, v) in tags {
             let grouped = grouped.entry(k).or_insert(vec![]);
@@ -260,91 +333,141 @@ pub fn print_csv(
         let mut grouped = grouped.remove(&key).expect("could not get grouped!");
         grouped.sort_by(|x, y| x.0.cmp(&y.0));
         // FIXME: Handle name clashes
-        let filename = format!("{}.csv", key.1.replace(" ", "_").to_lowercase());
+        let filename = format!("{}.csv", key.replace(" ", "_").to_lowercase());
         let path = directory.join(&filename);
         let mut csv = prettytable::csv::Writer::from_path(path)?;
         cs_eprintln!("[+] Created {}", filename);
-        let (mapping, group) = key;
-        if let Some(mapping) = mapping {
-            if let Some(groups) = mappings.get(mapping) {
-                let group = groups.get(&group).expect("could not get group!");
-                let mut header = vec!["timestamp", "detections"];
-                if let Some(default) = group.default.as_ref() {
-                    for field in default {
-                        header.push(field);
-                    }
-                } else {
-                    header.push("data");
+        if let Some((headers, _)) = headers.remove(key) {
+            let mut cells = vec!["timestamp", "detections"];
+            if headers.is_empty() {
+                cells.push("data");
+            } else {
+                for header in &headers {
+                    cells.push(header);
                 }
-                csv.write_record(header)?;
-                for (timestamp, kind, mut tags) in grouped {
-                    tags.sort();
-                    let localised = if let Some(timezone) = timezone {
-                        timezone
-                            .from_local_datetime(timestamp)
-                            .single()
-                            .expect("failed to localise timestamp")
-                            .to_rfc3339()
-                    } else if local {
-                        Utc.from_local_datetime(timestamp)
-                            .single()
-                            .expect("failed to localise timestamp")
-                            .to_rfc3339()
-                    } else {
-                        DateTime::<Utc>::from_utc(timestamp.clone(), Utc).to_rfc3339()
-                    };
-                    let mut cells = vec![localised];
-                    cells.push(
-                        tags.iter()
-                            .map(|tag| format!("{}", tag.as_str()))
-                            .collect::<Vec<_>>()
-                            .join(";"),
-                    );
-                    let document = match kind {
-                        Kind::Individual { document } => document,
+            }
+            csv.write_record(cells)?;
+            for (timestamp, kind, ids) in grouped {
+                // FIXME: Sort tags
+                //tags.sort();
+                let localised = if let Some(timezone) = timezone {
+                    timezone
+                        .from_local_datetime(timestamp)
+                        .single()
+                        .expect("failed to localise timestamp")
+                        .to_rfc3339()
+                } else if local {
+                    Utc.from_local_datetime(timestamp)
+                        .single()
+                        .expect("failed to localise timestamp")
+                        .to_rfc3339()
+                } else {
+                    DateTime::<Utc>::from_utc(timestamp.clone(), Utc).to_rfc3339()
+                };
+                let mut cells = vec![localised];
+                cells.push(
+                    ids.iter()
+                        .map(|(_, rid)| {
+                            format!(
+                                "{}",
+                                rules.get(rid).expect("could not get rule").name.as_str()
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join(";"),
+                );
+                let document = match kind {
+                    Kind::Individual { document } => document,
+                    Kind::Aggregate { documents } => {
+                        documents.first().expect("could not get document")
+                    }
+                };
+                if headers.is_empty() {
+                    let json = serde_json::to_string(&document.data)
+                        .expect("could not serialise document");
+                    cells.push(json);
+                } else {
+                    // This is really complicated, we could land in the same group but be from
+                    // different hunts that have different headers, that also could even overlap...
+                    // Because we group we won't be able to reliably handle clashes.
+                    let mut hids = HashSet::new();
+                    for (hid, _) in &ids {
+                        hids.insert(hid);
+                    }
+                    let wrapper = match &document.kind {
+                        FileKind::Evtx => crate::evtx::Wrapper(&document.data),
                         _ => continue,
                     };
-                    if let Some(default) = group.default.as_ref() {
-                        for field in default {
-                            if let Some(value) = group
-                                .fields
-                                .get(field)
-                                .and_then(|k| document.data.find(k))
-                                .and_then(|v| v.to_string())
-                            {
-                                cells.push(value);
-                            } else {
-                                cells.push("".to_owned());
+                    let mut hdrs = HashMap::new();
+                    for hid in hids {
+                        let hunt = hunts.get(hid).expect("could not get hunt");
+                        let fields = match &hunt.kind {
+                            crate::hunt::HuntKind::Group { .. } => {
+                                &groups.get(&hunt.id).expect("could not get group").fields
+                            }
+                            crate::hunt::HuntKind::Rule { .. } => {
+                                &rules.get(&hunt.id).expect("could not get rule").fields
+                            }
+                        };
+                        let flds: HashMap<_, _> =
+                            fields.iter().map(|f| (&f.name, &f.from)).collect();
+                        for header in &headers {
+                            if let Some(from) = flds.get(header) {
+                                let mapper = Mapper(&hunt.mapper, &wrapper);
+                                if let Some(value) = mapper.find(&from).and_then(|v| v.to_string())
+                                {
+                                    hdrs.insert(header, value);
+                                }
                             }
                         }
-                    } else {
-                        let json = serde_json::to_string(&document.data)
-                            .expect("could not serialise document");
-                        cells.push(json);
                     }
-                    csv.write_record(cells)?;
+                    for header in &headers {
+                        if let Some(value) = hdrs.get(header) {
+                            cells.push(value.to_string());
+                        } else {
+                            cells.push("".to_owned());
+                        }
+                    }
                 }
+                csv.write_record(cells)?;
             }
         }
     }
     Ok(())
 }
 
+#[derive(Debug, Serialize)]
+pub struct Detection<'a> {
+    pub group: &'a String,
+    #[serde(flatten)]
+    pub kind: &'a Kind,
+    pub name: &'a String,
+    pub timestamp: String,
+
+    pub authors: &'a Vec<String>,
+    pub level: &'a Level,
+    pub source: &'a RuleKind,
+    pub status: &'a Status,
+}
+
 pub fn print_json(
     detections: &[Detections],
-    rules: &[Rule],
+    rules: &HashMap<RuleKind, Vec<(Uuid, Chainsaw)>>,
     local: bool,
     timezone: Option<Tz>,
 ) -> crate::Result<()> {
-    // TODO: Fixme...
-    let ruleset = "sigma".to_owned();
-    let rules: HashMap<_, _> = rules.iter().map(|r| (&r.tag, r)).collect();
+    let mut rs: HashMap<_, _> = HashMap::new();
+    for (kind, rules) in rules {
+        for (id, rule) in rules {
+            rs.insert(id, (kind, rule));
+        }
+    }
     let mut detections = detections
         .iter()
         .map(|d| {
             let mut detections = Vec::with_capacity(d.hits.len());
             for hit in &d.hits {
-                let rule = rules.get(&hit.tag).expect("could not get rule!");
+                let (kind, rule) = rs.get(&hit.rule).expect("could not get rule!");
                 let localised = if let Some(timezone) = timezone {
                     timezone
                         .from_local_datetime(&hit.timestamp)
@@ -361,11 +484,11 @@ pub fn print_json(
                 };
                 detections.push(Detection {
                     authors: &rule.authors,
-                    group: &hit.group,
+                    group: &rule.group,
                     kind: &d.kind,
                     level: &rule.level,
-                    name: &hit.tag,
-                    source: &ruleset,
+                    name: &rule.name,
+                    source: kind,
                     status: &rule.status,
                     timestamp: localised,
                 })

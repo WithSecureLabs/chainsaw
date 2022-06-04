@@ -1,5 +1,37 @@
 use aho_corasick::AhoCorasickBuilder;
-use tau_engine::core::parser::{BoolSym, Expression, IdentifierParser, MatchType, Pattern, Search};
+use serde::de;
+use serde_yaml::Value as Yaml;
+use tau_engine::core::parser::{
+    parse_identifier, BoolSym, Expression, IdentifierParser, MatchType, Pattern, Search,
+};
+
+pub fn deserialize_expression<'de, D>(deserializer: D) -> Result<Expression, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    let yaml: Yaml = de::Deserialize::deserialize(deserializer)?;
+    parse_identifier(&yaml).map_err(de::Error::custom)
+}
+
+pub fn deserialize_numeric<'de, D>(deserializer: D) -> Result<Pattern, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    let string: String = de::Deserialize::deserialize(deserializer)?;
+    if let Ok(i) = str::parse::<i64>(&string) {
+        return Ok(Pattern::Equal(i));
+    }
+    let identifier = string.into_identifier().map_err(de::Error::custom)?;
+    match &identifier.pattern {
+        &Pattern::Equal(_)
+        | &Pattern::GreaterThan(_)
+        | &Pattern::GreaterThanOrEqual(_)
+        | &Pattern::LessThan(_)
+        | &Pattern::LessThanOrEqual(_) => {}
+        _ => return Err(de::Error::custom("only numeric expressions are allowed")),
+    }
+    Ok(identifier.pattern)
+}
 
 pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
     let mut parts = kv.split(": ");

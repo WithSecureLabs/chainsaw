@@ -7,6 +7,21 @@ use anyhow::Result;
 use regex::Regex;
 use serde::Deserialize;
 use serde_yaml::{Mapping, Sequence, Value as Yaml};
+use tau_engine::Rule as Tau;
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub struct Rule {
+    #[serde(alias = "title")]
+    pub name: String,
+    #[serde(flatten)]
+    pub tau: Tau,
+
+    pub authors: Vec<String>,
+    pub description: String,
+    pub level: Option<String>,
+    pub status: Option<String>,
+}
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 struct Detection {

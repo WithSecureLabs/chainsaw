@@ -174,6 +174,7 @@ dependencies = [
  "serde_yaml",
  "structopt",
  "tau-engine",
+ "uuid",
 ]
 
 [[package]]
@@ -525,6 +526,17 @@ dependencies = [
  "cfg-if",
  "libc",
  "wasi 0.9.0+wasi-snapshot-preview1",
+]
+
+[[package]]
+name = "getrandom"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9be70c98951c83b8d2f8f60d7065fa6d5146873094452a1008da8c2f1e4205ad"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "wasi 0.10.0+wasi-snapshot-preview1",
 ]
 
 [[package]]
@@ -923,7 +935,7 @@ version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de0737333e7a9502c789a36d7c7fa6092a49895d4faa31ca5df163857ded2e9d"
 dependencies = [
- "getrandom",
+ "getrandom 0.1.16",
  "redox_syscall 0.1.57",
  "rust-argon2",
 ]
@@ -1151,9 +1163,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.95"
+version = "1.0.96"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbaf6116ab8924f39d52792136fb74fd60a80194cf1b1c6ffa6453eef1c3f942"
+checksum = "0748dd251e24453cb8717f0354206b91557e4ec8703673a4b30208f2abaf1ebf"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1162,9 +1174,9 @@ dependencies = [
 
 [[package]]
 name = "tau-engine"
-version = "1.4.0"
+version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e01789704e01baf9d6b0e677648e6bf52b7ba7192c9201dd426f02ab6d493f9f"
+checksum = "f32fcbd3e364cb39fac2f5753f3b21df0dcf246eacec2953453400fad64c9db8"
 dependencies = [
  "aho-corasick 0.7.18",
  "lazy_static",
@@ -1338,6 +1350,16 @@ name = "utf8-ranges"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fcfc827f90e53a02eaef5e535ee14266c1d569214c6aa70133a624d8a3164ba"
+
+[[package]]
+name = "uuid"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6d5d669b51467dcf7b2f1a796ce0f955f05f01cafda6c19d6e95f730df29238"
+dependencies = [
+ "getrandom 0.2.6",
+ "serde",
+]
 
 [[package]]
 name = "vec_map"
