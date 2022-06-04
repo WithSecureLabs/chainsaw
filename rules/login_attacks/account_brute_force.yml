@@ -15,8 +15,6 @@ timestamp: Event.System.TimeCreated
 fields:
   - name: Event ID
     to: Event.System.EventID
-  - name: Record ID
-    to: Event.System.EventRecordID
   - name: User
     to: Event.EventData.TargetUserName
 
