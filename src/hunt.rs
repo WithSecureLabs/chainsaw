@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
+// https://github.com/rust-lang/rust/issues/74465
+use once_cell::unsync::OnceCell;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 use tau_engine::{
@@ -16,7 +18,7 @@ use uuid::Uuid;
 
 use crate::file::{Document as File, Kind as FileKind, Reader};
 use crate::rule::{
-    chainsaw::{Aggregate, Field, Filter, Rule as Chainsaw},
+    chainsaw::{Aggregate, Container, Field, Filter, Format, Rule as Chainsaw},
     Kind as RuleKind, Rule,
 };
 
@@ -93,18 +95,11 @@ impl HunterBuilder {
                     let uuid = Uuid::new_v4();
                     let rules = map.entry(rule.kind.clone()).or_insert(vec![]);
                     if &rule.kind == &RuleKind::Chainsaw {
-                        let mapper = MapperKind::from(&rule.chainsaw.fields);
+                        let mapper = Mapper::from(rule.chainsaw.fields.clone());
                         hunts.push(Hunt {
                             id: uuid.clone(),
 
                             group: rule.chainsaw.group.clone(),
-                            headers: rule
-                                .chainsaw
-                                .fields
-                                .iter()
-                                .filter_map(|f| if f.visible { Some(&f.name) } else { None })
-                                .cloned()
-                                .collect(),
                             kind: HuntKind::Rule {
                                 aggregate: rule.chainsaw.aggregate.clone(),
                                 filter: rule.chainsaw.filter.clone(),
@@ -122,45 +117,33 @@ impl HunterBuilder {
             }
             None => HashMap::new(),
         };
-        let mappings = match self.mappings {
-            Some(mut mappings) => {
-                mappings.sort();
-                let mut scratch = vec![];
-                for mapping in mappings {
-                    let mut file = fs::File::open(mapping)?;
-                    let mut content = String::new();
-                    file.read_to_string(&mut content)?;
-                    let mut mapping: Mapping = serde_yaml::from_str(&mut content)?;
-                    mapping.groups.sort_by(|x, y| x.name.cmp(&y.name));
-                    for group in &mapping.groups {
-                        let mapper = MapperKind::from(&group.fields);
-                        hunts.push(Hunt {
-                            id: group.id.clone(),
+        if let Some(mut mappings) = self.mappings {
+            mappings.sort();
+            for mapping in mappings {
+                let mut file = fs::File::open(mapping)?;
+                let mut content = String::new();
+                file.read_to_string(&mut content)?;
+                let mut mapping: Mapping = serde_yaml::from_str(&mut content)?;
+                mapping.groups.sort_by(|x, y| x.name.cmp(&y.name));
+                for group in mapping.groups {
+                    let mapper = Mapper::from(group.fields);
+                    hunts.push(Hunt {
+                        id: group.id,
 
-                            group: group.name.clone(),
-                            headers: group
-                                .fields
-                                .iter()
-                                .filter_map(|f| if f.visible { Some(&f.name) } else { None })
-                                .cloned()
-                                .collect(),
-                            kind: HuntKind::Group {
-                                exclusions: mapping.exclusions.clone(),
-                                filter: group.filter.clone(),
-                            },
-                            timestamp: group.timestamp.clone(),
+                        group: group.name,
+                        kind: HuntKind::Group {
+                            exclusions: mapping.exclusions.clone(),
+                            filter: group.filter,
+                        },
+                        timestamp: group.timestamp,
 
-                            file: mapping.kind.clone(),
-                            mapper,
-                            rule: mapping.rules.clone(),
-                        });
-                    }
-                    scratch.push(mapping);
+                        file: mapping.kind.clone(),
+                        mapper,
+                        rule: mapping.rules.clone(),
+                    });
                 }
-                scratch
             }
-            None => vec![],
-        };
+        }
 
         let load_unknown = self.load_unknown.unwrap_or_default();
         let local = self.local.unwrap_or_default();
@@ -169,7 +152,6 @@ impl HunterBuilder {
         Ok(Hunter {
             inner: HunterInner {
                 hunts,
-                mappings,
                 rules,
 
                 from: self.from.map(|d| DateTime::from_utc(d, Utc)),
@@ -237,14 +219,19 @@ pub enum HuntKind {
 pub enum MapperKind {
     None,
     Fast(HashMap<String, String>),
-    Full(HashMap<String, Field>),
+    Full(HashMap<String, (String, Option<Container>)>),
 }
 
-impl MapperKind {
-    pub fn from(fields: &Vec<Field>) -> Self {
+pub struct Mapper {
+    fields: Vec<Field>,
+    kind: MapperKind,
+}
+
+impl Mapper {
+    pub fn from(fields: Vec<Field>) -> Self {
         let mut fast = false;
         let mut full = false;
-        for field in fields {
+        for field in &fields {
             if field.container.is_some() {
                 full = true;
                 break;
@@ -253,20 +240,95 @@ impl MapperKind {
                 fast = true;
             }
         }
-        if full {
+        let kind = if full {
             let mut map = HashMap::with_capacity(fields.len());
-            for field in fields {
-                map.insert(field.from.clone(), field.clone());
+            for field in &fields {
+                map.insert(
+                    field.from.clone(),
+                    (field.to.clone(), field.container.clone()),
+                );
             }
             MapperKind::Full(map)
         } else if fast {
             let mut map = HashMap::with_capacity(fields.len());
-            for field in fields {
+            for field in &fields {
                 map.insert(field.from.clone(), field.to.clone());
             }
             MapperKind::Fast(map)
         } else {
             MapperKind::None
+        };
+        Self { fields, kind }
+    }
+
+    pub fn fields(&self) -> &Vec<Field> {
+        &self.fields
+    }
+
+    pub fn mapped<'a, D>(&'a self, document: &'a D) -> Mapped<'a>
+    where
+        D: TauDocument,
+    {
+        Mapped {
+            cache: OnceCell::new(),
+            document,
+            mapper: self,
+        }
+    }
+}
+
+pub struct Mapped<'a> {
+    cache: OnceCell<HashMap<String, Box<dyn TauDocument>>>,
+    document: &'a dyn TauDocument,
+    mapper: &'a Mapper,
+}
+impl<'a> TauDocument for Mapped<'a> {
+    fn find(&self, key: &str) -> Option<Tau<'_>> {
+        match &self.mapper.kind {
+            MapperKind::None => self.document.find(key),
+            MapperKind::Fast(map) => match map.get(key) {
+                Some(v) => self.document.find(v),
+                None => self.document.find(key),
+            },
+            MapperKind::Full(map) => match map.get(key) {
+                Some((v, c)) => match c {
+                    Some(container) => {
+                        if let Some(cache) = self.cache.get() {
+                            return cache.get(&container.field).and_then(|hit| hit.find(v));
+                        }
+                        // Due to referencing and ownership, we parse all containers at once, which
+                        // then allows us to use a OnceCell.
+                        let mut lookup = HashMap::new();
+                        for field in &self.mapper.fields {
+                            if let Some(container) = &field.container {
+                                if !lookup.contains_key(&container.field) {
+                                    let data = match self.document.find(&container.field) {
+                                        Some(Tau::String(s)) => match container.format {
+                                            Format::Json => {
+                                                match serde_json::from_str::<Json>(&s) {
+                                                    Ok(j) => Box::new(j) as Box<dyn TauDocument>,
+                                                    Err(_) => continue,
+                                                }
+                                            }
+                                        },
+                                        _ => continue,
+                                    };
+                                    lookup.insert(container.field.clone(), data);
+                                }
+                            }
+                        }
+                        if let Err(_) = self.cache.set(lookup) {
+                            panic!("cache is already set!");
+                        }
+                        if let Some(cache) = self.cache.get() {
+                            return cache.get(&container.field).and_then(|hit| hit.find(v));
+                        }
+                        None
+                    }
+                    None => self.document.find(key),
+                },
+                None => self.document.find(key),
+            },
         }
     }
 }
@@ -274,18 +336,16 @@ impl MapperKind {
 pub struct Hunt {
     pub id: Uuid,
     pub group: String,
-    pub headers: Vec<String>,
     pub kind: HuntKind,
+    pub mapper: Mapper,
     pub timestamp: String,
 
     pub file: FileKind,
-    pub mapper: MapperKind,
     pub rule: RuleKind,
 }
 
 pub struct HunterInner {
     hunts: Vec<Hunt>,
-    mappings: Vec<Mapping>,
     rules: HashMap<RuleKind, Vec<(Uuid, Chainsaw)>>,
 
     load_unknown: bool,
@@ -294,22 +354,6 @@ pub struct HunterInner {
     skip_errors: bool,
     timezone: Option<Tz>,
     to: Option<DateTime<Utc>>,
-}
-
-//pub struct Mapper<'a>(&'a HashMap<String, String>, &'a dyn TauDocument);
-pub struct Mapper<'a>(pub &'a MapperKind, pub &'a dyn TauDocument);
-impl<'a> TauDocument for Mapper<'a> {
-    fn find(&self, key: &str) -> Option<Tau<'_>> {
-        match &self.0 {
-            MapperKind::None => self.1.find(key),
-            MapperKind::Fast(map) => match map.get(key) {
-                Some(v) => self.1.find(v),
-                None => self.1.find(key),
-            },
-            //MapperKind::Full(map) => unimplemented!(),
-            MapperKind::Full(map) => self.1.find(key),
-        }
-    }
 }
 
 pub struct Hunter {
@@ -348,9 +392,9 @@ impl Hunter {
                     continue;
                 }
 
-                let mapper = Mapper(&hunt.mapper, &wrapper);
+                let mapped = hunt.mapper.mapped(&wrapper);
 
-                let timestamp = match mapper.find(&hunt.timestamp) {
+                let timestamp = match mapped.find(&hunt.timestamp) {
                     Some(value) => match value.as_str() {
                         Some(timestamp) => {
                             match NaiveDateTime::parse_from_str(timestamp, "%Y-%m-%dT%H:%M:%S%.6fZ")
@@ -386,17 +430,17 @@ impl Hunter {
                 match &hunt.kind {
                     HuntKind::Group { exclusions, filter } => {
                         if let Some(rules) = self.inner.rules.get(&hunt.rule) {
-                            if tau_engine::core::solve(&filter, &mapper) {
+                            if tau_engine::core::solve(&filter, &mapped) {
                                 for (rid, rule) in rules {
                                     if exclusions.contains(&rule.name) {
                                         continue;
                                     }
                                     let hit = match &rule.filter {
                                         Filter::Detection(detection) => {
-                                            tau_engine::solve(&detection, &mapper)
+                                            tau_engine::solve(&detection, &mapped)
                                         }
                                         Filter::Expression(expression) => {
-                                            tau_engine::core::solve(&expression, &mapper)
+                                            tau_engine::core::solve(&expression, &mapped)
                                         }
                                     };
                                     if hit {
@@ -412,9 +456,9 @@ impl Hunter {
                     }
                     HuntKind::Rule { aggregate, filter } => {
                         let hit = match &filter {
-                            Filter::Detection(detection) => tau_engine::solve(&detection, &mapper),
+                            Filter::Detection(detection) => tau_engine::solve(&detection, &mapped),
                             Filter::Expression(expression) => {
-                                tau_engine::core::solve(&expression, &mapper)
+                                tau_engine::core::solve(&expression, &mapped)
                             }
                         };
                         if hit {
@@ -423,7 +467,7 @@ impl Hunter {
                                 let mut hasher = DefaultHasher::new();
                                 for field in &aggregate.fields {
                                     if let Some(value) =
-                                        mapper.find(&field).and_then(|s| s.to_string())
+                                        mapped.find(&field).and_then(|s| s.to_string())
                                     {
                                         value.hash(&mut hasher);
                                     }
@@ -504,10 +548,6 @@ impl Hunter {
 
     pub fn hunts(&self) -> &Vec<Hunt> {
         &self.inner.hunts
-    }
-
-    pub fn mappings(&self) -> &Vec<Mapping> {
-        &self.inner.mappings
     }
 
     pub fn rules(&self) -> &HashMap<RuleKind, Vec<(Uuid, Chainsaw)>> {

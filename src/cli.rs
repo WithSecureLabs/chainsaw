@@ -10,7 +10,7 @@ use tau_engine::Document;
 use uuid::Uuid;
 
 use crate::file::Kind as FileKind;
-use crate::hunt::{Detections, Group, Hunt, Kind, Mapper, Mapping};
+use crate::hunt::{Detections, Hunt, Kind};
 use crate::rule::{
     chainsaw::{Level, Rule as Chainsaw, Status},
     Kind as RuleKind,
@@ -79,7 +79,6 @@ pub fn format_field_length(data: &str, full_output: bool, length: u32) -> String
 pub fn print_detections(
     detections: &[Detections],
     hunts: &[Hunt],
-    mappings: &[Mapping],
     rules: &HashMap<RuleKind, Vec<(Uuid, Chainsaw)>>,
     column_width: u32,
     full: bool,
@@ -111,20 +110,14 @@ pub fn print_detections(
         let headers = headers
             .entry(&hunt.group)
             .or_insert((vec![], HashSet::new()));
-        for header in &hunt.headers {
-            if !headers.1.contains(&header) {
-                (*headers).0.push(&header);
-                (*headers).1.insert(&header);
+        for field in hunt.mapper.fields() {
+            if field.visible && !headers.1.contains(&field.name) {
+                (*headers).0.push(&field.name);
+                (*headers).1.insert(&field.name);
             }
         }
     }
     // Build lookups
-    let mut groups: HashMap<&Uuid, &Group> = HashMap::new();
-    for mapping in mappings {
-        for group in &mapping.groups {
-            groups.insert(&group.id, group);
-        }
-    }
     let hunts: HashMap<_, _> = hunts.iter().map(|h| (&h.id, h)).collect();
     let rules: HashMap<_, _> = rules.values().flatten().map(|r| (&r.0, &r.1)).collect();
 
@@ -236,20 +229,16 @@ pub fn print_detections(
                     let mut hdrs = HashMap::new();
                     for hid in hids {
                         let hunt = hunts.get(hid).expect("could not get hunt");
-                        let fields = match &hunt.kind {
-                            crate::hunt::HuntKind::Group { .. } => {
-                                &groups.get(&hunt.id).expect("could not get group").fields
-                            }
-                            crate::hunt::HuntKind::Rule { .. } => {
-                                &rules.get(&hunt.id).expect("could not get rule").fields
-                            }
-                        };
-                        let flds: HashMap<_, _> =
-                            fields.iter().map(|f| (&f.name, &f.from)).collect();
+                        let flds: HashMap<_, _> = hunt
+                            .mapper
+                            .fields()
+                            .iter()
+                            .map(|f| (&f.name, &f.from))
+                            .collect();
                         for header in &headers {
                             if let Some(from) = flds.get(header) {
-                                let mapper = Mapper(&hunt.mapper, &wrapper);
-                                if let Some(value) = mapper.find(&from).and_then(|v| v.to_string())
+                                let mapped = hunt.mapper.mapped(&wrapper);
+                                if let Some(value) = mapped.find(&from).and_then(|v| v.to_string())
                                 {
                                     hdrs.insert(
                                         header,
@@ -278,7 +267,6 @@ pub fn print_detections(
 pub fn print_csv(
     detections: &[Detections],
     hunts: &[Hunt],
-    mappings: &[Mapping],
     rules: &HashMap<RuleKind, Vec<(Uuid, Chainsaw)>>,
     local: bool,
     timezone: Option<Tz>,
@@ -296,20 +284,14 @@ pub fn print_csv(
         let headers = headers
             .entry(&hunt.group)
             .or_insert((vec![], HashSet::new()));
-        for header in &hunt.headers {
-            if !headers.1.contains(&header) {
-                (*headers).0.push(&header);
-                (*headers).1.insert(&header);
+        for field in hunt.mapper.fields() {
+            if field.visible && !headers.1.contains(&field.name) {
+                (*headers).0.push(&field.name);
+                (*headers).1.insert(&field.name);
             }
         }
     }
     // Build lookups
-    let mut groups: HashMap<&Uuid, &Group> = HashMap::new();
-    for mapping in mappings {
-        for group in &mapping.groups {
-            groups.insert(&group.id, group);
-        }
-    }
     let hunts: HashMap<_, _> = hunts.iter().map(|h| (&h.id, h)).collect();
     let rules: HashMap<_, _> = rules.values().flatten().map(|r| (&r.0, &r.1)).collect();
     // Do a single unfold...
@@ -401,20 +383,16 @@ pub fn print_csv(
                     let mut hdrs = HashMap::new();
                     for hid in hids {
                         let hunt = hunts.get(hid).expect("could not get hunt");
-                        let fields = match &hunt.kind {
-                            crate::hunt::HuntKind::Group { .. } => {
-                                &groups.get(&hunt.id).expect("could not get group").fields
-                            }
-                            crate::hunt::HuntKind::Rule { .. } => {
-                                &rules.get(&hunt.id).expect("could not get rule").fields
-                            }
-                        };
-                        let flds: HashMap<_, _> =
-                            fields.iter().map(|f| (&f.name, &f.from)).collect();
+                        let flds: HashMap<_, _> = hunt
+                            .mapper
+                            .fields()
+                            .iter()
+                            .map(|f| (&f.name, &f.from))
+                            .collect();
                         for header in &headers {
                             if let Some(from) = flds.get(header) {
-                                let mapper = Mapper(&hunt.mapper, &wrapper);
-                                if let Some(value) = mapper.find(&from).and_then(|v| v.to_string())
+                                let mapped = hunt.mapper.mapped(&wrapper);
+                                if let Some(value) = mapped.find(&from).and_then(|v| v.to_string())
                                 {
                                     hdrs.insert(header, value);
                                 }

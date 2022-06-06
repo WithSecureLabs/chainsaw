@@ -292,21 +292,13 @@ fn run() -> Result<()> {
             }
             pb.finish();
             if csv {
-                cli::print_csv(
-                    &detections,
-                    hunter.hunts(),
-                    hunter.mappings(),
-                    hunter.rules(),
-                    local,
-                    timezone,
-                )?;
+                cli::print_csv(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
             } else if json {
                 cli::print_json(&detections, hunter.rules(), local, timezone)?;
             } else {
                 cli::print_detections(
                     &detections,
                     hunter.hunts(),
-                    hunter.mappings(),
                     hunter.rules(),
                     column_width.unwrap_or(40),
                     full,

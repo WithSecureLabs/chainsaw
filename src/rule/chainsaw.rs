@@ -23,7 +23,7 @@ pub struct Aggregate {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Container {
-    pub name: String,
+    pub field: String,
     pub format: Format,
 }
 
