@@ -516,11 +516,11 @@ impl Hunter {
         for (id, (aggregate, docs)) in aggregates {
             for ids in docs.values() {
                 let hit = match aggregate.count {
-                    Pattern::Equal(i) => (i as usize) == ids.len(),
-                    Pattern::GreaterThan(i) => (i as usize) > ids.len(),
-                    Pattern::GreaterThanOrEqual(i) => (i as usize) >= ids.len(),
-                    Pattern::LessThan(i) => (i as usize) < ids.len(),
-                    Pattern::LessThanOrEqual(i) => (i as usize) <= ids.len(),
+                    Pattern::Equal(i) => ids.len() == (i as usize),
+                    Pattern::GreaterThan(i) => ids.len() > (i as usize),
+                    Pattern::GreaterThanOrEqual(i) => ids.len() >= (i as usize),
+                    Pattern::LessThan(i) => ids.len() < (i as usize),
+                    Pattern::LessThanOrEqual(i) => ids.len() <= (i as usize),
                     _ => false,
                 };
                 if hit {
