@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
@@ -47,19 +47,19 @@ pub struct Rule {
     pub kind: Kind,
 }
 
-pub fn load_rule(path: &PathBuf) -> crate::Result<Vec<Rule>> {
+pub fn load_rule(path: &Path) -> crate::Result<Vec<Rule>> {
     if let Some(x) = path.extension() {
         if x != "yml" && x != "yaml" {
             anyhow::bail!("rule must have a yaml file extension");
         }
     }
     // This is a bit crude but we try all formats then report the errors...
-    let rules = if let Ok(rule) = chainsaw::load(&path) {
+    let rules = if let Ok(rule) = chainsaw::load(path) {
         vec![Rule {
             chainsaw: rule,
             kind: Kind::Chainsaw,
         }]
-    } else if let Ok(rules) = sigma::load(&path) {
+    } else if let Ok(rules) = sigma::load(path) {
         rules
             .into_iter()
             .filter_map(|r| serde_yaml::from_value(r).ok())
@@ -99,7 +99,7 @@ pub fn load_rule(path: &PathBuf) -> crate::Result<Vec<Rule>> {
                 kind: Kind::Sigma,
             })
             .collect()
-    } else if let Ok(rule) = stalker::load(&path) {
+    } else if let Ok(rule) = stalker::load(path) {
         vec![Rule {
             chainsaw: Chainsaw {
                 name: rule.tag,
@@ -135,7 +135,7 @@ pub fn load_rule(path: &PathBuf) -> crate::Result<Vec<Rule>> {
     Ok(rules)
 }
 
-pub fn lint_rule(kind: &Kind, path: &PathBuf) -> crate::Result<()> {
+pub fn lint_rule(kind: &Kind, path: &Path) -> crate::Result<()> {
     if let Some(x) = path.extension() {
         if x != "yml" && x != "yaml" {
             anyhow::bail!("rule must have a yaml file extension");
@@ -146,7 +146,7 @@ pub fn lint_rule(kind: &Kind, path: &PathBuf) -> crate::Result<()> {
             unimplemented!()
         }
         Kind::Sigma => {
-            if let Err(e) = sigma::load(&path) {
+            if let Err(e) = sigma::load(path) {
                 let file_name = match path.to_string_lossy().split('/').last() {
                     Some(e) => e.to_string(),
                     None => path.display().to_string(),
@@ -159,7 +159,7 @@ pub fn lint_rule(kind: &Kind, path: &PathBuf) -> crate::Result<()> {
             }
         }
         Kind::Stalker => {
-            if let Err(e) = stalker::load(&path) {
+            if let Err(e) = stalker::load(path) {
                 let file_name = match path.to_string_lossy().split('/').last() {
                     Some(e) => e.to_string(),
                     None => path.display().to_string(),

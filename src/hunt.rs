@@ -94,10 +94,10 @@ impl HunterBuilder {
                 for rule in rules {
                     let uuid = Uuid::new_v4();
                     let rules = map.entry(rule.kind.clone()).or_insert(vec![]);
-                    if &rule.kind == &RuleKind::Chainsaw {
+                    if rule.kind == RuleKind::Chainsaw {
                         let mapper = Mapper::from(rule.chainsaw.fields.clone());
                         hunts.push(Hunt {
-                            id: uuid.clone(),
+                            id: uuid,
 
                             group: rule.chainsaw.group.clone(),
                             kind: HuntKind::Rule {
@@ -123,7 +123,7 @@ impl HunterBuilder {
                 let mut file = fs::File::open(mapping)?;
                 let mut content = String::new();
                 file.read_to_string(&mut content)?;
-                let mut mapping: Mapping = serde_yaml::from_str(&mut content)?;
+                let mut mapping: Mapping = serde_yaml::from_str(&content)?;
                 mapping.groups.sort_by(|x, y| x.name.cmp(&y.name));
                 for group in mapping.groups {
                     let mapper = Mapper::from(group.fields);
@@ -291,43 +291,38 @@ impl<'a> TauDocument for Mapped<'a> {
                 None => self.document.find(key),
             },
             MapperKind::Full(map) => match map.get(key) {
-                Some((v, c)) => match c {
-                    Some(container) => {
-                        if let Some(cache) = self.cache.get() {
-                            return cache.get(&container.field).and_then(|hit| hit.find(v));
-                        }
-                        // Due to referencing and ownership, we parse all containers at once, which
-                        // then allows us to use a OnceCell.
-                        let mut lookup = HashMap::new();
-                        for field in &self.mapper.fields {
-                            if let Some(container) = &field.container {
-                                if !lookup.contains_key(&container.field) {
-                                    let data = match self.document.find(&container.field) {
-                                        Some(Tau::String(s)) => match container.format {
-                                            Format::Json => {
-                                                match serde_json::from_str::<Json>(&s) {
-                                                    Ok(j) => Box::new(j) as Box<dyn TauDocument>,
-                                                    Err(_) => continue,
-                                                }
-                                            }
+                Some((v, Some(container))) => {
+                    if let Some(cache) = self.cache.get() {
+                        return cache.get(&container.field).and_then(|hit| hit.find(v));
+                    }
+                    // Due to referencing and ownership, we parse all containers at once, which
+                    // then allows us to use a OnceCell.
+                    let mut lookup = HashMap::new();
+                    for field in &self.mapper.fields {
+                        if let Some(container) = &field.container {
+                            if !lookup.contains_key(&container.field) {
+                                let data = match self.document.find(&container.field) {
+                                    Some(Tau::String(s)) => match container.format {
+                                        Format::Json => match serde_json::from_str::<Json>(&s) {
+                                            Ok(j) => Box::new(j) as Box<dyn TauDocument>,
+                                            Err(_) => continue,
                                         },
-                                        _ => continue,
-                                    };
-                                    lookup.insert(container.field.clone(), data);
-                                }
+                                    },
+                                    _ => continue,
+                                };
+                                lookup.insert(container.field.clone(), data);
                             }
                         }
-                        if let Err(_) = self.cache.set(lookup) {
-                            panic!("cache is already set!");
-                        }
-                        if let Some(cache) = self.cache.get() {
-                            return cache.get(&container.field).and_then(|hit| hit.find(v));
-                        }
-                        None
                     }
-                    None => self.document.find(key),
-                },
-                None => self.document.find(key),
+                    if self.cache.set(lookup).is_err() {
+                        panic!("cache is already set!");
+                    }
+                    if let Some(cache) = self.cache.get() {
+                        return cache.get(&container.field).and_then(|hit| hit.find(v));
+                    }
+                    None
+                }
+                _ => self.document.find(key),
             },
         }
     }
@@ -374,7 +369,7 @@ impl Hunter {
         HunterBuilder::new()
     }
 
-    pub fn hunt<'a>(&self, file: &Path) -> crate::Result<Vec<Detections>> {
+    pub fn hunt(&self, file: &Path) -> crate::Result<Vec<Detections>> {
         let mut reader = Reader::load(file, self.inner.load_unknown, self.inner.skip_errors)?;
         let kind = reader.kind();
         // This can be optimised better ;)
@@ -444,23 +439,23 @@ impl Hunter {
                 match &hunt.kind {
                     HuntKind::Group { exclusions, filter } => {
                         if let Some(rules) = self.inner.rules.get(&hunt.rule) {
-                            if tau_engine::core::solve(&filter, &mapped) {
+                            if tau_engine::core::solve(filter, &mapped) {
                                 for (rid, rule) in rules {
                                     if exclusions.contains(&rule.name) {
                                         continue;
                                     }
                                     let hit = match &rule.filter {
                                         Filter::Detection(detection) => {
-                                            tau_engine::solve(&detection, &mapped)
+                                            tau_engine::solve(detection, &mapped)
                                         }
                                         Filter::Expression(expression) => {
-                                            tau_engine::core::solve(&expression, &mapped)
+                                            tau_engine::core::solve(expression, &mapped)
                                         }
                                     };
                                     if hit {
                                         hits.push(Hit {
-                                            hunt: hunt.id.clone(),
-                                            rule: rid.clone(),
+                                            hunt: hunt.id,
+                                            rule: *rid,
                                             timestamp,
                                         });
                                     }
@@ -470,18 +465,18 @@ impl Hunter {
                     }
                     HuntKind::Rule { aggregate, filter } => {
                         let hit = match &filter {
-                            Filter::Detection(detection) => tau_engine::solve(&detection, &mapped),
+                            Filter::Detection(detection) => tau_engine::solve(detection, &mapped),
                             Filter::Expression(expression) => {
-                                tau_engine::core::solve(&expression, &mapped)
+                                tau_engine::core::solve(expression, &mapped)
                             }
                         };
                         if hit {
                             if let Some(aggregate) = aggregate {
-                                files.insert(document_id.clone(), (document.clone(), timestamp));
+                                files.insert(document_id, (document.clone(), timestamp));
                                 let mut hasher = DefaultHasher::new();
                                 for field in &aggregate.fields {
                                     if let Some(value) =
-                                        mapped.find(&field).and_then(|s| s.to_string())
+                                        mapped.find(field).and_then(|s| s.to_string())
                                     {
                                         value.hash(&mut hasher);
                                     }
@@ -489,13 +484,13 @@ impl Hunter {
                                 let id = hasher.finish();
                                 let aggregates = aggregates
                                     .entry(hunt.id)
-                                    .or_insert((&aggregate, HashMap::new()));
+                                    .or_insert((aggregate, HashMap::new()));
                                 let docs = aggregates.1.entry(id).or_insert(vec![]);
-                                docs.push(document_id.clone());
+                                docs.push(document_id);
                             } else {
                                 hits.push(Hit {
-                                    hunt: hunt.id.clone(),
-                                    rule: hunt.id.clone(),
+                                    hunt: hunt.id,
+                                    rule: hunt.id,
                                     timestamp,
                                 });
                             }
@@ -534,7 +529,7 @@ impl Hunter {
                     let mut documents = Vec::with_capacity(ids.len());
                     let mut timestamps = Vec::with_capacity(ids.len());
                     for id in ids {
-                        let (document, timestamp) = files.get(&id).expect("could not get document");
+                        let (document, timestamp) = files.get(id).expect("could not get document");
                         let data = match &document {
                             File::Evtx(evtx) => evtx.data.clone(),
                             File::Json(json) => json.clone(),
@@ -544,13 +539,13 @@ impl Hunter {
                             kind: kind.clone(),
                             data,
                         });
-                        timestamps.push(timestamp.clone());
+                        timestamps.push(*timestamp);
                     }
                     timestamps.sort();
                     detections.push(Detections {
                         hits: vec![Hit {
-                            hunt: id.clone(),
-                            rule: id.clone(),
+                            hunt: id,
+                            rule: id,
                             timestamp: timestamps
                                 .into_iter()
                                 .next()

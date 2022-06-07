@@ -421,7 +421,7 @@ fn run() -> Result<()> {
                         }
                     };
                     if json {
-                        if !(hits == 0) {
+                        if hits != 0 {
                             cs_print!(",");
                         }
                         cs_print_json!(&hit)?;

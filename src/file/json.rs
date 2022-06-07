@@ -23,14 +23,10 @@ impl Parser {
     pub fn parse(&mut self) -> impl Iterator<Item = Result<Json, Error>> + '_ {
         if let Some(json) = self.inner.take() {
             return match json {
-                Json::Array(array) => array
-                    .into_iter()
-                    .map(|x| Ok(x))
-                    .collect::<Vec<_>>()
-                    .into_iter(),
+                Json::Array(array) => array.into_iter().map(Ok).collect::<Vec<_>>().into_iter(),
                 _ => vec![json]
                     .into_iter()
-                    .map(|x| Ok(x))
+                    .map(Ok)
                     .collect::<Vec<_>>()
                     .into_iter(),
             };

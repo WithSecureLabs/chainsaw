@@ -102,7 +102,7 @@ impl<'de> Deserialize<'de> for Field {
                 let name = name.unwrap_or_else(|| to.clone());
                 let from = from.unwrap_or_else(|| to.clone());
                 let container = container.unwrap_or_default();
-                let visible = visible.unwrap_or_else(|| true);
+                let visible = visible.unwrap_or(true);
                 Ok(Field {
                     name,
                     to,
@@ -113,7 +113,7 @@ impl<'de> Deserialize<'de> for Field {
             }
         }
 
-        const FIELDS: &'static [&'static str] = &["container", "from", "name", "to", "visible"];
+        const FIELDS: &[&str] = &["container", "from", "name", "to", "visible"];
         deserializer.deserialize_struct("Field", FIELDS, FieldVisitor)
     }
 }

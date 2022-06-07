@@ -129,12 +129,12 @@ impl Reader {
             Parser::Evtx(parser) => Box::new(
                 parser
                     .parse()
-                    .map(|r| r.map(|d| Document::Evtx(d)).map_err(|e| e.into())),
+                    .map(|r| r.map(Document::Evtx).map_err(|e| e.into())),
             )
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
-            Parser::Json(parser) => Box::new(parser.parse().map(|r| r.map(|d| Document::Json(d))))
+            Parser::Json(parser) => Box::new(parser.parse().map(|r| r.map(Document::Json)))
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
-            Parser::Xml(parser) => Box::new(parser.parse().map(|r| r.map(|d| Document::Xml(d))))
+            Parser::Xml(parser) => Box::new(parser.parse().map(|r| r.map(Document::Xml)))
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
             Parser::Unknown => {
                 Box::new(Unknown) as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>
@@ -195,18 +195,16 @@ pub fn get_files(
                         }
                     }
                 };
-                files.extend(get_files(&dir.path(), &extension, skip_errors)?);
+                files.extend(get_files(&dir.path(), extension, skip_errors)?);
+            }
+        } else if let Some(extension) = extension {
+            if let Some(ext) = path.extension() {
+                if ext == extension.as_str() {
+                    files.push(path.to_path_buf());
+                }
             }
         } else {
-            if let Some(extension) = extension {
-                if let Some(ext) = path.extension() {
-                    if ext == extension.as_str() {
-                        files.push(path.to_path_buf());
-                    }
-                }
-            } else {
-                files.push(path.to_path_buf());
-            }
+            files.push(path.to_path_buf());
         }
     } else {
         anyhow::bail!("Invalid input path: {}", path.display());

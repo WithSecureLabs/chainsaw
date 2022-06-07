@@ -35,7 +35,7 @@ impl<'a> Iterator for Iter<'a> {
     type Item = crate::Result<Json>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(document) = self.documents.next() {
+        for document in self.documents.by_ref() {
             let document = match document {
                 Ok(document) => document,
                 Err(e) => {
@@ -55,7 +55,7 @@ impl<'a> Iterator for Iter<'a> {
                     .expect("could not get timestamp");
                 // TODO: Default to RFC 3339
                 let result = match &document {
-                    Document::Evtx(evtx) => match crate::evtx::Wrapper(&evtx.data).find(&field) {
+                    Document::Evtx(evtx) => match crate::evtx::Wrapper(&evtx.data).find(field) {
                         Some(value) => match value.as_str() {
                             Some(timestamp) => {
                                 NaiveDateTime::parse_from_str(timestamp, "%Y-%m-%dT%H:%M:%S%.6fZ")
@@ -64,7 +64,7 @@ impl<'a> Iterator for Iter<'a> {
                         },
                         None => continue,
                     },
-                    Document::Json(json) | Document::Xml(json) => match json.find(&field) {
+                    Document::Json(json) | Document::Xml(json) => match json.find(field) {
                         Some(value) => match value.as_str() {
                             Some(timestamp) => {
                                 NaiveDateTime::parse_from_str(timestamp, "%Y-%m-%dT%H:%M:%S%.6fZ")
@@ -132,10 +132,10 @@ impl<'a> Iterator for Iter<'a> {
                 Document::Evtx(evtx) => {
                     let wrapper = crate::evtx::Wrapper(&evtx.data);
                     if let Some(expression) = &self.searcher.tau {
-                        if !tau_engine::core::solve(&expression, &wrapper) {
+                        if !tau_engine::core::solve(expression, &wrapper) {
                             continue;
                         }
-                        if self.searcher.regex.len() == 0 {
+                        if self.searcher.regex.is_empty() {
                             return Some(Ok(evtx.data));
                         }
                     }
@@ -145,10 +145,10 @@ impl<'a> Iterator for Iter<'a> {
                 }
                 Document::Json(json) | Document::Xml(json) => {
                     if let Some(expression) = &self.searcher.tau {
-                        if !tau_engine::core::solve(&expression, &json) {
+                        if !tau_engine::core::solve(expression, &json) {
                             continue;
                         }
-                        if self.searcher.regex.len() == 0 {
+                        if self.searcher.regex.is_empty() {
                             return Some(Ok(json));
                         }
                     }
@@ -213,7 +213,7 @@ impl SearcherBuilder {
 
         Ok(Searcher {
             inner: SearcherInner {
-                regex: regex,
+                regex,
 
                 from: self.from.map(|d| DateTime::from_utc(d, Utc)),
                 load_unknown,

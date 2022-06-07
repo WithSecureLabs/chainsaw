@@ -41,7 +41,7 @@ impl<'a> Document for Wrapper<'a> {
                 // will be ignored...
                 self.0
                     .find("Event.System.EventID.#text")
-                    .or(self.0.find(key))
+                    .or_else(|| self.0.find(key))
             }
             "Event.System.Provider" => self.0.find("Event.System.Provider_attributes.Name"),
             "Event.System.TimeCreated" => self

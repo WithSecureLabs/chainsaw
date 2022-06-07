@@ -54,9 +54,9 @@ pub fn format_field_length(data: &str, full_output: bool, length: u32) -> String
     // Take the context_field and format it for printing. Remove newlines, break into even chunks etc.
     // If this is a scheduled task we need to parse the XML to make it more readable
     let mut data = data
-        .replace("\n", "")
-        .replace("\r", "")
-        .replace("\t", "")
+        .replace('\n', "")
+        .replace('\r', "")
+        .replace('\t', "")
         .replace("  ", " ")
         .chars()
         .collect::<Vec<char>>()
@@ -163,7 +163,7 @@ pub fn print_detections(
     keys.sort();
     for key in keys {
         let mut group = groups.remove(&key).expect("could not get grouping!");
-        group.sort_by(|x, y| x.timestamp.cmp(&y.timestamp));
+        group.sort_by(|x, y| x.timestamp.cmp(y.timestamp));
 
         let mut table = Table::new();
         table.set_format(format);
@@ -195,7 +195,7 @@ pub fn print_detections(
                         .expect("failed to localise timestamp")
                         .to_rfc3339()
                 } else {
-                    DateTime::<Utc>::from_utc(grouping.timestamp.clone(), Utc).to_rfc3339()
+                    DateTime::<Utc>::from_utc(*grouping.timestamp, Utc).to_rfc3339()
                 };
 
                 // NOTE: Currently we don't do any fancy outputting for aggregates so we can cut some
@@ -383,10 +383,10 @@ pub fn print_csv(
     keys.sort();
     for key in keys {
         let mut group = groups.remove(&key).expect("could not get grouping!");
-        group.sort_by(|x, y| x.timestamp.cmp(&y.timestamp));
+        group.sort_by(|x, y| x.timestamp.cmp(y.timestamp));
 
         // FIXME: Handle name clashes
-        let filename = format!("{}.csv", key.replace(" ", "_").to_lowercase());
+        let filename = format!("{}.csv", key.replace(' ', "_").to_lowercase());
         let path = directory.join(&filename);
         let mut csv = prettytable::csv::Writer::from_path(path)?;
         cs_eprintln!("[+] Created {}", filename);
@@ -415,7 +415,7 @@ pub fn print_csv(
                         .expect("failed to localise timestamp")
                         .to_rfc3339()
                 } else {
-                    DateTime::<Utc>::from_utc(grouping.timestamp.clone(), Utc).to_rfc3339()
+                    DateTime::<Utc>::from_utc(*grouping.timestamp, Utc).to_rfc3339()
                 };
 
                 // NOTE: Currently we don't do any fancy outputting for aggregates so we can cut some
@@ -501,7 +501,7 @@ pub fn print_csv(
                     cells.push(
                         rules
                             .iter()
-                            .map(|rule| format!("{}", rule.name))
+                            .map(|rule| rule.name.to_string())
                             .collect::<Vec<_>>()
                             .join(";"),
                     );
@@ -542,7 +542,7 @@ pub fn print_json(
     }
     let mut detections = detections
         .iter()
-        .map(|d| {
+        .flat_map(|d| {
             let mut detections = Vec::with_capacity(d.hits.len());
             for hit in &d.hits {
                 let (kind, rule) = rs.get(&hit.rule).expect("could not get rule!");
@@ -558,7 +558,7 @@ pub fn print_json(
                         .expect("failed to localise timestamp")
                         .to_rfc3339()
                 } else {
-                    DateTime::<Utc>::from_utc(hit.timestamp.clone(), Utc).to_rfc3339()
+                    DateTime::<Utc>::from_utc(hit.timestamp, Utc).to_rfc3339()
                 };
                 detections.push(Detection {
                     authors: &rule.authors,
@@ -573,7 +573,6 @@ pub fn print_json(
             }
             detections
         })
-        .flatten()
         .collect::<Vec<Detection>>();
     detections.sort_by(|x, y| x.timestamp.cmp(&y.timestamp));
     cs_print_json!(&detections)?;
