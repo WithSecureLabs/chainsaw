@@ -374,7 +374,7 @@ impl Hunter {
         HunterBuilder::new()
     }
 
-    pub fn hunt(&self, file: &Path) -> crate::Result<Vec<Detections>> {
+    pub fn hunt<'a>(&self, file: &Path) -> crate::Result<Vec<Detections>> {
         let mut reader = Reader::load(file, self.inner.load_unknown, self.inner.skip_errors)?;
         let kind = reader.kind();
         // This can be optimised better ;)
@@ -392,16 +392,20 @@ impl Hunter {
                     return Err(e);
                 }
             };
-            let wrapper = match &document {
-                File::Evtx(evtx) => crate::evtx::Wrapper(&evtx.data),
-            };
             let mut hits = vec![];
             for hunt in &self.inner.hunts {
                 if hunt.file != kind {
                     continue;
                 }
 
-                let mapped = hunt.mapper.mapped(&wrapper);
+                let wrapper;
+                let mapped = match &document {
+                    File::Evtx(evtx) => {
+                        wrapper = crate::evtx::Wrapper(&evtx.data);
+                        hunt.mapper.mapped(&wrapper)
+                    }
+                    File::Json(json) => hunt.mapper.mapped(json),
+                };
 
                 let timestamp = match mapped.find(&hunt.timestamp) {
                     Some(value) => match value.as_str() {
@@ -501,6 +505,7 @@ impl Hunter {
             if !hits.is_empty() {
                 let data = match &document {
                     File::Evtx(evtx) => evtx.data.clone(),
+                    File::Json(json) => json.clone(),
                 };
                 detections.push(Detections {
                     hits,
@@ -530,6 +535,7 @@ impl Hunter {
                         let (document, timestamp) = files.get(&id).expect("could not get document");
                         let data = match &document {
                             File::Evtx(evtx) => evtx.data.clone(),
+                            File::Json(json) => json.clone(),
                         };
                         documents.push(Document {
                             kind: kind.clone(),

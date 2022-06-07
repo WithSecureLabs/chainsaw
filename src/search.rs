@@ -54,37 +54,36 @@ impl<'a> Iterator for Iter<'a> {
                     .as_ref()
                     .expect("could not get timestamp");
                 // TODO: Default to RFC 3339
-                let timestamp = match &document {
+                let result = match &document {
                     Document::Evtx(evtx) => match crate::evtx::Wrapper(&evtx.data).find(&field) {
                         Some(value) => match value.as_str() {
                             Some(timestamp) => {
-                                match NaiveDateTime::parse_from_str(
-                                    timestamp,
-                                    "%Y-%m-%dT%H:%M:%S%.6fZ",
-                                ) {
-                                    Ok(t) => t,
-                                    Err(e) => {
-                                        if self.searcher.skip_errors {
-                                            cs_eyellowln!(
-                                                "failed to parse timestamp '{}' - {}",
-                                                timestamp,
-                                                e,
-                                            );
-                                            continue;
-                                        } else {
-                                            return Some(Err(anyhow::anyhow!(
-                                                "failed to parse timestamp '{}' - {}",
-                                                timestamp,
-                                                e
-                                            )));
-                                        }
-                                    }
-                                }
+                                NaiveDateTime::parse_from_str(timestamp, "%Y-%m-%dT%H:%M:%S%.6fZ")
                             }
                             None => continue,
                         },
                         None => continue,
                     },
+                    Document::Json(json) => match json.find(&field) {
+                        Some(value) => match value.as_str() {
+                            Some(timestamp) => {
+                                NaiveDateTime::parse_from_str(timestamp, "%Y-%m-%dT%H:%M:%S%.6fZ")
+                            }
+                            None => continue,
+                        },
+                        None => continue,
+                    },
+                };
+                let timestamp = match result {
+                    Ok(t) => t,
+                    Err(e) => {
+                        if self.searcher.skip_errors {
+                            cs_eyellowln!("failed to parse timestamp - {}", e);
+                            continue;
+                        } else {
+                            return Some(Err(anyhow::anyhow!("failed to parse timestamp - {}", e)));
+                        }
+                    }
                 };
                 // TODO: Not sure if this is correct...
                 let localised = if let Some(timezone) = self.searcher.timezone {
@@ -128,20 +127,36 @@ impl<'a> Iterator for Iter<'a> {
                     }
                 }
             }
-            let r = match document {
-                Document::Evtx(evtx) => evtx,
+            // TODO: Remove duplication...
+            match document {
+                Document::Evtx(evtx) => {
+                    let wrapper = crate::evtx::Wrapper(&evtx.data);
+                    if let Some(expression) = &self.searcher.tau {
+                        if !tau_engine::core::solve(&expression, &wrapper) {
+                            continue;
+                        }
+                        if self.searcher.regex.len() == 0 {
+                            return Some(Ok(evtx.data));
+                        }
+                    }
+                    if evtx.matches(&self.searcher.regex) {
+                        return Some(Ok(evtx.data));
+                    }
+                }
+                Document::Json(json) => {
+                    if let Some(expression) = &self.searcher.tau {
+                        if !tau_engine::core::solve(&expression, &json) {
+                            continue;
+                        }
+                        if self.searcher.regex.len() == 0 {
+                            return Some(Ok(json));
+                        }
+                    }
+                    if json.matches(&self.searcher.regex) {
+                        return Some(Ok(json));
+                    }
+                }
             };
-            if let Some(expression) = &self.searcher.tau {
-                if !tau_engine::core::solve(&expression, &crate::evtx::Wrapper(&r.data)) {
-                    continue;
-                }
-                if self.searcher.regex.len() == 0 {
-                    return Some(Ok(r.data));
-                }
-            }
-            if r.matches(&self.searcher.regex) {
-                return Some(Ok(r.data));
-            }
         }
         None
     }

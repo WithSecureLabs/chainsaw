@@ -4,12 +4,15 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use self::evtx::{Evtx, Parser as EvtxParser};
+use self::json::{Json, Parser as JsonParser};
 
 pub mod evtx;
+pub mod json;
 
 #[derive(Clone)]
 pub enum Document {
     Evtx(Evtx),
+    Json(Json),
 }
 
 pub struct Documents<'a> {
@@ -20,6 +23,7 @@ pub struct Documents<'a> {
 #[serde(rename_all = "snake_case")]
 pub enum Kind {
     Evtx,
+    Json,
     Unknown,
 }
 
@@ -42,6 +46,7 @@ impl Iterator for Unknown {
 
 pub enum Parser {
     Evtx(EvtxParser),
+    Json(JsonParser),
     Unknown,
 }
 
@@ -57,6 +62,9 @@ impl Reader {
             Some(extension) => match extension {
                 "evtx" => Ok(Self {
                     parser: Parser::Evtx(EvtxParser::load(file)?),
+                }),
+                "json" => Ok(Self {
+                    parser: Parser::Json(JsonParser::load(file)?),
                 }),
                 _ => {
                     if load_unknown {
@@ -80,6 +88,10 @@ impl Reader {
                     if let Ok(parser) = EvtxParser::load(file) {
                         return Ok(Self {
                             parser: Parser::Evtx(parser),
+                        });
+                    } else if let Ok(parser) = JsonParser::load(file) {
+                        return Ok(Self {
+                            parser: Parser::Json(parser),
                         });
                     }
                     if skip_errors {
@@ -106,7 +118,10 @@ impl Reader {
                 parser
                     .parse()
                     .map(|r| r.map(|d| Document::Evtx(d)).map_err(|e| e.into())),
-            ),
+            )
+                as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
+            Parser::Json(parser) => Box::new(parser.parse().map(|r| r.map(|d| Document::Json(d))))
+                as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
             Parser::Unknown => {
                 Box::new(Unknown) as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>
             }
@@ -117,6 +132,7 @@ impl Reader {
     pub fn kind(&self) -> Kind {
         match self.parser {
             Parser::Evtx(_) => Kind::Evtx,
+            Parser::Json(_) => Kind::Json,
             Parser::Unknown => Kind::Unknown,
         }
     }

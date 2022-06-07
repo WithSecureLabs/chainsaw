@@ -224,13 +224,18 @@ pub fn print_detections(
                     ));
                     seen.insert(0, rules);
                 } else {
-                    let wrapper = match &document.kind {
-                        FileKind::Evtx => crate::evtx::Wrapper(&document.data),
-                        FileKind::Unknown => continue,
-                    };
                     // What we do here is hash each row since if the fields are the same but the values
                     // are not then we would lose data, so in this case we split the row
                     for hit in &grouping.hits {
+                        let wrapper;
+                        let mapped = match &document.kind {
+                            FileKind::Evtx => {
+                                wrapper = crate::evtx::Wrapper(&document.data);
+                                hit.hunt.mapper.mapped(&wrapper)
+                            }
+                            FileKind::Json => hit.hunt.mapper.mapped(&document.data),
+                            FileKind::Unknown => continue,
+                        };
                         let fields: HashMap<_, _> = hit
                             .hunt
                             .mapper
@@ -242,7 +247,6 @@ pub fn print_detections(
                         let mut hasher = DefaultHasher::new();
                         for header in &headers {
                             if let Some(field) = fields.get(header) {
-                                let mapped = hit.hunt.mapper.mapped(&wrapper);
                                 if let Some(value) = mapped.find(&field.from) {
                                     match value.to_string() {
                                         Some(v) => {
@@ -435,13 +439,19 @@ pub fn print_csv(
                     rows.push((0, vec![json]));
                     seen.insert(0, rules);
                 } else {
-                    let wrapper = match &document.kind {
-                        FileKind::Evtx => crate::evtx::Wrapper(&document.data),
-                        FileKind::Unknown => continue,
-                    };
                     // What we do here is hash each row since if the fields are the same but the values
                     // are not then we would lose data, so in this case we split the row
                     for hit in &grouping.hits {
+                        let wrapper;
+                        let mapped = match &document.kind {
+                            FileKind::Evtx => {
+                                wrapper = crate::evtx::Wrapper(&document.data);
+                                hit.hunt.mapper.mapped(&wrapper)
+                            }
+                            FileKind::Json => hit.hunt.mapper.mapped(&document.data),
+                            FileKind::Unknown => continue,
+                        };
+
                         let fields: HashMap<_, _> = hit
                             .hunt
                             .mapper
@@ -453,7 +463,6 @@ pub fn print_csv(
                         let mut hasher = DefaultHasher::new();
                         for header in &headers {
                             if let Some(field) = fields.get(header) {
-                                let mapped = hit.hunt.mapper.mapped(&wrapper);
                                 if let Some(value) = mapped.find(&field.from) {
                                     match value.to_string() {
                                         Some(v) => {
