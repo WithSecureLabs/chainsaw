@@ -2,7 +2,7 @@ use aho_corasick::AhoCorasickBuilder;
 use serde::de;
 use serde_yaml::Value as Yaml;
 use tau_engine::core::parser::{
-    parse_identifier, BoolSym, Expression, IdentifierParser, MatchType, Pattern, Search,
+    parse_identifier, BoolSym, Expression, IdentifierParser, MatchType, MiscSym, Pattern, Search,
 };
 
 pub fn deserialize_expression<'de, D>(deserializer: D) -> Result<Expression, D::Error>
@@ -37,61 +37,77 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
     let mut parts = kv.split(": ");
     let key = parts.next().expect("invalid tau key value pair");
     let value = parts.next().expect("invalid tau key value pair");
-    // NOTE: This is pinched from tau-engine as it is not exposed.
+    let mut not = false;
+    let (field, key) = if key.starts_with("int(") && key.ends_with(")") {
+        let key = key[4..key.len() - 1].to_owned();
+        (Expression::Cast(key.to_owned(), MiscSym::Int), key)
+    } else if key.starts_with("not(") && key.ends_with(")") {
+        not = true;
+        let key = key[4..key.len() - 1].to_owned();
+        (Expression::Field(key.to_owned()), key)
+    } else if key.starts_with("str(") && key.ends_with(")") {
+        let key = key[4..key.len() - 1].to_owned();
+        (Expression::Cast(key.to_owned(), MiscSym::Str), key)
+    } else {
+        (Expression::Field(key.to_owned()), key.to_owned())
+    };
+    // NOTE: This is pinched from tau-engine as it is not exposed, we then slightly tweak it to
+    // handle casting in a slightly different way :O
+    // FIXME: The tau-engine is not able to cast string expressions, I need to fix this upstream :/
     let identifier = value.to_owned().into_identifier()?;
     let expression = match identifier.pattern {
         Pattern::Equal(i) => Expression::BooleanExpression(
-            Box::new(Expression::Field(key.to_owned())),
+            Box::new(field),
             BoolSym::Equal,
             Box::new(Expression::Integer(i)),
         ),
         Pattern::GreaterThan(i) => Expression::BooleanExpression(
-            Box::new(Expression::Field(key.to_owned())),
+            Box::new(field),
             BoolSym::GreaterThan,
             Box::new(Expression::Integer(i)),
         ),
         Pattern::GreaterThanOrEqual(i) => Expression::BooleanExpression(
-            Box::new(Expression::Field(key.to_owned())),
+            Box::new(field),
             BoolSym::GreaterThanOrEqual,
             Box::new(Expression::Integer(i)),
         ),
         Pattern::LessThan(i) => Expression::BooleanExpression(
-            Box::new(Expression::Field(key.to_owned())),
+            Box::new(field),
             BoolSym::LessThan,
             Box::new(Expression::Integer(i)),
         ),
         Pattern::LessThanOrEqual(i) => Expression::BooleanExpression(
-            Box::new(Expression::Field(key.to_owned())),
+            Box::new(field),
             BoolSym::LessThanOrEqual,
             Box::new(Expression::Integer(i)),
         ),
         Pattern::FEqual(i) => Expression::BooleanExpression(
-            Box::new(Expression::Field(key.to_owned())),
+            Box::new(field),
             BoolSym::Equal,
             Box::new(Expression::Float(i)),
         ),
         Pattern::FGreaterThan(i) => Expression::BooleanExpression(
-            Box::new(Expression::Field(key.to_owned())),
+            Box::new(field),
             BoolSym::GreaterThan,
             Box::new(Expression::Float(i)),
         ),
         Pattern::FGreaterThanOrEqual(i) => Expression::BooleanExpression(
-            Box::new(Expression::Field(key.to_owned())),
+            Box::new(field),
             BoolSym::GreaterThanOrEqual,
             Box::new(Expression::Float(i)),
         ),
         Pattern::FLessThan(i) => Expression::BooleanExpression(
-            Box::new(Expression::Field(key.to_owned())),
+            Box::new(field),
             BoolSym::LessThan,
             Box::new(Expression::Float(i)),
         ),
         Pattern::FLessThanOrEqual(i) => Expression::BooleanExpression(
-            Box::new(Expression::Field(key.to_owned())),
+            Box::new(field),
             BoolSym::LessThanOrEqual,
             Box::new(Expression::Float(i)),
         ),
-        Pattern::Any => Expression::Search(Search::Any, key.to_owned()),
-        Pattern::Regex(c) => Expression::Search(Search::Regex(c), key.to_owned()),
+        Pattern::Any => Expression::Search(Search::Any, key),
+        Pattern::Regex(c) => Expression::Search(Search::Regex(c), key),
         Pattern::Contains(c) => Expression::Search(
             if identifier.ignore_case {
                 Search::AhoCorasick(
@@ -106,7 +122,7 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
             } else {
                 Search::Contains(c)
             },
-            key.to_owned(),
+            key,
         ),
         Pattern::EndsWith(c) => Expression::Search(
             if identifier.ignore_case {
@@ -122,7 +138,7 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
             } else {
                 Search::EndsWith(c)
             },
-            key.to_owned(),
+            key,
         ),
         Pattern::Exact(c) => Expression::Search(
             if !c.is_empty() && identifier.ignore_case {
@@ -138,7 +154,7 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
             } else {
                 Search::Exact(c)
             },
-            key.to_owned(),
+            key,
         ),
         Pattern::StartsWith(c) => Expression::Search(
             if identifier.ignore_case {
@@ -154,8 +170,11 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
             } else {
                 Search::StartsWith(c)
             },
-            key.to_owned(),
+            key,
         ),
     };
+    if not {
+        return Ok(Expression::Negate(Box::new(expression)));
+    }
     Ok(expression)
 }
