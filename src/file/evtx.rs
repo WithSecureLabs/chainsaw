@@ -36,13 +36,6 @@ impl<'a> Document for Wrapper<'a> {
         // As event logs can store values in a key or complex objects we do some aliasing here for
         // convenience...
         match key {
-            "Event.System.EventID" => {
-                // FIXME: If `#text` returns text then we need to map this to a u64 otherwise it
-                // will be ignored...
-                self.0
-                    .find("Event.System.EventID.#text")
-                    .or_else(|| self.0.find(key))
-            }
             "Event.System.Provider" => self.0.find("Event.System.Provider_attributes.Name"),
             "Event.System.TimeCreated" => self
                 .0
