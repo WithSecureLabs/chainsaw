@@ -344,6 +344,15 @@ pub struct Hunt {
     pub rule: RuleKind,
 }
 
+impl Hunt {
+    pub fn is_aggregation(&self) -> bool {
+        if let HuntKind::Rule { aggregate, .. } = &self.kind {
+            return aggregate.is_some();
+        }
+        false
+    }
+}
+
 pub struct HunterInner {
     hunts: Vec<Hunt>,
     rules: HashMap<RuleKind, Vec<(Uuid, Chainsaw)>>,
