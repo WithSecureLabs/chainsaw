@@ -5,14 +5,17 @@ use serde::{Deserialize, Serialize};
 
 use self::evtx::{Evtx, Parser as EvtxParser};
 use self::json::{Json, Parser as JsonParser};
+use self::xml::{Parser as XmlParser, Xml};
 
 pub mod evtx;
 pub mod json;
+pub mod xml;
 
 #[derive(Clone)]
 pub enum Document {
     Evtx(Evtx),
     Json(Json),
+    Xml(Xml),
 }
 
 pub struct Documents<'a> {
@@ -24,6 +27,7 @@ pub struct Documents<'a> {
 pub enum Kind {
     Evtx,
     Json,
+    Xml,
     Unknown,
 }
 
@@ -47,6 +51,7 @@ impl Iterator for Unknown {
 pub enum Parser {
     Evtx(EvtxParser),
     Json(JsonParser),
+    Xml(XmlParser),
     Unknown,
 }
 
@@ -65,6 +70,9 @@ impl Reader {
                 }),
                 "json" => Ok(Self {
                     parser: Parser::Json(JsonParser::load(file)?),
+                }),
+                "xml" => Ok(Self {
+                    parser: Parser::Xml(XmlParser::load(file)?),
                 }),
                 _ => {
                     if load_unknown {
@@ -92,6 +100,10 @@ impl Reader {
                     } else if let Ok(parser) = JsonParser::load(file) {
                         return Ok(Self {
                             parser: Parser::Json(parser),
+                        });
+                    } else if let Ok(parser) = XmlParser::load(file) {
+                        return Ok(Self {
+                            parser: Parser::Xml(parser),
                         });
                     }
                     if skip_errors {
@@ -122,6 +134,8 @@ impl Reader {
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
             Parser::Json(parser) => Box::new(parser.parse().map(|r| r.map(|d| Document::Json(d))))
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
+            Parser::Xml(parser) => Box::new(parser.parse().map(|r| r.map(|d| Document::Xml(d))))
+                as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
             Parser::Unknown => {
                 Box::new(Unknown) as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>
             }
@@ -133,6 +147,7 @@ impl Reader {
         match self.parser {
             Parser::Evtx(_) => Kind::Evtx,
             Parser::Json(_) => Kind::Json,
+            Parser::Xml(_) => Kind::Xml,
             Parser::Unknown => Kind::Unknown,
         }
     }

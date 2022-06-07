@@ -168,6 +168,7 @@ dependencies = [
  "once_cell",
  "paste",
  "prettytable-rs",
+ "quick-xml 0.23.0",
  "rayon",
  "regex 1.5.6",
  "serde",
@@ -499,7 +500,7 @@ dependencies = [
  "encoding",
  "indoc",
  "log",
- "quick-xml",
+ "quick-xml 0.22.0",
  "rayon",
  "serde",
  "serde_json",
@@ -880,6 +881,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8533f14c8382aaad0d592c812ac3b826162128b65662331e1127b45c3d18536b"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9279fbdacaad3baf559d8cabe0acc3d06e30ea14931af31af79578ac0946decc"
+dependencies = [
+ "memchr",
+ "serde",
 ]
 
 [[package]]

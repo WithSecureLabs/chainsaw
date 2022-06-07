@@ -233,7 +233,9 @@ pub fn print_detections(
                                 wrapper = crate::evtx::Wrapper(&document.data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
-                            FileKind::Json => hit.hunt.mapper.mapped(&document.data),
+                            FileKind::Json | FileKind::Xml => {
+                                hit.hunt.mapper.mapped(&document.data)
+                            }
                             FileKind::Unknown => continue,
                         };
                         let fields: HashMap<_, _> = hit
@@ -448,7 +450,9 @@ pub fn print_csv(
                                 wrapper = crate::evtx::Wrapper(&document.data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
-                            FileKind::Json => hit.hunt.mapper.mapped(&document.data),
+                            FileKind::Json | FileKind::Xml => {
+                                hit.hunt.mapper.mapped(&document.data)
+                            }
                             FileKind::Unknown => continue,
                         };
 

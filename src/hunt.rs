@@ -405,6 +405,7 @@ impl Hunter {
                         hunt.mapper.mapped(&wrapper)
                     }
                     File::Json(json) => hunt.mapper.mapped(json),
+                    File::Xml(xml) => hunt.mapper.mapped(xml),
                 };
 
                 let timestamp = match mapped.find(&hunt.timestamp) {
@@ -506,6 +507,7 @@ impl Hunter {
                 let data = match &document {
                     File::Evtx(evtx) => evtx.data.clone(),
                     File::Json(json) => json.clone(),
+                    File::Xml(xml) => xml.clone(),
                 };
                 detections.push(Detections {
                     hits,
@@ -536,6 +538,7 @@ impl Hunter {
                         let data = match &document {
                             File::Evtx(evtx) => evtx.data.clone(),
                             File::Json(json) => json.clone(),
+                            File::Xml(xml) => xml.clone(),
                         };
                         documents.push(Document {
                             kind: kind.clone(),

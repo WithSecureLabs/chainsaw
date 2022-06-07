@@ -19,6 +19,7 @@ evtx = "0.7"
 indicatif = "0.16"
 once_cell = "1.0"
 prettytable-rs = "0.8"
+quick-xml = { version = "0.23", features = ["serialize"] }
 rayon = "1.5"
 regex = "1.5"
 serde = { version = "1.0", features = ["derive"] }
