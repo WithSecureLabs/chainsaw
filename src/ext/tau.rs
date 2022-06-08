@@ -37,6 +37,7 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
     let mut parts = kv.split(": ");
     let key = parts.next().expect("invalid tau key value pair");
     let value = parts.next().expect("invalid tau key value pair");
+    let mut cast = false;
     let mut not = false;
     let (field, key) = if key.starts_with("int(") && key.ends_with(")") {
         let key = key[4..key.len() - 1].to_owned();
@@ -46,6 +47,7 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
         let key = key[4..key.len() - 1].to_owned();
         (Expression::Field(key.to_owned()), key)
     } else if key.starts_with("str(") && key.ends_with(")") {
+        cast = true;
         let key = key[4..key.len() - 1].to_owned();
         (Expression::Cast(key.to_owned(), MiscSym::Str), key)
     } else {
@@ -106,8 +108,8 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
             BoolSym::LessThanOrEqual,
             Box::new(Expression::Float(i)),
         ),
-        Pattern::Any => Expression::Search(Search::Any, key),
-        Pattern::Regex(c) => Expression::Search(Search::Regex(c), key),
+        Pattern::Any => Expression::Search(Search::Any, key, cast),
+        Pattern::Regex(c) => Expression::Search(Search::Regex(c), key, cast),
         Pattern::Contains(c) => Expression::Search(
             if identifier.ignore_case {
                 Search::AhoCorasick(
@@ -123,6 +125,7 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
                 Search::Contains(c)
             },
             key,
+            cast,
         ),
         Pattern::EndsWith(c) => Expression::Search(
             if identifier.ignore_case {
@@ -139,6 +142,7 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
                 Search::EndsWith(c)
             },
             key,
+            cast,
         ),
         Pattern::Exact(c) => Expression::Search(
             if !c.is_empty() && identifier.ignore_case {
@@ -155,6 +159,7 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
                 Search::Exact(c)
             },
             key,
+            cast,
         ),
         Pattern::StartsWith(c) => Expression::Search(
             if identifier.ignore_case {
@@ -171,6 +176,7 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
                 Search::StartsWith(c)
             },
             key,
+            cast,
         ),
     };
     if not {

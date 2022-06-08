@@ -14,7 +14,7 @@ groups:
   - name: Suspicious Process Creation
     timestamp: Event.System.TimeCreated
     filter:
-      EventID: 1
+      int(EventID): 1
       Provider: Microsoft-Windows-Sysmon
     fields:
       - from: Provider
@@ -48,7 +48,7 @@ groups:
   - name: Suspicious Network Connection
     timestamp: Event.System.TimeCreated
     filter:
-      EventID: 3
+      int(EventID): 3
       Provider: Microsoft-Windows-Sysmon
     fields:
       - from: Provider
@@ -92,7 +92,7 @@ groups:
   - name: Suspicious Image Load
     timestamp: Event.System.TimeCreated
     filter:
-      EventID: 7
+      int(EventID): 7
       Provider: Microsoft-Windows-Sysmon
     fields:
       - from: Provider
@@ -117,7 +117,7 @@ groups:
   - name: Suspicious File Creation
     timestamp: Event.System.TimeCreated
     filter:
-      EventID: 11
+      int(EventID): 11
       Provider: Microsoft-Windows-Sysmon
     fields:
       - from: Provider
@@ -142,7 +142,7 @@ groups:
   - name: Suspicious Registry Event
     timestamp: Event.System.TimeCreated
     filter:
-      EventID: 13
+      int(EventID): 13
       Provider: Microsoft-Windows-Sysmon
     fields:
       - from: Provider
@@ -170,7 +170,7 @@ groups:
   - name: Suspicious Service Installed
     timestamp: Event.System.TimeCreated
     filter:
-      EventID: 7045
+      int(EventID): 7045
       Provider: Service Control Manager
     fields:
       - from: Provider
@@ -196,7 +196,7 @@ groups:
   - name: Suspicious Command Line
     timestamp: Event.System.TimeCreated
     filter:
-      EventID: 4688
+      int(EventID): 4688
       Provider: Microsoft-Windows-Security-Auditing
     fields:
       - from: Provider
@@ -225,7 +225,7 @@ groups:
   - name: Suspicious Powershell ScriptBlock
     timestamp: Event.System.TimeCreated
     filter:
-      EventID: 4104
+      int(EventID): 4104
       Provider: Microsoft-Windows-PowerShell
     fields:
       - from: Provider
@@ -247,7 +247,7 @@ groups:
   - name: Suspicious Scheduled Task Created
     timestamp: Event.System.TimeCreated
     filter:
-      EventID: 4698
+      int(EventID): 4698
       Provider: Microsoft-Windows-Security-Auditing
     fields:
       - from: Provider

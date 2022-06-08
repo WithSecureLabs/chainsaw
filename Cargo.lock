@@ -1186,9 +1186,9 @@ dependencies = [
 
 [[package]]
 name = "tau-engine"
-version = "1.4.1"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f32fcbd3e364cb39fac2f5753f3b21df0dcf246eacec2953453400fad64c9db8"
+checksum = "b5db9c91ce2460b6438363850f0a3c57ef01410da9d041f865c99b2725c5bff4"
 dependencies = [
  "aho-corasick 0.7.18",
  "lazy_static",
@@ -1316,11 +1316,11 @@ dependencies = [
 
 [[package]]
 name = "tracing-core"
-version = "0.1.26"
+version = "0.1.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f54c8ca710e81886d498c2fd3331b56c93aa248d49de2222ad2742247c60072f"
+checksum = "7709595b8878a4965ce5e87ebf880a7d39c9afc6837721b21a5a816a8117d921"
 dependencies = [
- "lazy_static",
+ "once_cell",
 ]
 
 [[package]]
