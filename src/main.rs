@@ -381,7 +381,6 @@ fn run() -> Result<()> {
             }
             let mut files = vec![];
             for path in &paths {
-                println!("foo: {}", path.display());
                 files.extend(get_files(path, &extension, skip_errors)?);
             }
             if files.len() == 0 {
