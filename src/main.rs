@@ -33,14 +33,14 @@ enum Command {
         /// The path to a collection of rules.
         rules: PathBuf,
 
-        /// The paths to hunt through.
+        /// The paths containing event logs to hunt through.
         path: Vec<PathBuf>,
 
         /// A mapping file to hunt with.
         #[structopt(short = "m", long = "mapping", number_of_values = 1)]
         mapping: Option<Vec<PathBuf>>,
         /// Additional rules to hunt with.
-        #[structopt(short = "r", long = "rule", number_of_values = 1)]
+        #[structopt(short = "r", long = "rule", number_of_values = 1, requires("mapping"))]
         rule: Option<Vec<PathBuf>>,
 
         /// Set the column width for the tabular output.
@@ -91,8 +91,8 @@ enum Command {
     Lint {
         /// The path to a collection of rules.
         path: PathBuf,
-        /// The kind of rule to lint.
-        #[structopt(long = "kind", default_value = "chainsaw")]
+        /// The kind of rule to lint: chainsaw, sigma or stalker
+        #[structopt(long = "kind")]
         kind: RuleKind,
     },
 
@@ -102,7 +102,7 @@ enum Command {
         #[structopt(required_unless_one=&["regexp", "tau"])]
         pattern: Option<String>,
 
-        /// The paths to search through.
+        /// The paths containing event logs to hunt through.
         path: Vec<PathBuf>,
 
         /// A pattern to search for.
@@ -283,6 +283,11 @@ fn run() -> Result<()> {
             for path in &path {
                 files.extend(get_files(path, &extension, skip_errors)?);
             }
+            if files.len() == 0 {
+                return Err(anyhow::anyhow!(
+                    "No event logs were found in the provided paths",
+                ));
+            }
             let mut detections = vec![];
             let pb = cli::init_progress_bar(files.len() as u64, "Hunting".to_string());
             for file in &files {
@@ -376,7 +381,13 @@ fn run() -> Result<()> {
             }
             let mut files = vec![];
             for path in &paths {
+                println!("foo: {}", path.display());
                 files.extend(get_files(path, &extension, skip_errors)?);
+            }
+            if files.len() == 0 {
+                return Err(anyhow::anyhow!(
+                    "No event logs were found in the provided paths"
+                ));
             }
             let mut searcher = Searcher::builder()
                 .ignore_case(ignore_case)
