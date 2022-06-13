@@ -10,7 +10,8 @@ use chrono_tz::Tz;
 use structopt::StructOpt;
 
 use chainsaw::{
-    cli, get_files, lint_rule, load_rule, set_writer, Format, Hunter, RuleKind, Searcher, Writer,
+    cli, get_files, lint_rule, load_rule, set_writer, Filter, Format, Hunter, RuleKind, Searcher,
+    Writer,
 };
 
 #[derive(StructOpt)]
@@ -94,6 +95,9 @@ enum Command {
         /// The kind of rule to lint.
         #[structopt(long = "kind", default_value = "chainsaw")]
         kind: RuleKind,
+        /// Output tau logic.
+        #[structopt(short = "t", long = "tau")]
+        tau: bool,
     },
 
     /// Search through event logs for specific event IDs and/or keywords
@@ -313,26 +317,52 @@ fn run() -> Result<()> {
                 detections.len()
             );
         }
-        Command::Lint { path, kind } => {
+        Command::Lint { path, kind, tau } => {
             init_writer(None, false, false, false)?;
             if !opts.no_banner {
                 print_title();
             }
-            cs_eprintln!("[+] Validating supplied detection rules...");
+            cs_eprintln!("[+] Validating as {} for supplied detection rules...", kind);
             let mut count = 0;
             let mut failed = 0;
             for file in get_files(&path, &None, false)? {
-                if let Err(e) = lint_rule(&kind, &file) {
-                    failed += 1;
-                    cs_eprintln!("[!] {}", e);
-                    continue;
+                match lint_rule(&kind, &file) {
+                    Ok(filters) => {
+                        if tau {
+                            cs_eprintln!("[+] Rule {}:", file.to_string_lossy());
+                            for filter in filters {
+                                let yaml = match filter {
+                                    Filter::Detection(mut d) => {
+                                        d.expression = tau_engine::core::optimiser::coalesce(
+                                            d.expression,
+                                            &d.identifiers,
+                                        );
+                                        d.identifiers.clear();
+                                        d.expression =
+                                            tau_engine::core::optimiser::shake(d.expression, true);
+                                        serde_yaml::to_string(&d)?
+                                    }
+                                    Filter::Expression(_) => {
+                                        cs_eyellowln!("[!] Tau does not support visual representation of expressions");
+                                        continue;
+                                    }
+                                };
+                                println!("{}", yaml);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        failed += 1;
+                        cs_eprintln!("[!] {}", e);
+                        continue;
+                    }
                 }
                 count += 1;
             }
             cs_eprintln!(
-                "[+] Validated {} detection rules ({} were not loaded)",
+                "[+] Validated {} detection rules out of {}",
                 count,
-                failed
+                count + failed
             );
         }
         Command::Search {

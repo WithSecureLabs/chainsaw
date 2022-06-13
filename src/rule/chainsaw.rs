@@ -8,6 +8,7 @@ use serde::{
     Deserialize, Serialize,
 };
 use tau_engine::core::{
+    optimiser,
     parser::{Expression, Pattern},
     Detection,
 };
@@ -196,6 +197,16 @@ pub fn load(rule: &Path) -> crate::Result<Rule> {
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
 
-    let rule: Rule = serde_yaml::from_str(&contents)?;
+    let mut rule: Rule = serde_yaml::from_str(&contents)?;
+    rule.filter = match rule.filter {
+        Filter::Detection(mut detection) => {
+            detection.expression =
+                optimiser::coalesce(detection.expression, &detection.identifiers);
+            detection.identifiers.clear();
+            detection.expression = optimiser::shake(detection.expression, true);
+            Filter::Detection(detection)
+        }
+        Filter::Expression(expression) => Filter::Expression(optimiser::shake(expression, true)),
+    };
     Ok(rule)
 }
