@@ -222,38 +222,128 @@ fn prepare(detection: Detection, extra: Option<Detection>) -> Result<Detection> 
                 condition: Some("of(A, 1)".into()),
                 identifiers,
             }
-        } else if let Some(d) = extra {
+        } else {
+            let condition = match c {
+                Yaml::String(c) => c,
+                Yaml::Sequence(s) => {
+                    if s.len() == 1 {
+                        let x = s.iter().next().expect("could not get condition");
+                        if let Yaml::String(c) = x {
+                            c
+                        } else {
+                            anyhow::bail!("condition must be a string");
+                        }
+                    } else {
+                        anyhow::bail!("condition must be a string");
+                    }
+                }
+                _ => anyhow::bail!("condition must be a string"),
+            };
             let mut identifiers = detection.identifiers;
-            for (k, v) in d.identifiers {
-                match identifiers.remove(&k) {
-                    Some(i) => match (i, v) {
-                        (Yaml::Mapping(mut m), Yaml::Mapping(v)) => {
-                            for (x, y) in v {
-                                m.insert(x, y);
+            let mut index = 0;
+            let mut mutated = vec![];
+            let mut parts = condition.split_whitespace();
+            while let Some(part) = parts.next() {
+                let part = if let Some(part) = part.strip_prefix("(") {
+                    mutated.push("(".to_owned());
+                    part
+                } else {
+                    part
+                };
+                match part {
+                    "all" | "1" => {
+                        if let Some(next) = parts.next() {
+                            if next != "of" {
+                                mutated.push(part.to_owned());
+                                mutated.push(next.to_owned());
+                                continue;
                             }
-                            identifiers.insert(k, Yaml::Mapping(m));
-                        }
-                        (Yaml::Sequence(s), Yaml::Mapping(v)) => {
-                            let mut z = vec![];
-                            for mut ss in s.into_iter() {
-                                if let Some(m) = ss.as_mapping_mut() {
-                                    for (x, y) in v.clone() {
-                                        m.insert(x, y);
+
+                            if let Some(ident) = parts.next() {
+                                let mut bracket = false;
+                                let ident = if let Some(ident) = ident.strip_suffix(")") {
+                                    bracket = true;
+                                    ident
+                                } else {
+                                    ident
+                                };
+                                if let Some(ident) = ident.strip_suffix("*") {
+                                    let mut scratch = vec![];
+                                    let mut keys = vec![];
+                                    for (k, _) in &identifiers {
+                                        if let Yaml::String(key) = k {
+                                            if key.starts_with(ident) {
+                                                keys.push(k.clone());
+                                            }
+                                        }
                                     }
+                                    for key in keys {
+                                        if let Some(v) = identifiers.get(&key) {
+                                            scratch.push(v.clone());
+                                        }
+                                    }
+                                    if scratch.is_empty() {
+                                        anyhow::bail!("could not find any applicable identifiers");
+                                    }
+                                    let key = format!("tau_{}", index);
+                                    if part == "all" {
+                                        mutated.push(format!("all({})", key));
+                                    } else if part == "1" {
+                                        mutated.push(format!("of({}, 1)", key));
+                                    }
+                                    identifiers.insert(Yaml::String(key), Yaml::Sequence(scratch));
+                                    mutated.push(")".to_owned());
+                                    index += 1;
+                                    continue;
+                                } else {
+                                    if part == "all" {
+                                        mutated.push(format!("all({})", ident));
+                                    } else if part == "1" {
+                                        mutated.push(format!("of({}, 1)", ident));
+                                    }
+                                    mutated.push(")".to_owned());
+                                    continue;
                                 }
-                                z.push(ss);
                             }
-                            identifiers.insert(k, Yaml::Sequence(z));
                         }
-                        (_, _) => anyhow::bail!("unsupported rule collection format"),
-                    },
-                    None => {
-                        identifiers.insert(k, v);
+                    }
+                    _ => {}
+                }
+                mutated.push(part.to_owned());
+            }
+            let condition = mutated.join(" ");
+            if let Some(d) = extra {
+                for (k, v) in d.identifiers {
+                    match identifiers.remove(&k) {
+                        Some(i) => match (i, v) {
+                            (Yaml::Mapping(mut m), Yaml::Mapping(v)) => {
+                                for (x, y) in v {
+                                    m.insert(x, y);
+                                }
+                                identifiers.insert(k, Yaml::Mapping(m));
+                            }
+                            (Yaml::Sequence(s), Yaml::Mapping(v)) => {
+                                let mut z = vec![];
+                                for mut ss in s.into_iter() {
+                                    if let Some(m) = ss.as_mapping_mut() {
+                                        for (x, y) in v.clone() {
+                                            m.insert(x, y);
+                                        }
+                                    }
+                                    z.push(ss);
+                                }
+                                identifiers.insert(k, Yaml::Sequence(z));
+                            }
+                            (_, _) => anyhow::bail!("unsupported rule collection format"),
+                        },
+                        None => {
+                            identifiers.insert(k, v);
+                        }
                     }
                 }
             }
             detection = Detection {
-                condition,
+                condition: Some(Yaml::String(condition)),
                 identifiers,
             }
         }
