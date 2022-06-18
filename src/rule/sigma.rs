@@ -99,7 +99,7 @@ trait Match {
     fn as_contains(&self) -> String;
     fn as_endswith(&self) -> String;
     fn as_match(&self) -> Option<String>;
-    fn as_regex(&self) -> Option<String>;
+    fn as_regex(&self, convert: bool) -> Option<String>;
     fn as_startswith(&self) -> String;
 }
 
@@ -128,9 +128,32 @@ impl Match for String {
         }
         Some(format!("i{}", self))
     }
-    fn as_regex(&self) -> Option<String> {
-        let _ = Regex::new(self).ok()?;
-        Some(format!("?{}", self))
+    fn as_regex(&self, convert: bool) -> Option<String> {
+        if convert {
+            let literal = regex::escape(self);
+            let mut scratch = Vec::with_capacity(literal.len());
+            let mut escaped = false;
+            for c in literal.chars() {
+                match c {
+                    '*' | '?' => {
+                        if !escaped {
+                            scratch.push('.');
+                        }
+                    }
+                    '\\' => {
+                        escaped = !escaped;
+                    }
+                    _ => {
+                        escaped = false;
+                    }
+                }
+                scratch.push(c);
+            }
+            Some(format!("?{}", scratch.into_iter().collect::<String>()))
+        } else {
+            let _ = Regex::new(self).ok()?;
+            Some(format!("?{}", self))
+        }
     }
     fn as_startswith(&self) -> String {
         format!("i{}*", self)
@@ -159,7 +182,7 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
             } else if modifiers.contains("endswith") {
                 Yaml::String(s.as_endswith())
             } else if modifiers.contains("re") {
-                let r = match s.as_regex() {
+                let r = match s.as_regex(false) {
                     Some(r) => r,
                     None => {
                         return Err(anyhow!(s.to_owned()).context("unsupported regex"));
@@ -172,7 +195,11 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
                 let s = match s.as_match() {
                     Some(s) => s,
                     None => {
-                        return Err(anyhow!(s.to_owned()).context("unsupported match"));
+                        if let Some(r) = s.as_regex(true) {
+                            r
+                        } else {
+                            return Err(anyhow!(s.to_owned()).context("unsupported match"));
+                        }
                     }
                 };
                 Yaml::String(s)
@@ -292,7 +319,9 @@ fn prepare(detection: Detection, extra: Option<Detection>) -> Result<Detection> 
                                         mutated.push(format!("of({}, 1)", key));
                                     }
                                     identifiers.insert(Yaml::String(key), Yaml::Sequence(scratch));
-                                    mutated.push(")".to_owned());
+                                    if bracket {
+                                        mutated.push(")".to_owned());
+                                    }
                                     index += 1;
                                     continue;
                                 } else {
@@ -301,7 +330,9 @@ fn prepare(detection: Detection, extra: Option<Detection>) -> Result<Detection> 
                                     } else if part == "1" {
                                         mutated.push(format!("of({}, 1)", ident));
                                     }
-                                    mutated.push(")".to_owned());
+                                    if bracket {
+                                        mutated.push(")".to_owned());
+                                    }
                                     continue;
                                 }
                             }
@@ -607,7 +638,7 @@ mod tests {
     #[test]
     fn test_match_regex() {
         let x = "foobar".to_owned();
-        assert_eq!(x.as_regex().unwrap(), "?foobar");
+        assert_eq!(x.as_regex(false).unwrap(), "?foobar");
     }
 
     #[test]
