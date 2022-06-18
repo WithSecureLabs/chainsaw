@@ -121,6 +121,7 @@ pub fn print_detections(
             .entry(&hunt.group)
             .or_insert((vec![], HashSet::new()));
         // NOTE: We only support count in aggs atm so we can inject that value in...!
+        // NOTE: This will not work for sigma based aggs...
         if hunt.is_aggregation() {
             (*headers).0.push("count".to_owned());
             (*headers).1.insert("count".to_owned());

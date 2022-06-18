@@ -5,7 +5,7 @@ use std::path::Path;
 
 use anyhow::Result;
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_yaml::{Mapping, Sequence, Value as Yaml};
 use tau_engine::Rule as Tau;
 
@@ -17,10 +17,19 @@ pub struct Rule {
     #[serde(flatten)]
     pub tau: Tau,
 
+    #[serde(default)]
+    pub aggregate: Option<super::chainsaw::Aggregate>,
+
     pub authors: Vec<String>,
     pub description: String,
     pub level: Option<String>,
     pub status: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Aggregate {
+    pub count: String,
+    pub fields: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -91,7 +100,14 @@ trait Condition {
 
 impl Condition for String {
     fn unsupported(&self) -> bool {
-        self.contains('|') | self.contains('*') | self.contains(" of ")
+        self.contains(" | ")
+            | self.contains('*')
+            | self.contains(" avg ")
+            | self.contains(" of ")
+            | self.contains(" max ")
+            | self.contains(" min ")
+            | self.contains(" near ")
+            | self.contains(" sum ")
     }
 }
 
@@ -210,7 +226,11 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
     Ok(v)
 }
 
-fn prepare(detection: Detection, extra: Option<Detection>) -> Result<Detection> {
+fn prepare(
+    detection: Detection,
+    extra: Option<Detection>,
+) -> Result<(Detection, Option<Aggregate>)> {
+    let mut aggregate = None;
     let mut detection = detection;
     let condition = extra
         .as_ref()
@@ -266,6 +286,57 @@ fn prepare(detection: Detection, extra: Option<Detection>) -> Result<Detection> 
                 }
                 _ => anyhow::bail!("condition must be a string"),
             };
+            let condition = if condition.contains(" | ") {
+                let (condition, agg) = condition
+                    .split_once(" | ")
+                    .expect("could not split condition");
+                let mut parts = agg.split_whitespace();
+                let mut fields = vec![];
+                // NOTE: We only support count atm...
+                // agg-function(agg-field) [ by group-field ] comparison-op value
+                if let Some(kind) = parts.next() {
+                    if let Some(rest) = kind.strip_prefix("count(") {
+                        if let Some(field) = rest.strip_suffix(")") {
+                            if !field.is_empty() {
+                                fields.push(field.to_owned());
+                            }
+                        } else {
+                            anyhow::bail!("invalid agg function");
+                        }
+                    } else {
+                        anyhow::bail!("unsupported agg function - {}", kind);
+                    }
+                } else {
+                    anyhow::bail!("missing agg function");
+                }
+                let mut part = match parts.next() {
+                    Some(part) => part,
+                    None => anyhow::bail!("invalid aggregation"),
+                };
+                if part == "by" {
+                    let field = match parts.next() {
+                        Some(field) => field,
+                        None => anyhow::bail!("missing group field"),
+                    };
+                    fields.push(field.to_owned());
+                    part = match parts.next() {
+                        Some(part) => part,
+                        None => anyhow::bail!("invalid aggregation"),
+                    };
+                }
+                let number = match parts.next() {
+                    Some(part) => part,
+                    None => anyhow::bail!("invalid aggregation"),
+                };
+                aggregate = Some(Aggregate {
+                    count: format!("{}{}", part, number),
+                    fields,
+                });
+                condition
+            } else {
+                condition
+            };
+
             let mut identifiers = detection.identifiers;
             let mut index = 0;
             let mut mutated = vec![];
@@ -379,7 +450,7 @@ fn prepare(detection: Detection, extra: Option<Detection>) -> Result<Detection> 
             }
         }
     }
-    Ok(detection)
+    Ok((detection, aggregate))
 }
 
 fn detections_to_tau(detection: Detection) -> Result<Mapping> {
@@ -433,7 +504,9 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
             None => bail!("identifiers must be strings"),
         };
         if k == "timeframe" {
-            bail!("timeframe based rules cannot be converted");
+            // TODO: Ignore for now as this would make the aggregator more complex...
+            continue;
+            //bail!("timeframe based rules cannot be converted");
         }
         let mut multi = false;
         let blocks = match v {
@@ -547,7 +620,7 @@ pub fn load(rule: &Path) -> Result<Vec<Yaml>> {
     if main.header.and_then(|m| m.action).is_some() {
         for sigma in sigma.into_iter() {
             if let Some(extension) = sigma.detection {
-                let detection = match &main.detection {
+                let (detection, agg) = match &main.detection {
                     Some(d) => prepare(d.clone(), Some(extension)),
                     None => prepare(extension, None),
                 }?;
@@ -558,6 +631,9 @@ pub fn load(rule: &Path) -> Result<Vec<Yaml>> {
                 }
                 for (k, v) in tau {
                     rule.insert(k, v);
+                }
+                if let Some(agg) = agg.and_then(|a| serde_yaml::to_value(a).ok()) {
+                    rule.insert(Yaml::String("aggregate".to_owned()), agg);
                 }
                 rules.push(rule.into());
             } else {
@@ -571,13 +647,16 @@ pub fn load(rule: &Path) -> Result<Vec<Yaml>> {
     if single {
         let mut rule = base;
         if let Some(detection) = main.detection {
-            let detection = prepare(detection, None)?;
+            let (detection, agg) = prepare(detection, None)?;
             let tau = detections_to_tau(detection)?;
             if let Some(level) = main.level {
                 rule.insert("level".into(), level.into());
             }
             for (k, v) in tau {
                 rule.insert(k, v);
+            }
+            if let Some(agg) = agg.and_then(|a| serde_yaml::to_value(a).ok()) {
+                rule.insert(Yaml::String("aggregate".to_owned()), agg);
             }
             rules.push(rule.into());
         }

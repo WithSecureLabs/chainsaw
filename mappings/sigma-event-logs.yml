@@ -265,6 +265,9 @@ groups:
       - name: User
         from: UserName
         to: Event.EventData.SubjectUserName
+      - name: Name
+        from: TaskName 
+        to: Event.EventData.TaskName
       # TODO: Can someone check if this is a typo...?
       - name: Command Line
         from: CommandLine

@@ -105,7 +105,10 @@ pub fn load_rule(path: &Path) -> crate::Result<Vec<Rule>> {
 
                     filter: chainsaw::Filter::Detection(rule.tau.optimise(true, true).detection),
 
-                    aggregate: None,
+                    aggregate: rule.aggregate.map(|a| chainsaw::Aggregate {
+                        count: a.count,
+                        fields: a.fields,
+                    }),
                 },
                 kind: Kind::Sigma,
             })
