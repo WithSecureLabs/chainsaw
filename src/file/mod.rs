@@ -213,7 +213,7 @@ pub fn get_files(
             files.push(path.to_path_buf());
         }
     } else {
-        anyhow::bail!("Invalid input path: {}", path.display());
+        anyhow::bail!("Specified event log path is invalid - {}", path.display());
     }
     Ok(files)
 }
