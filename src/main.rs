@@ -400,8 +400,10 @@ fn run() -> Result<()> {
             }
             if files.len() == 0 {
                 return Err(anyhow::anyhow!(
-                    "No event logs were found in the provided paths"
+                    "No event logs were found in the provided paths",
                 ));
+            } else {
+                cs_eprintln!("[+] Loaded {} EVTX files", files.len(),);
             }
             let mut searcher = Searcher::builder()
                 .ignore_case(ignore_case)
