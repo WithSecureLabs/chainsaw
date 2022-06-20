@@ -236,6 +236,7 @@ fn run() -> Result<()> {
             if let Some(rule) = rule {
                 rules.extend(rule)
             };
+            cs_eprintln!("[+] Loading event logs from: {:?}", path);
             cs_eprintln!("[+] Loading detection rules from: {:?}", rules);
             let mut failed = 0;
             let mut count = 0;
@@ -259,7 +260,6 @@ fn run() -> Result<()> {
                     }
                 }
             }
-            cs_eprintln!("[+] Loading event logs from: {:?}", path);
             if count == 0 {
                 return Err(anyhow::anyhow!(
                     "No valid detection rules were found in the provided paths",
@@ -300,6 +300,8 @@ fn run() -> Result<()> {
                 return Err(anyhow::anyhow!(
                     "No event logs were found in the provided paths",
                 ));
+            } else {
+                cs_eprintln!("[+] Loaded {} EVTX files", files.len(),);
             }
             let mut detections = vec![];
             let pb = cli::init_progress_bar(files.len() as u64, "Hunting".to_string());
