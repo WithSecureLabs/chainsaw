@@ -75,6 +75,21 @@ pub fn format_field_length(data: &str, full_output: bool, length: u32) -> String
     data
 }
 
+fn split_tag(tag_name: &str) -> String {
+    let mut count = 0;
+    let mut chars = Vec::with_capacity(tag_name.len());
+    for char in tag_name.chars() {
+        count += 1;
+        if count > 20 && char.is_whitespace() {
+            count = 0;
+            chars.push('\n');
+        } else {
+            chars.push(char);
+        }
+    }
+    chars.into_iter().collect()
+}
+
 fn format_time(event_time: String) -> String {
     let chunks = event_time.rsplit('.').last();
     match chunks {
@@ -304,7 +319,7 @@ pub fn print_detections(
                         ]));
                         for rule in &rules {
                             table.add_row(Row::new(vec![
-                                cell!(rule.name),
+                                cell!(split_tag(&rule.name)),
                                 cell!(rule.authors.join("\n")),
                                 cell!(rule.level),
                                 cell!(rule.status),
@@ -314,7 +329,7 @@ pub fn print_detections(
                     } else {
                         cells.push(cell!(rules
                             .iter()
-                            .map(|rule| format!("{} {}", RULE_PREFIX, rule.name))
+                            .map(|rule| format!("{} {}", RULE_PREFIX, split_tag(&rule.name)))
                             .collect::<Vec<_>>()
                             .join("\n")));
                     }
