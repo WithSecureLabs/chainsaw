@@ -120,7 +120,10 @@ impl HunterBuilder {
         if let Some(mut mappings) = self.mappings {
             mappings.sort();
             for mapping in mappings {
-                let mut file = fs::File::open(mapping)?;
+                let mut file = match fs::File::open(mapping) {
+                    Ok(a) => a,
+                    Err(e) => anyhow::bail!("Error loading mapping file - {}", e),
+                };
                 let mut content = String::new();
                 file.read_to_string(&mut content)?;
                 let mut mapping: Mapping = serde_yaml::from_str(&content)?;
