@@ -40,7 +40,7 @@ enum Command {
         #[structopt(short = "m", long = "mapping", number_of_values = 1)]
         mapping: Option<Vec<PathBuf>>,
         /// Additional rules to hunt with.
-        #[structopt(short = "r", long = "rule", number_of_values = 1, requires("mapping"))]
+        #[structopt(short = "r", long = "rule", number_of_values = 1)]
         rule: Option<Vec<PathBuf>>,
 
         /// Set the column width for the tabular output.
@@ -236,22 +236,34 @@ fn run() -> Result<()> {
             if let Some(rule) = rule {
                 rules.extend(rule)
             };
-            cs_eprintln!("[+] Loading rules...");
+            cs_eprintln!("[+] Loading detection rules from: {:?}", rules);
             let mut failed = 0;
             let mut count = 0;
             let mut rs = vec![];
             for path in &rules {
                 for file in get_files(path, &None, skip_errors)? {
-                    match load_rule(&file) {
+                    match load_rule(&file, &mapping.is_some()) {
                         Ok(mut r) => {
                             count += 1;
                             rs.append(&mut r)
                         }
-                        Err(_) => {
+                        Err(e) => {
+                            // Hacky way of exposing rule types from load_rule function
+                            if e.to_string() == "sigma-no-mapping" {
+                                return Err(anyhow::anyhow!(
+                                    "No mapping file specified for provided Sigma rules, specify one with the '-m' flag",
+                                ));
+                            }
                             failed += 1;
                         }
                     }
                 }
+            }
+            cs_eprintln!("[+] Loading event logs from: {:?}", path);
+            if count == 0 {
+                return Err(anyhow::anyhow!(
+                    "No valid detection rules were found in the provided paths",
+                ));
             }
             if failed > 0 {
                 cs_eprintln!(
@@ -262,6 +274,7 @@ fn run() -> Result<()> {
             } else {
                 cs_eprintln!("[+] Loaded {} detection rules", count);
             }
+
             let rules = rs;
             let mut hunter = Hunter::builder()
                 .rules(rules)

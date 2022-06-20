@@ -75,6 +75,14 @@ pub fn format_field_length(data: &str, full_output: bool, length: u32) -> String
     data
 }
 
+fn format_time(event_time: String) -> String {
+    let chunks = event_time.rsplit('.').last();
+    match chunks {
+        Some(e) => e.replace("T", " ").replace('"', ""),
+        None => event_time,
+    }
+}
+
 pub struct Grouping<'a> {
     hits: Vec<Hit<'a>>,
     kind: &'a Kind,
@@ -183,7 +191,7 @@ pub fn print_detections(
             table.add_row(Row::new(cells));
 
             for grouping in group {
-                let localised = if let Some(timezone) = timezone {
+                let mut localised = if let Some(timezone) = timezone {
                     timezone
                         .from_local_datetime(grouping.timestamp)
                         .single()
@@ -197,6 +205,8 @@ pub fn print_detections(
                 } else {
                     DateTime::<Utc>::from_utc(*grouping.timestamp, Utc).to_rfc3339()
                 };
+
+                localised = format_time(localised);
 
                 // NOTE: Currently we don't do any fancy outputting for aggregates so we can cut some
                 // corners here!
