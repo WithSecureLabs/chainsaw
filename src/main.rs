@@ -1,12 +1,15 @@
 #[macro_use]
 extern crate chainsaw;
+extern crate bytesize;
 
 use std::fs::File;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use bytesize::ByteSize;
 use chrono::NaiveDateTime;
 use chrono_tz::Tz;
+
 use structopt::StructOpt;
 
 use chainsaw::{
@@ -267,7 +270,7 @@ fn run() -> Result<()> {
             }
             if failed > 0 {
                 cs_eprintln!(
-                    "[+] Loaded {} detection rules ({} were not loaded)",
+                    "[+] Loaded {} detection rules ({} not loaded)",
                     count,
                     failed
                 );
@@ -293,15 +296,20 @@ fn run() -> Result<()> {
             }
             let hunter = hunter.build()?;
             let mut files = vec![];
+            let mut size = ByteSize::mb(0);
             for path in &path {
-                files.extend(get_files(path, &extension, skip_errors)?);
+                let res = get_files(path, &extension, skip_errors)?;
+                for i in &res {
+                    size += i.metadata()?.len();
+                }
+                files.extend(res);
             }
             if files.len() == 0 {
                 return Err(anyhow::anyhow!(
                     "No event logs were found in the provided paths",
                 ));
             } else {
-                cs_eprintln!("[+] Loaded {} EVTX files", files.len(),);
+                cs_eprintln!("[+] Loaded {} EVTX files ({})", files.len(), size);
             }
             let mut detections = vec![];
             let pb = cli::init_progress_bar(files.len() as u64, "Hunting".to_string());
@@ -395,15 +403,21 @@ fn run() -> Result<()> {
                 );
             }
             let mut files = vec![];
+            let mut size = ByteSize::mb(0);
             for path in &paths {
-                files.extend(get_files(path, &extension, skip_errors)?);
+                let res = get_files(path, &extension, skip_errors)?;
+                for i in &res {
+                    size += i.metadata()?.len();
+                }
+                files.extend(res);
             }
+
             if files.len() == 0 {
                 return Err(anyhow::anyhow!(
                     "No event logs were found in the provided paths",
                 ));
             } else {
-                cs_eprintln!("[+] Loaded {} EVTX files", files.len(),);
+                cs_eprintln!("[+] Loaded {} EVTX files ({})", files.len(), size);
             }
             let mut searcher = Searcher::builder()
                 .ignore_case(ignore_case)

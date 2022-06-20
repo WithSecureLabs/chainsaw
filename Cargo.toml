@@ -12,6 +12,7 @@ edition = "2021"
 [dependencies]
 aho-corasick = "0.7"
 anyhow = "1.0"
+bytesize = "1.0"
 chrono = "0.4"
 chrono-tz = { version = "0.4", features = ["serde"] }
 colour = "0.6"
