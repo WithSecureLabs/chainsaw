@@ -93,7 +93,7 @@ fn split_tag(tag_name: &str) -> String {
 fn format_time(event_time: String) -> String {
     let chunks = event_time.rsplit('.').last();
     match chunks {
-        Some(e) => e.replace("T", " ").replace('"', ""),
+        Some(e) => e.replace('T', " ").replace('"', ""),
         None => event_time,
     }
 }

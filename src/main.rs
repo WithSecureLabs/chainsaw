@@ -304,7 +304,7 @@ fn run() -> Result<()> {
                 }
                 files.extend(res);
             }
-            if files.len() == 0 {
+            if files.is_empty() {
                 return Err(anyhow::anyhow!(
                     "No event logs were found in the provided paths",
                 ));
@@ -412,7 +412,7 @@ fn run() -> Result<()> {
                 files.extend(res);
             }
 
-            if files.len() == 0 {
+            if files.is_empty() {
                 return Err(anyhow::anyhow!(
                     "No event logs were found in the provided paths",
                 ));

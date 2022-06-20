@@ -138,7 +138,7 @@ pub fn load_rule(path: &Path, mapping: &bool) -> crate::Result<Vec<Rule>> {
         anyhow::bail!("failed to load rule, run the linter for more information");
     };
 
-    if rules.len() == 0 {
+    if rules.is_empty() {
         anyhow::bail!("No valid rules could be loaded from the file");
     }
     Ok(rules)
