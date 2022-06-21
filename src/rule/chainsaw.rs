@@ -203,10 +203,17 @@ pub fn load(rule: &Path) -> crate::Result<Rule> {
             detection.expression =
                 optimiser::coalesce(detection.expression, &detection.identifiers);
             detection.identifiers.clear();
-            detection.expression = optimiser::shake(detection.expression, true);
+            detection.expression = optimiser::shake(detection.expression);
+            detection.expression = optimiser::rewrite(detection.expression);
+            detection.expression = optimiser::matrix(detection.expression);
             Filter::Detection(detection)
         }
-        Filter::Expression(expression) => Filter::Expression(optimiser::shake(expression, true)),
+        Filter::Expression(expression) => Filter::Expression({
+            let expression = optimiser::shake(expression);
+            let expression = optimiser::rewrite(expression);
+            let expression = optimiser::matrix(expression);
+            expression
+        }),
     };
     Ok(rule)
 }

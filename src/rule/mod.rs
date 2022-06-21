@@ -112,7 +112,9 @@ pub fn load_rule(path: &Path) -> crate::Result<Vec<Rule>> {
 
                     fields: vec![],
 
-                    filter: chainsaw::Filter::Detection(rule.tau.optimise(true, true).detection),
+                    filter: chainsaw::Filter::Detection(
+                        rule.tau.optimise(Default::default()).detection,
+                    ),
 
                     aggregate: rule.aggregate.map(|a| chainsaw::Aggregate {
                         count: a.count,
@@ -146,7 +148,9 @@ pub fn load_rule(path: &Path) -> crate::Result<Vec<Rule>> {
 
                 fields: vec![],
 
-                filter: chainsaw::Filter::Detection(rule.tau.optimise(true, true).detection),
+                filter: chainsaw::Filter::Detection(
+                    rule.tau.optimise(Default::default()).detection,
+                ),
 
                 aggregate: None,
             },

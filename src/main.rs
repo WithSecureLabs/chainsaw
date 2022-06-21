@@ -339,7 +339,11 @@ fn run() -> Result<()> {
                                         );
                                         d.identifiers.clear();
                                         d.expression =
-                                            tau_engine::core::optimiser::shake(d.expression, true);
+                                            tau_engine::core::optimiser::shake(d.expression);
+                                        d.expression =
+                                            tau_engine::core::optimiser::rewrite(d.expression);
+                                        d.expression =
+                                            tau_engine::core::optimiser::matrix(d.expression);
                                         serde_yaml::to_string(&d)?
                                     }
                                     Filter::Expression(_) => {
