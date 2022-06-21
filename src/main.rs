@@ -353,7 +353,15 @@ fn run() -> Result<()> {
                     }
                     Err(e) => {
                         failed += 1;
-                        cs_eprintln!("[!] {}", e);
+                        let file_name = match file
+                            .display()
+                            .to_string()
+                            .strip_prefix(&path.display().to_string())
+                        {
+                            Some(e) => e.to_string(),
+                            None => file.display().to_string(),
+                        };
+                        cs_eprintln!("[!] {}: {}", file_name, e);
                         continue;
                     }
                 }

@@ -156,7 +156,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "chainsaw"
-version = "2.0.0-alpha.3"
+version = "2.0.0-alpha.4"
 dependencies = [
  "aho-corasick 0.7.18",
  "anyhow",
@@ -1186,9 +1186,9 @@ dependencies = [
 
 [[package]]
 name = "tau-engine"
-version = "1.7.0"
+version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28a9cf722f2c09f4a81b8367b0329a36067e845904e19ccee432b204ab96d191"
+checksum = "7e0f34a4bc11778eb6faed8506f40bad0b1fb323b2538152c2e487b1b9b75b61"
 dependencies = [
  "aho-corasick 0.7.18",
  "lazy_static",

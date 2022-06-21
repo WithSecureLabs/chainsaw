@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
@@ -226,6 +226,61 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
     Ok(v)
 }
 
+fn prepare_condition(condition: &str) -> Result<(String, Option<Aggregate>)> {
+    if condition.contains(" | ") {
+        let (condition, agg) = condition
+            .split_once(" | ")
+            .expect("could not split condition");
+        let mut parts = agg.split_whitespace();
+        let mut fields = vec![];
+        // NOTE: We only support count atm...
+        // agg-function(agg-field) [ by group-field ] comparison-op value
+        if let Some(kind) = parts.next() {
+            if let Some(rest) = kind.strip_prefix("count(") {
+                if let Some(field) = rest.strip_suffix(")") {
+                    if !field.is_empty() {
+                        fields.push(field.to_owned());
+                    }
+                } else {
+                    anyhow::bail!("invalid agg function");
+                }
+            } else {
+                anyhow::bail!("unsupported agg function - {}", kind);
+            }
+        } else {
+            anyhow::bail!("missing agg function");
+        }
+        let mut part = match parts.next() {
+            Some(part) => part,
+            None => anyhow::bail!("invalid aggregation"),
+        };
+        if part == "by" {
+            let field = match parts.next() {
+                Some(field) => field,
+                None => anyhow::bail!("missing group field"),
+            };
+            fields.push(field.to_owned());
+            part = match parts.next() {
+                Some(part) => part,
+                None => anyhow::bail!("invalid aggregation"),
+            };
+        }
+        let number = match parts.next() {
+            Some(part) => part,
+            None => anyhow::bail!("invalid aggregation"),
+        };
+        Ok((
+            condition.to_owned(),
+            Some(Aggregate {
+                count: format!("{}{}", part, number),
+                fields,
+            }),
+        ))
+    } else {
+        Ok((condition.to_owned(), None))
+    }
+}
+
 fn prepare(
     detection: Detection,
     extra: Option<Detection>,
@@ -237,217 +292,77 @@ fn prepare(
         .and_then(|e| e.condition.clone())
         .or_else(|| detection.condition.clone());
     if let Some(c) = &condition {
-        if c == "all of them" {
-            let mut scratch = Sequence::new();
-            for (_, v) in &detection.identifiers {
-                scratch.push(v.clone());
-            }
-            if let Some(d) = extra {
-                for (_, v) in d.identifiers {
-                    scratch.push(v);
-                }
-            }
-            let mut identifiers = Mapping::new();
-            identifiers.insert("A".into(), scratch.into());
-            detection = Detection {
-                condition: Some("all(A)".into()),
-                identifiers,
-            }
-        } else if c == "1 of them" {
-            let mut scratch = Sequence::new();
-            for (_, v) in &detection.identifiers {
-                scratch.push(v.clone());
-            }
-            if let Some(d) = extra {
-                for (_, v) in d.identifiers {
-                    scratch.push(v);
-                }
-            }
-            let mut identifiers = Mapping::new();
-            identifiers.insert("A".into(), scratch.into());
-            detection = Detection {
-                condition: Some("of(A, 1)".into()),
-                identifiers,
-            }
-        } else {
-            let condition = match c {
-                Yaml::String(c) => c,
-                Yaml::Sequence(s) => {
-                    if s.len() == 1 {
-                        let x = s.iter().next().expect("could not get condition");
-                        if let Yaml::String(c) = x {
-                            c
-                        } else {
-                            anyhow::bail!("condition must be a string");
-                        }
+        let mut conditions = vec![];
+        match c {
+            Yaml::String(c) => conditions.push(c),
+            Yaml::Sequence(s) => {
+                if s.len() == 1 {
+                    let x = s.iter().next().expect("could not get condition");
+                    if let Yaml::String(c) = x {
+                        conditions.push(c)
                     } else {
                         anyhow::bail!("condition must be a string");
                     }
-                }
-                _ => anyhow::bail!("condition must be a string"),
-            };
-            let condition = if condition.contains(" | ") {
-                let (condition, agg) = condition
-                    .split_once(" | ")
-                    .expect("could not split condition");
-                let mut parts = agg.split_whitespace();
-                let mut fields = vec![];
-                // NOTE: We only support count atm...
-                // agg-function(agg-field) [ by group-field ] comparison-op value
-                if let Some(kind) = parts.next() {
-                    if let Some(rest) = kind.strip_prefix("count(") {
-                        if let Some(field) = rest.strip_suffix(")") {
-                            if !field.is_empty() {
-                                fields.push(field.to_owned());
-                            }
-                        } else {
-                            anyhow::bail!("invalid agg function");
-                        }
-                    } else {
-                        anyhow::bail!("unsupported agg function - {}", kind);
-                    }
                 } else {
-                    anyhow::bail!("missing agg function");
+                    anyhow::bail!("condition must be a string");
                 }
-                let mut part = match parts.next() {
-                    Some(part) => part,
-                    None => anyhow::bail!("invalid aggregation"),
-                };
-                if part == "by" {
-                    let field = match parts.next() {
-                        Some(field) => field,
-                        None => anyhow::bail!("missing group field"),
-                    };
-                    fields.push(field.to_owned());
-                    part = match parts.next() {
-                        Some(part) => part,
-                        None => anyhow::bail!("invalid aggregation"),
-                    };
-                }
-                let number = match parts.next() {
-                    Some(part) => part,
-                    None => anyhow::bail!("invalid aggregation"),
-                };
-                aggregate = Some(Aggregate {
-                    count: format!("{}{}", part, number),
-                    fields,
-                });
-                condition
-            } else {
-                condition
-            };
-
-            let mut identifiers = detection.identifiers;
-            let mut index = 0;
-            let mut mutated = vec![];
-            let mut parts = condition.split_whitespace();
-            while let Some(part) = parts.next() {
-                let part = if let Some(part) = part.strip_prefix("(") {
-                    mutated.push("(".to_owned());
-                    part
-                } else {
-                    part
-                };
-                match part {
-                    "all" | "1" => {
-                        if let Some(next) = parts.next() {
-                            if next != "of" {
-                                mutated.push(part.to_owned());
-                                mutated.push(next.to_owned());
-                                continue;
-                            }
-
-                            if let Some(ident) = parts.next() {
-                                let mut bracket = false;
-                                let ident = if let Some(ident) = ident.strip_suffix(")") {
-                                    bracket = true;
-                                    ident
-                                } else {
-                                    ident
-                                };
-                                if let Some(ident) = ident.strip_suffix("*") {
-                                    let mut scratch = vec![];
-                                    let mut keys = vec![];
-                                    for (k, _) in &identifiers {
-                                        if let Yaml::String(key) = k {
-                                            if key.starts_with(ident) {
-                                                keys.push(k.clone());
-                                            }
-                                        }
-                                    }
-                                    for key in keys {
-                                        if let Some(v) = identifiers.get(&key) {
-                                            scratch.push(v.clone());
-                                        }
-                                    }
-                                    if scratch.is_empty() {
-                                        anyhow::bail!("could not find any applicable identifiers");
-                                    }
-                                    let key = format!("tau_{}", index);
-                                    if part == "all" {
-                                        mutated.push(format!("all({})", key));
-                                    } else if part == "1" {
-                                        mutated.push(format!("of({}, 1)", key));
-                                    }
-                                    identifiers.insert(Yaml::String(key), Yaml::Sequence(scratch));
-                                    if bracket {
-                                        mutated.push(")".to_owned());
-                                    }
-                                    index += 1;
-                                    continue;
-                                } else {
-                                    if part == "all" {
-                                        mutated.push(format!("all({})", ident));
-                                    } else if part == "1" {
-                                        mutated.push(format!("of({}, 1)", ident));
-                                    }
-                                    if bracket {
-                                        mutated.push(")".to_owned());
-                                    }
-                                    continue;
-                                }
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-                mutated.push(part.to_owned());
             }
-            let condition = mutated.join(" ");
-            if let Some(d) = extra {
-                for (k, v) in d.identifiers {
-                    match identifiers.remove(&k) {
-                        Some(i) => match (i, v) {
-                            (Yaml::Mapping(mut m), Yaml::Mapping(v)) => {
-                                for (x, y) in v {
-                                    m.insert(x, y);
-                                }
-                                identifiers.insert(k, Yaml::Mapping(m));
+            _ => anyhow::bail!("condition must be a string"),
+        };
+        let condition = if conditions.len() == 1 {
+            let (c, a) = conditions
+                .into_iter()
+                .map(|c| prepare_condition(c))
+                .next()
+                .expect("could not get condition")?;
+            aggregate = a;
+            c
+        } else {
+            let mut scratch = Vec::with_capacity(conditions.len());
+            for condition in conditions {
+                let (c, a) = prepare_condition(condition)?;
+                if a.is_some() {
+                    anyhow::bail!("multiple aggregation expressions are not supported");
+                }
+                scratch.push(format!("({})", c));
+            }
+            scratch.join(" or ")
+        };
+
+        let mut identifiers = detection.identifiers;
+        if let Some(d) = extra {
+            for (k, v) in d.identifiers {
+                match identifiers.remove(&k) {
+                    Some(i) => match (i, v) {
+                        (Yaml::Mapping(mut m), Yaml::Mapping(v)) => {
+                            for (x, y) in v {
+                                m.insert(x, y);
                             }
-                            (Yaml::Sequence(s), Yaml::Mapping(v)) => {
-                                let mut z = vec![];
-                                for mut ss in s.into_iter() {
-                                    if let Some(m) = ss.as_mapping_mut() {
-                                        for (x, y) in v.clone() {
-                                            m.insert(x, y);
-                                        }
-                                    }
-                                    z.push(ss);
-                                }
-                                identifiers.insert(k, Yaml::Sequence(z));
-                            }
-                            (_, _) => anyhow::bail!("unsupported rule collection format"),
-                        },
-                        None => {
-                            identifiers.insert(k, v);
+                            identifiers.insert(k, Yaml::Mapping(m));
                         }
+                        (Yaml::Sequence(s), Yaml::Mapping(v)) => {
+                            let mut z = vec![];
+                            for mut ss in s.into_iter() {
+                                if let Some(m) = ss.as_mapping_mut() {
+                                    for (x, y) in v.clone() {
+                                        m.insert(x, y);
+                                    }
+                                }
+                                z.push(ss);
+                            }
+                            identifiers.insert(k, Yaml::Sequence(z));
+                        }
+                        (_, _) => anyhow::bail!("unsupported rule collection format"),
+                    },
+                    None => {
+                        identifiers.insert(k, v);
                     }
                 }
             }
-            detection = Detection {
-                condition: Some(Yaml::String(condition)),
-                identifiers,
-            }
+        }
+        detection = Detection {
+            condition: Some(Yaml::String(condition.to_owned())),
+            identifiers,
         }
     }
     Ok((detection, aggregate))
@@ -460,44 +375,17 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
     // Handle condition statement
     let condition = match detection.condition {
         Some(conditions) => match conditions {
-            Yaml::Sequence(s) => {
-                let mut parts = vec![];
-                for s in s {
-                    let s = match s.as_str() {
-                        Some(s) => s.to_string(),
-                        None => {
-                            return Err(anyhow!("{:?}", s).context("unsupported condition"));
-                        }
-                    };
-                    if s.unsupported() {
-                        return Err(anyhow!("{:?}", s).context("unsupported condition"));
-                    }
-                    parts.push(format!("({})", s));
-                }
-                parts.join(" or ")
-            }
-            Yaml::String(s) => {
-                if s.unsupported() {
-                    return Err(anyhow!(s).context("unsupported condition"));
-                }
-                s
-            }
+            Yaml::String(s) => s,
             u => {
                 return Err(anyhow!("{:?}", u).context("unsupported condition"));
             }
         },
         None => bail!("missing condition"),
     };
-    det.insert(
-        "condition".into(),
-        condition
-            .replace(" AND ", " and ")
-            .replace(" NOT ", " not ")
-            .replace(" OR ", " or ")
-            .into(),
-    );
 
     // Handle identifiers
+    // NOTE: We can be inefficient here because the tree shaker will do the hard work for us!
+    let mut patches = HashMap::new();
     for (k, v) in detection.identifiers {
         let k = match k.as_str() {
             Some(s) => s.to_string(),
@@ -508,75 +396,237 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
             continue;
             //bail!("timeframe based rules cannot be converted");
         }
-        let mut multi = false;
-        let blocks = match v {
-            Yaml::Sequence(s) => {
-                multi = true;
-                s
+        match v {
+            Yaml::Sequence(sequence) => {
+                let mut blocks = vec![];
+                let mut index = 0;
+                for entry in sequence {
+                    let mapping = match entry.as_mapping() {
+                        Some(mapping) => mapping,
+                        None => bail!("keyless identifiers cannot be converted"),
+                    };
+                    let mut collect = true;
+                    let mut seen = HashSet::new();
+                    let mut maps = vec![];
+                    for (f, v) in mapping {
+                        let f = match f.as_str() {
+                            Some(s) => s.to_string(),
+                            None => bail!("[!] keys must strings"),
+                        };
+                        let mut it = f.split('|');
+                        let mut f = it.next().expect("could not get field").to_string();
+                        if seen.contains(&f) {
+                            collect = false;
+                        }
+                        seen.insert(f.clone());
+                        let modifiers: HashSet<String> = it.map(|s| s.to_string()).collect();
+                        if modifiers.contains("all") {
+                            f = format!("all({})", f);
+                        }
+                        let v = parse_identifier(&v, &modifiers)?;
+                        let f = f.into();
+                        let mut map = Mapping::new();
+                        map.insert(f, v);
+                        maps.push(map);
+                    }
+                    if collect {
+                        let mut m = Mapping::new();
+                        for map in maps {
+                            for (k, v) in map {
+                                m.insert(k, v);
+                            }
+                        }
+                        let ident = format!("{}_{}", k, index);
+                        blocks.push((ident, m.into()));
+                    } else {
+                        let ident = format!("all({}_{})", k, index);
+                        blocks.push((
+                            ident,
+                            Yaml::Sequence(maps.into_iter().map(|m| m.into()).collect()),
+                        ));
+                    }
+                    index += 1;
+                }
+                patches.insert(
+                    k,
+                    format!(
+                        "({})",
+                        blocks
+                            .iter()
+                            .map(|(k, _)| k)
+                            .cloned()
+                            .collect::<Vec<_>>()
+                            .join(" or "),
+                    ),
+                );
+                for (k, v) in blocks {
+                    det.insert(k.into(), v.into());
+                }
             }
-            Yaml::Mapping(m) => vec![Yaml::Mapping(m)],
+            Yaml::Mapping(mapping) => {
+                let mut collect = true;
+                let mut seen = HashSet::new();
+                let mut maps = vec![];
+                for (f, v) in mapping {
+                    let f = match f.as_str() {
+                        Some(s) => s.to_string(),
+                        None => bail!("[!] keys must strings"),
+                    };
+                    let mut it = f.split('|');
+                    let mut f = it.next().expect("could not get field").to_string();
+                    if seen.contains(&f) {
+                        collect = false;
+                    }
+                    seen.insert(f.clone());
+                    let modifiers: HashSet<String> = it.map(|s| s.to_string()).collect();
+                    if modifiers.contains("all") {
+                        f = format!("all({})", f);
+                    }
+                    let v = parse_identifier(&v, &modifiers)?;
+                    let f = f.into();
+                    let mut map = Mapping::new();
+                    map.insert(f, v);
+                    maps.push(map);
+                }
+                if collect {
+                    let mut m = Mapping::new();
+                    for map in maps {
+                        for (k, v) in map {
+                            m.insert(k, v);
+                        }
+                    }
+                    det.insert(k.into(), m.into());
+                } else {
+                    let ident = format!("all({})", k);
+                    det.insert(
+                        Yaml::String(k.clone()),
+                        Yaml::Sequence(maps.into_iter().map(|m| m.into()).collect()),
+                    );
+                    patches.insert(k, ident);
+                }
+            }
             _ => {
                 bail!("identifier blocks must be a mapping or a sequence of mappings");
             }
-        };
-        let mut maps = vec![];
-        for v in blocks {
-            let mapping = match v.as_mapping() {
-                Some(m) => m,
-                None => bail!("keyless identifiers cannot be converted"),
-            };
-            let mut fields = Mapping::new();
-            for (f, v) in mapping {
-                let f = match f.as_str() {
-                    Some(s) => s.to_string(),
-                    None => bail!("[!] keys must strings"),
-                };
-                let mut it = f.split('|');
-                let mut f = it.next().expect("could not get field").to_string();
-                let modifiers: HashSet<String> = it.map(|s| s.to_string()).collect();
-                if modifiers.contains("all") {
-                    f = format!("all({})", f);
-                }
-                let v = parse_identifier(v, &modifiers)?;
-                let f = f.into();
-                match fields.remove(&f) {
-                    Some(x) => {
-                        let s = match (x, v) {
-                            (Yaml::Sequence(mut a), Yaml::Sequence(b)) => {
-                                a.extend(b);
-                                Yaml::Sequence(a)
-                            }
-                            (Yaml::Sequence(mut s), y) => {
-                                s.push(y);
-                                Yaml::Sequence(s)
-                            }
-                            (y, Yaml::Sequence(mut s)) => {
-                                s.push(y);
-                                Yaml::Sequence(s)
-                            }
-                            (Yaml::Mapping(_), _) | (_, Yaml::Mapping(_)) => {
-                                bail!("could not merge identifiers")
-                            }
-                            (a, b) => Yaml::Sequence(vec![a, b]),
-                        };
-                        fields.insert(f, s);
-                    }
-                    None => {
-                        fields.insert(f, v);
-                    }
-                }
-            }
-            maps.push(fields.into());
-        }
-        if multi {
-            det.insert(k.into(), Yaml::Sequence(maps));
-        } else {
-            det.insert(k.into(), maps.remove(0));
         }
     }
+
+    let condition = condition
+        .replace(" AND ", " and ")
+        .replace(" NOT ", " not ")
+        .replace(" OR ", " or ")
+        .split_whitespace()
+        .map(|ident| {
+            let key = ident.trim_start_matches("(").trim_end_matches(")");
+            match patches.get(key) {
+                Some(v) => ident.replace(key, v),
+                None => ident.to_owned(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    let condition = if condition == "all of them" {
+        let mut identifiers = vec![];
+        for (k, _) in &det {
+            let key = k.as_str().expect("could not get key");
+            match patches.get(key) {
+                Some(i) => identifiers.push(i.to_owned()),
+                None => identifiers.push(key.to_owned()),
+            }
+        }
+        identifiers.join(" and ")
+    } else if condition == "1 of them" {
+        let mut identifiers = vec![];
+        for (k, _) in &det {
+            let key = k.as_str().expect("could not get key");
+            match patches.get(key) {
+                Some(i) => identifiers.push(i.to_owned()),
+                None => identifiers.push(key.to_owned()),
+            }
+        }
+        identifiers.join(" or ")
+    } else {
+        let mut mutated = vec![];
+        let mut parts = condition.split_whitespace();
+        while let Some(part) = parts.next() {
+            let mut token = part;
+            while let Some(tail) = token.strip_prefix("(") {
+                mutated.push("(".to_owned());
+                token = tail;
+            }
+            match token {
+                "all" | "1" => {
+                    if let Some(next) = parts.next() {
+                        if next != "of" {
+                            mutated.push(token.to_owned());
+                            mutated.push(next.to_owned());
+                            continue;
+                        }
+
+                        if let Some(next) = parts.next() {
+                            let mut brackets = vec![];
+                            let mut identifier = next;
+                            while let Some(head) = identifier.strip_suffix(")") {
+                                brackets.push(")".to_owned());
+                                identifier = head;
+                            }
+                            if let Some(ident) = identifier.strip_suffix("*") {
+                                let mut keys = vec![];
+                                for (k, _) in &det {
+                                    if let Yaml::String(key) = k {
+                                        if key.starts_with(ident) {
+                                            match patches.get(key) {
+                                                Some(i) => keys.push(i.to_owned()),
+                                                None => keys.push(key.to_owned()),
+                                            }
+                                        }
+                                    }
+                                }
+                                if keys.is_empty() {
+                                    anyhow::bail!("could not find any applicable identifiers");
+                                }
+                                let expression = if token == "all" {
+                                    format!("({})", keys.join(" and "))
+                                } else if token == "1" {
+                                    format!("({})", keys.join(" or "))
+                                } else {
+                                    unreachable!();
+                                };
+                                mutated.push(expression);
+                            } else {
+                                let key = match patches.get(identifier) {
+                                    Some(i) => i,
+                                    None => identifier,
+                                };
+                                let key = next.replace(identifier, &key);
+                                if part == "all" {
+                                    mutated.push(format!("all({})", key));
+                                } else if part == "1" {
+                                    mutated.push(format!("of({}, 1)", key));
+                                }
+                            }
+                            mutated.extend(brackets);
+                            continue;
+                        }
+                    }
+                }
+                _ => {}
+            }
+            mutated.push(token.to_owned());
+        }
+        mutated.join(" ").replace("( ", "(").replace(" )", ")")
+    };
+    if condition.unsupported() {
+        return Err(anyhow!(condition).context("unsupported condition"));
+    }
+
+    det.insert("condition".into(), condition.into());
+
     tau.insert("detection".into(), det.into());
     tau.insert("true_positives".into(), Sequence::new().into());
     tau.insert("true_negatives".into(), Sequence::new().into());
+
     Ok(tau)
 }
 
@@ -773,53 +823,7 @@ mod tests {
         "#;
 
         let detection: Detection = serde_yaml::from_str(&detection).unwrap();
-        let detection = prepare(detection, None).unwrap();
-        assert_eq!(detection, expected);
-    }
-
-    #[test]
-    fn test_prepare_all_of_them() {
-        let expected = r#"
-            A:
-                - string: abcd
-                - string: efgh
-            condition: all(A)
-        "#;
-        let expected: Detection = serde_yaml::from_str(&expected).unwrap();
-
-        let detection = r#"
-            A:
-                string: abcd
-            B:
-                string: efgh
-            condition: all of them
-        "#;
-
-        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
-        let detection = prepare(detection, None).unwrap();
-        assert_eq!(detection, expected);
-    }
-
-    #[test]
-    fn test_prepare_one_of_them() {
-        let expected = r#"
-            A:
-                - string: abcd
-                - string: efgh
-            condition: of(A, 1)
-        "#;
-        let expected: Detection = serde_yaml::from_str(&expected).unwrap();
-
-        let detection = r#"
-            A:
-                string: abcd
-            B:
-                string: efgh
-            condition: 1 of them
-        "#;
-
-        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
-        let detection = prepare(detection, None).unwrap();
+        let (detection, _) = prepare(detection, None).unwrap();
         assert_eq!(detection, expected);
     }
 
@@ -847,12 +851,12 @@ mod tests {
 
         let base: Detection = serde_yaml::from_str(&base).unwrap();
         let detection: Detection = serde_yaml::from_str(&detection).unwrap();
-        let detection = prepare(base, Some(detection)).unwrap();
+        let (detection, _) = prepare(base, Some(detection)).unwrap();
         assert_eq!(detection, expected);
     }
 
     #[test]
-    fn test_detection_to_tau() {
+    fn test_detection_to_tau_0() {
         let expected = r#"
             detection:
                 A:
@@ -866,12 +870,19 @@ mod tests {
                     number: 30
                     string: iabcd
                 B:
-                    string:
-                    - i*foobar*
-                    - i*foobar
-                    - ?foobar
-                    - ifoobar*
-                condition: A and B
+                    - string: i*foobar*
+                    - string: i*foobar
+                    - string: ?foobar
+                    - string: ifoobar*
+                C_0:
+                    string: i*foobar*
+                C_1:
+                    string: i*foobar
+                C_2:
+                    string: ?foobar
+                C_3:
+                    string: ifoobar*
+                condition: A and all(B) and (C_0 or C_1 or C_2 or C_3)
             true_negatives: []
             true_positives: []
         "#;
@@ -893,8 +904,67 @@ mod tests {
                 string|endswith: foobar
                 string|re: foobar
                 string|startswith: foobar
-            condition: A and B
+            C:
+                - string|contains: foobar
+                - string|endswith: foobar
+                - string|re: foobar
+                - string|startswith: foobar
+            condition: A and B and C
         "#;
+        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let detection = detections_to_tau(detection).unwrap();
+        assert_eq!(detection, *expected.as_mapping().unwrap());
+    }
+
+    #[test]
+    fn test_detection_to_tau_all_of_them() {
+        let expected = r#"
+            detection:
+                A:
+                    string: iabcd
+                B:
+                    string: iefgh
+                condition: A and B
+            true_negatives: []
+            true_positives: []
+        "#;
+        let expected: serde_yaml::Value = serde_yaml::from_str(&expected).unwrap();
+
+        let detection = r#"
+            A:
+                string: abcd
+            B:
+                string: efgh
+            condition: all of them
+        "#;
+
+        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let detection = detections_to_tau(detection).unwrap();
+        assert_eq!(detection, *expected.as_mapping().unwrap());
+    }
+
+    #[test]
+    fn test_detection_to_tau_one_of_them() {
+        let expected = r#"
+            detection:
+                A:
+                    string: iabcd
+                B:
+                    string: iefgh
+                condition: A or B
+            true_negatives: []
+            true_positives: []
+        "#;
+        let expected: serde_yaml::Value = serde_yaml::from_str(&expected).unwrap();
+
+        let detection = r#"
+            A:
+                string: abcd
+            B:
+                string: efgh
+            condition: 1 of them
+        "#;
+
         let detection: Detection = serde_yaml::from_str(&detection).unwrap();
         let detection = detections_to_tau(detection).unwrap();
         assert_eq!(detection, *expected.as_mapping().unwrap());

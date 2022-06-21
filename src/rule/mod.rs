@@ -71,9 +71,18 @@ pub fn load_rule(path: &Path) -> crate::Result<Vec<Rule>> {
             kind: Kind::Chainsaw,
         }]
     } else if let Ok(rules) = sigma::load(path) {
-        rules
+        let sigma = match rules
             .into_iter()
-            .filter_map(|r| serde_yaml::from_value(r).ok())
+            .map(|y| serde_yaml::from_value::<Sigma>(y))
+            .collect::<Result<Vec<_>, _>>()
+        {
+            Ok(rules) => rules,
+            Err(_) => {
+                anyhow::bail!("failed to load rule, run the linter for more information");
+            }
+        };
+        sigma
+            .into_iter()
             .map(|rule: Sigma| Rule {
                 chainsaw: Chainsaw {
                     name: rule.name,
@@ -161,28 +170,25 @@ pub fn lint_rule(kind: &Kind, path: &Path) -> crate::Result<Vec<Filter>> {
                 vec![rule.filter]
             }
             Err(e) => {
-                let file_name = match path.to_string_lossy().split('/').last() {
-                    Some(e) => e.to_string(),
-                    None => path.display().to_string(),
-                };
-                anyhow::bail!("{:?}: {}", file_name, e);
+                anyhow::bail!("{}", e);
             }
         },
         Kind::Sigma => match sigma::load(path) {
-            Ok(yamls) => yamls
-                .into_iter()
-                .filter_map(|y| serde_yaml::from_value::<Sigma>(y).ok())
-                .map(|r| Filter::Detection(r.tau.detection))
-                .collect(),
+            Ok(yamls) => {
+                let sigma = yamls
+                    .into_iter()
+                    .map(|y| serde_yaml::from_value::<Sigma>(y))
+                    .collect::<Result<Vec<_>, _>>()?;
+                sigma
+                    .into_iter()
+                    .map(|r| Filter::Detection(r.tau.detection))
+                    .collect()
+            }
             Err(e) => {
-                let file_name = match path.to_string_lossy().split('/').last() {
-                    Some(e) => e.to_string(),
-                    None => path.display().to_string(),
-                };
                 if let Some(source) = e.source() {
-                    anyhow::bail!("{:?}: {} - {}", file_name, e, source);
+                    anyhow::bail!("{} - {}", e, source);
                 } else {
-                    anyhow::bail!("{:?}: {}", file_name, e);
+                    anyhow::bail!("{}", e);
                 }
             }
         },
@@ -191,11 +197,7 @@ pub fn lint_rule(kind: &Kind, path: &Path) -> crate::Result<Vec<Filter>> {
                 vec![Filter::Detection(rule.tau.detection)]
             }
             Err(e) => {
-                let file_name = match path.to_string_lossy().split('/').last() {
-                    Some(e) => e.to_string(),
-                    None => path.display().to_string(),
-                };
-                anyhow::bail!("{:?}: {}", file_name, e);
+                anyhow::bail!("{}", e);
             }
         },
     };
