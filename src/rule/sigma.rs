@@ -969,4 +969,66 @@ mod tests {
         let detection = detections_to_tau(detection).unwrap();
         assert_eq!(detection, *expected.as_mapping().unwrap());
     }
+
+    #[test]
+    fn test_detection_to_tau_all_of_selection() {
+        let expected = r#"
+            detection:
+                A:
+                    string: iabcd
+                selection0:
+                    string: iefgh
+                selection1:
+                    string: iijkl
+                condition: A and (selection0 and selection1)
+            true_negatives: []
+            true_positives: []
+        "#;
+        let expected: serde_yaml::Value = serde_yaml::from_str(&expected).unwrap();
+
+        let detection = r#"
+            A:
+                string: abcd
+            selection0:
+                string: efgh
+            selection1:
+                string: ijkl
+            condition: A and all of selection*
+        "#;
+
+        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let detection = detections_to_tau(detection).unwrap();
+        assert_eq!(detection, *expected.as_mapping().unwrap());
+    }
+
+    #[test]
+    fn test_detection_to_tau_one_of_selection() {
+        let expected = r#"
+            detection:
+                A:
+                    string: iabcd
+                selection0:
+                    string: iefgh
+                selection1:
+                    string: iijkl
+                condition: A and (selection0 or selection1)
+            true_negatives: []
+            true_positives: []
+        "#;
+        let expected: serde_yaml::Value = serde_yaml::from_str(&expected).unwrap();
+
+        let detection = r#"
+            A:
+                string: abcd
+            selection0:
+                string: efgh
+            selection1:
+                string: ijkl
+            condition: A and 1 of selection*
+        "#;
+
+        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let detection = detections_to_tau(detection).unwrap();
+        assert_eq!(detection, *expected.as_mapping().unwrap());
+    }
 }
