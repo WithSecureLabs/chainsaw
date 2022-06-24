@@ -83,12 +83,12 @@ pub fn parse_evtx_file(evtx_file: &Path) -> Result<evtx::EvtxParser<File>> {
 
 pub fn get_progress_bar(size: u64, msg: String) -> indicatif::ProgressBar {
     let pb = ProgressBar::new(size);
-    unsafe {
-        match crate::write::WRITER.quiet {
+    
+        match unsafe {crate::write::WRITER.quiet} {
             true => pb.set_draw_target(ProgressDrawTarget::hidden()),
             false => pb.set_draw_target(ProgressDrawTarget::stderr()),
         }
-    };
+   
     pb.set_style(
         ProgressStyle::default_bar()
             .template("[+] {msg}: [{bar:40}] {pos}/{len} {spinner}")

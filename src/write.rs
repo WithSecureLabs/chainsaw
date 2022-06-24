@@ -54,8 +54,8 @@ where
 macro_rules! cs_print {
     ($($arg:tt)*) => ({
         use std::io::Write;
-        unsafe {
-            match $crate::write::WRITER.output.as_ref() {
+        
+            match unsafe { $crate::write::WRITER.output.as_ref() }{
                 Some(mut f) => {
                     f.write_all(format!($($arg)*).as_bytes()).expect("could not write to file");
                 }
@@ -63,15 +63,15 @@ macro_rules! cs_print {
                     print!($($arg)*);
                 }
             }
-        }
+        
     })
 }
 
 macro_rules! cs_println {
     () => {
         use std::io::Write;
-        unsafe {
-            match $crate::write::WRITER.output.as_ref() {
+        
+            match unsafe { $crate::write::WRITER.output.as_ref() }{
                 Some(mut f) => {
                     f.write_all(b"\n").expect("could not write to file");
                 }
@@ -79,12 +79,12 @@ macro_rules! cs_println {
                     println!();
                 }
             }
-        }
+        
     };
     ($($arg:tt)*) => {
         use std::io::Write;
-        unsafe {
-            match $crate::write::WRITER.output.as_ref() {
+        
+            match unsafe { $crate::write::WRITER.output.as_ref() }{
                 Some(mut f) => {
                     f.write_all(format!($($arg)*).as_bytes()).expect("could not write to file");
                     f.write_all(b"\n").expect("could not write to file");
@@ -93,7 +93,7 @@ macro_rules! cs_println {
                     println!($($arg)*);
                 }
             }
-        }
+        
     }
 }
 
@@ -111,8 +111,8 @@ macro_rules! cs_eprintln {
 macro_rules! cs_print_json {
     ($value:expr) => {{
         use std::io::Write;
-        unsafe {
-            match $crate::write::WRITER.output.as_ref() {
+        
+            match unsafe { $crate::write::WRITER.output.as_ref() } {
                 Some(mut f) => {
                     $crate::serde_json::to_writer(f, $value)?;
                     f.flush()
@@ -122,15 +122,15 @@ macro_rules! cs_print_json {
                     std::io::stdout().flush()
                 }
             }
-        }
+        
     }};
 }
 
 macro_rules! cs_print_yaml {
     ($value:expr) => {{
         use std::io::Write;
-        unsafe {
-            match $crate::write::WRITER.output.as_ref() {
+        
+            match unsafe { $crate::write::WRITER.output.as_ref() }{
                 Some(mut f) => {
                     $crate::serde_yaml::to_writer(f, $value)?;
                     f.write_all(b"\n")?;
@@ -142,26 +142,26 @@ macro_rules! cs_print_yaml {
                     std::io::stdout().flush()
                 }
             }
-        }
+        
     }};
 }
 
 macro_rules! cs_print_table {
     ($table:ident) => {
-        unsafe {
-            match $crate::write::WRITER.output.as_ref() {
+        
+            match unsafe { $crate::write::WRITER.output.as_ref() }{
                 Some(mut f) => $table.print(&mut f).expect("could not write table to file"),
                 None => $table.printstd(),
             }
-        }
+        
     };
 }
 
 macro_rules! cs_greenln {
     ($($arg:tt)*) => {
         use std::io::Write;
-        unsafe {
-            match $crate::write::WRITER.output.as_ref() {
+        
+            match unsafe { $crate::write::WRITER.output.as_ref() } {
                 Some(mut f) => {
                     f.write_all(format!($($arg)*).as_bytes()).expect("could not write to file");
                     f.write_all(b"\n").expect("could not write to file");
@@ -170,7 +170,7 @@ macro_rules! cs_greenln {
                     colour::unnamed::write(Some(colour::unnamed::Colour::Green), &format!($($arg)*), true);
                 }
             }
-        }
+        
     };
 }
 
