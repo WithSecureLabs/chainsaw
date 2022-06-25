@@ -1,9 +1,9 @@
 [package]
 name = "chainsaw"
-version = "2.0.0-alpha.5"
+version = "2.0.0-alpha.6"
 repository = "https://github.com/countercept/chainsaw"
 description = "Rapidly Search and Hunt Through Windows Event Logs"
-authors = ["James Dorgan <james.dorgan@f-secure.com>","Alex Kornitzer <alex.kornitzer@f-secure.com>"]
+authors = ["James Dorgan <james@dorgan.io>","Alex Kornitzer <alex.kornitzer@f-secure.com>"]
 readme = "README.md"
 license = "GPL3"
 edition = "2021"
