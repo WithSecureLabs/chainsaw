@@ -39,14 +39,14 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
     let value = parts.next().expect("invalid tau key value pair");
     let mut cast = false;
     let mut not = false;
-    let (field, key) = if key.starts_with("int(") && key.ends_with(")") {
+    let (field, key) = if key.starts_with("int(") && key.ends_with(')') {
         let key = key[4..key.len() - 1].to_owned();
         (Expression::Cast(key.to_owned(), ModSym::Int), key)
-    } else if key.starts_with("not(") && key.ends_with(")") {
+    } else if key.starts_with("not(") && key.ends_with(')') {
         not = true;
         let key = key[4..key.len() - 1].to_owned();
         (Expression::Field(key.to_owned()), key)
-    } else if key.starts_with("str(") && key.ends_with(")") {
+    } else if key.starts_with("str(") && key.ends_with(')') {
         cast = true;
         let key = key[4..key.len() - 1].to_owned();
         (Expression::Cast(key.to_owned(), ModSym::Str), key)

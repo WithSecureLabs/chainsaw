@@ -1,12 +1,15 @@
 #[macro_use]
 extern crate chainsaw;
+extern crate bytesize;
 
 use std::fs::File;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use bytesize::ByteSize;
 use chrono::NaiveDateTime;
 use chrono_tz::Tz;
+
 use structopt::StructOpt;
 
 use chainsaw::{
@@ -34,7 +37,7 @@ enum Command {
         /// The path to a collection of rules.
         rules: PathBuf,
 
-        /// The paths to hunt through.
+        /// The paths containing event logs to hunt through.
         path: Vec<PathBuf>,
 
         /// A mapping file to hunt with.
@@ -92,8 +95,8 @@ enum Command {
     Lint {
         /// The path to a collection of rules.
         path: PathBuf,
-        /// The kind of rule to lint.
-        #[structopt(long = "kind", default_value = "chainsaw")]
+        /// The kind of rule to lint: chainsaw, sigma or stalker
+        #[structopt(long = "kind")]
         kind: RuleKind,
         /// Output tau logic.
         #[structopt(short = "t", long = "tau")]
@@ -106,7 +109,7 @@ enum Command {
         #[structopt(required_unless_one=&["regexp", "tau"])]
         pattern: Option<String>,
 
-        /// The paths to search through.
+        /// The paths containing event logs to hunt through.
         path: Vec<PathBuf>,
 
         /// A pattern to search for.
@@ -240,32 +243,45 @@ fn run() -> Result<()> {
             if let Some(rule) = rule {
                 rules.extend(rule)
             };
-            cs_eprintln!("[+] Loading rules...");
+            cs_eprintln!("[+] Loading event logs from: {:?}", path);
+            cs_eprintln!("[+] Loading detection rules from: {:?}", rules);
             let mut failed = 0;
             let mut count = 0;
             let mut rs = vec![];
             for path in &rules {
                 for file in get_files(path, &None, skip_errors)? {
-                    match load_rule(&file) {
+                    match load_rule(&file, &mapping.is_some()) {
                         Ok(mut r) => {
                             count += 1;
                             rs.append(&mut r)
                         }
-                        Err(_) => {
+                        Err(e) => {
+                            // Hacky way of exposing rule types from load_rule function
+                            if e.to_string() == "sigma-no-mapping" {
+                                return Err(anyhow::anyhow!(
+                                    "No mapping file specified for provided Sigma rules, specify one with the '-m' flag",
+                                ));
+                            }
                             failed += 1;
                         }
                     }
                 }
             }
+            if count == 0 {
+                return Err(anyhow::anyhow!(
+                    "No valid detection rules were found in the provided paths",
+                ));
+            }
             if failed > 0 {
                 cs_eprintln!(
-                    "[+] Loaded {} detection rules ({} were not loaded)",
+                    "[+] Loaded {} detection rules ({} not loaded)",
                     count,
                     failed
                 );
             } else {
                 cs_eprintln!("[+] Loaded {} detection rules", count);
             }
+
             let rules = rs;
             let mut hunter = Hunter::builder()
                 .rules(rules)
@@ -284,8 +300,20 @@ fn run() -> Result<()> {
             }
             let hunter = hunter.build()?;
             let mut files = vec![];
+            let mut size = ByteSize::mb(0);
             for path in &path {
-                files.extend(get_files(path, &extension, skip_errors)?);
+                let res = get_files(path, &extension, skip_errors)?;
+                for i in &res {
+                    size += i.metadata()?.len();
+                }
+                files.extend(res);
+            }
+            if files.is_empty() {
+                return Err(anyhow::anyhow!(
+                    "No event logs were found in the provided paths",
+                ));
+            } else {
+                cs_eprintln!("[+] Loaded {} EVTX files ({})", files.len(), size);
             }
             let mut detections = vec![];
             let pb = cli::init_progress_bar(files.len() as u64, "Hunting".to_string());
@@ -417,8 +445,21 @@ fn run() -> Result<()> {
                 );
             }
             let mut files = vec![];
+            let mut size = ByteSize::mb(0);
             for path in &paths {
-                files.extend(get_files(path, &extension, skip_errors)?);
+                let res = get_files(path, &extension, skip_errors)?;
+                for i in &res {
+                    size += i.metadata()?.len();
+                }
+                files.extend(res);
+            }
+
+            if files.is_empty() {
+                return Err(anyhow::anyhow!(
+                    "No event logs were found in the provided paths",
+                ));
+            } else {
+                cs_eprintln!("[+] Loaded {} EVTX files ({})", files.len(), size);
             }
             let mut searcher = Searcher::builder()
                 .ignore_case(ignore_case)

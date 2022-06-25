@@ -9,6 +9,7 @@ authors:
 kind: evtx
 level: info
 status: stable
+timestamp: Event.System.TimeCreated
 
 
 fields:

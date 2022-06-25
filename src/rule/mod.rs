@@ -58,12 +58,13 @@ pub struct Rule {
     pub kind: Kind,
 }
 
-pub fn load_rule(path: &Path) -> crate::Result<Vec<Rule>> {
+pub fn load_rule(path: &Path, mapping: &bool) -> crate::Result<Vec<Rule>> {
     if let Some(x) = path.extension() {
         if x != "yml" && x != "yaml" {
             anyhow::bail!("rule must have a yaml file extension");
         }
     }
+
     // This is a bit crude but we try all formats then report the errors...
     let rules = if let Ok(rule) = chainsaw::load(path) {
         vec![Rule {
@@ -71,6 +72,10 @@ pub fn load_rule(path: &Path) -> crate::Result<Vec<Rule>> {
             kind: Kind::Chainsaw,
         }]
     } else if let Ok(rules) = sigma::load(path) {
+        if !mapping {
+            // Hacky way of exposing rule types from load_rule function
+            anyhow::bail!("sigma-no-mapping");
+        }
         let sigma = match rules
             .into_iter()
             .map(|y| serde_yaml::from_value::<Sigma>(y))
@@ -159,6 +164,10 @@ pub fn load_rule(path: &Path) -> crate::Result<Vec<Rule>> {
     } else {
         anyhow::bail!("failed to load rule, run the linter for more information");
     };
+
+    if rules.is_empty() {
+        anyhow::bail!("No valid rules could be loaded from the file");
+    }
     Ok(rules)
 }
 

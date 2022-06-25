@@ -77,12 +77,18 @@ impl Reader {
                 _ => {
                     if load_unknown {
                         if skip_errors {
-                            cs_eyellowln!("file type is not currently supported - {}", extension);
+                            cs_eyellowln!(
+                                "file type is not currently supported - {}",
+                                file.display()
+                            );
                             Ok(Self {
                                 parser: Parser::Unknown,
                             })
                         } else {
-                            anyhow::bail!("file type is not currently supported - {}", extension)
+                            anyhow::bail!(
+                                "file type is not currently supported - {}",
+                                file.display()
+                            )
                         }
                     } else {
                         Ok(Self {
@@ -107,13 +113,13 @@ impl Reader {
                         });
                     }
                     if skip_errors {
-                        cs_eyellowln!("file type is not known");
+                        cs_eyellowln!("file type is not known - {}", file.display());
 
                         Ok(Self {
                             parser: Parser::Unknown,
                         })
                     } else {
-                        anyhow::bail!("file type is not known")
+                        anyhow::bail!("file type is not known - {}", file.display())
                     }
                 } else {
                     Ok(Self {
@@ -207,7 +213,7 @@ pub fn get_files(
             files.push(path.to_path_buf());
         }
     } else {
-        anyhow::bail!("Invalid input path: {}", path.display());
+        anyhow::bail!("Specified event log path is invalid - {}", path.display());
     }
     Ok(files)
 }

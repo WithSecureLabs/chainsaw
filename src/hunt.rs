@@ -120,10 +120,16 @@ impl HunterBuilder {
         if let Some(mut mappings) = self.mappings {
             mappings.sort();
             for mapping in mappings {
-                let mut file = fs::File::open(mapping)?;
+                let mut file = match fs::File::open(mapping) {
+                    Ok(a) => a,
+                    Err(e) => anyhow::bail!("Error loading specified mapping file - {}", e),
+                };
                 let mut content = String::new();
                 file.read_to_string(&mut content)?;
-                let mut mapping: Mapping = serde_yaml::from_str(&content)?;
+                let mut mapping: Mapping = match serde_yaml::from_str(&content) {
+                    Ok(a) => a,
+                    Err(e) => anyhow::bail!("Provided mapping file is invalid - {}", e),
+                };
                 mapping.groups.sort_by(|x, y| x.name.cmp(&y.name));
                 for group in mapping.groups {
                     let mapper = Mapper::from(group.fields);
