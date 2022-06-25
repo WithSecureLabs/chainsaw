@@ -2,7 +2,7 @@ use aho_corasick::AhoCorasickBuilder;
 use serde::de;
 use serde_yaml::Value as Yaml;
 use tau_engine::core::parser::{
-    parse_identifier, BoolSym, Expression, IdentifierParser, MatchType, MiscSym, Pattern, Search,
+    parse_identifier, BoolSym, Expression, IdentifierParser, MatchType, ModSym, Pattern, Search,
 };
 
 pub fn deserialize_expression<'de, D>(deserializer: D) -> Result<Expression, D::Error>
@@ -49,7 +49,7 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
     } else if key.starts_with("str(") && key.ends_with(')') {
         cast = true;
         let key = key[4..key.len() - 1].to_owned();
-        (Expression::Cast(key.to_owned(), MiscSym::Str), key)
+        (Expression::Cast(key.to_owned(), ModSym::Str), key)
     } else {
         (Expression::Field(key.to_owned()), key.to_owned())
     };
@@ -109,7 +109,9 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
             Box::new(Expression::Float(i)),
         ),
         Pattern::Any => Expression::Search(Search::Any, key, cast),
-        Pattern::Regex(c) => Expression::Search(Search::Regex(c), key, cast),
+        Pattern::Regex(c) => {
+            Expression::Search(Search::Regex(c, identifier.ignore_case), key, cast)
+        }
         Pattern::Contains(c) => Expression::Search(
             if identifier.ignore_case {
                 Search::AhoCorasick(
@@ -120,6 +122,7 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
                             .build(vec![c.clone()]),
                     ),
                     vec![MatchType::Contains(c)],
+                    identifier.ignore_case,
                 )
             } else {
                 Search::Contains(c)
@@ -137,6 +140,7 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
                             .build(vec![c.clone()]),
                     ),
                     vec![MatchType::EndsWith(c)],
+                    identifier.ignore_case,
                 )
             } else {
                 Search::EndsWith(c)
@@ -154,6 +158,7 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
                             .build(vec![c.clone()]),
                     ),
                     vec![MatchType::Exact(c)],
+                    identifier.ignore_case,
                 )
             } else {
                 Search::Exact(c)
@@ -171,6 +176,7 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
                             .build(vec![c.clone()]),
                     ),
                     vec![MatchType::StartsWith(c)],
+                    identifier.ignore_case,
                 )
             } else {
                 Search::StartsWith(c)

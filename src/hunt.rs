@@ -380,7 +380,8 @@ impl Hunter {
         let kind = reader.kind();
         // This can be optimised better ;)
         let mut detections = vec![];
-        let mut aggregates: HashMap<Uuid, (&Aggregate, HashMap<u64, Vec<Uuid>>)> = HashMap::new();
+        let mut aggregates: HashMap<(Uuid, Uuid), (&Aggregate, HashMap<u64, Vec<Uuid>>)> =
+            HashMap::new();
         let mut files: HashMap<Uuid, (File, NaiveDateTime)> = HashMap::new();
         for document in reader.documents() {
             let document_id = Uuid::new_v4();
@@ -459,11 +460,37 @@ impl Hunter {
                                         }
                                     };
                                     if hit {
-                                        hits.push(Hit {
-                                            hunt: hunt.id,
-                                            rule: *rid,
-                                            timestamp,
-                                        });
+                                        if let Some(aggregate) = &rule.aggregate {
+                                            files
+                                                .insert(document_id, (document.clone(), timestamp));
+                                            let mut hasher = DefaultHasher::new();
+                                            let mut skip = false;
+                                            for field in &aggregate.fields {
+                                                if let Some(value) =
+                                                    mapped.find(field).and_then(|s| s.to_string())
+                                                {
+                                                    value.hash(&mut hasher);
+                                                } else {
+                                                    skip = true;
+                                                    break;
+                                                }
+                                            }
+                                            if skip {
+                                                continue;
+                                            }
+                                            let id = hasher.finish();
+                                            let aggregates = aggregates
+                                                .entry((hunt.id, *rid))
+                                                .or_insert((aggregate, HashMap::new()));
+                                            let docs = aggregates.1.entry(id).or_insert(vec![]);
+                                            docs.push(document_id);
+                                        } else {
+                                            hits.push(Hit {
+                                                hunt: hunt.id,
+                                                rule: *rid,
+                                                timestamp,
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -480,16 +507,23 @@ impl Hunter {
                             if let Some(aggregate) = aggregate {
                                 files.insert(document_id, (document.clone(), timestamp));
                                 let mut hasher = DefaultHasher::new();
+                                let mut skip = false;
                                 for field in &aggregate.fields {
                                     if let Some(value) =
                                         mapped.find(field).and_then(|s| s.to_string())
                                     {
                                         value.hash(&mut hasher);
+                                    } else {
+                                        skip = true;
+                                        break;
                                     }
+                                }
+                                if skip {
+                                    continue;
                                 }
                                 let id = hasher.finish();
                                 let aggregates = aggregates
-                                    .entry(hunt.id)
+                                    .entry((hunt.id, hunt.id))
                                     .or_insert((aggregate, HashMap::new()));
                                 let docs = aggregates.1.entry(id).or_insert(vec![]);
                                 docs.push(document_id);
@@ -521,7 +555,7 @@ impl Hunter {
                 });
             }
         }
-        for (id, (aggregate, docs)) in aggregates {
+        for ((hid, rid), (aggregate, docs)) in aggregates {
             for ids in docs.values() {
                 let hit = match aggregate.count {
                     Pattern::Equal(i) => ids.len() == (i as usize),
@@ -550,8 +584,8 @@ impl Hunter {
                     timestamps.sort();
                     detections.push(Detections {
                         hits: vec![Hit {
-                            hunt: id,
-                            rule: id,
+                            hunt: hid,
+                            rule: rid,
                             timestamp: timestamps
                                 .into_iter()
                                 .next()

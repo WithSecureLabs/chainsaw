@@ -1,3 +1,4 @@
+use std::fmt;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -5,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::file::Kind as FileKind;
 
-pub use self::chainsaw::Rule as Chainsaw;
+pub use self::chainsaw::{Filter, Rule as Chainsaw};
 pub use self::sigma::Rule as Sigma;
 pub use self::stalker::Rule as Stalker;
 
@@ -24,6 +25,16 @@ pub enum Kind {
 impl Default for Kind {
     fn default() -> Self {
         Self::Chainsaw
+    }
+}
+
+impl fmt::Display for Kind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Chainsaw => write!(f, "chainsaw"),
+            Self::Sigma => write!(f, "sigma"),
+            Self::Stalker => write!(f, "stalker"),
+        }
     }
 }
 
@@ -65,9 +76,18 @@ pub fn load_rule(path: &Path, mapping: &bool) -> crate::Result<Vec<Rule>> {
             // Hacky way of exposing rule types from load_rule function
             anyhow::bail!("sigma-no-mapping");
         }
-        rules
+        let sigma = match rules
             .into_iter()
-            .filter_map(|r| serde_yaml::from_value(r).ok())
+            .map(|y| serde_yaml::from_value::<Sigma>(y))
+            .collect::<Result<Vec<_>, _>>()
+        {
+            Ok(rules) => rules,
+            Err(_) => {
+                anyhow::bail!("failed to load rule, run the linter for more information");
+            }
+        };
+        sigma
+            .into_iter()
             .map(|rule: Sigma| Rule {
                 chainsaw: Chainsaw {
                     name: rule.name,
@@ -97,9 +117,14 @@ pub fn load_rule(path: &Path, mapping: &bool) -> crate::Result<Vec<Rule>> {
 
                     fields: vec![],
 
-                    filter: chainsaw::Filter::Detection(rule.tau.detection),
+                    filter: chainsaw::Filter::Detection(
+                        rule.tau.optimise(Default::default()).detection,
+                    ),
 
-                    aggregate: None,
+                    aggregate: rule.aggregate.map(|a| chainsaw::Aggregate {
+                        count: a.count,
+                        fields: a.fields,
+                    }),
                 },
                 kind: Kind::Sigma,
             })
@@ -128,7 +153,9 @@ pub fn load_rule(path: &Path, mapping: &bool) -> crate::Result<Vec<Rule>> {
 
                 fields: vec![],
 
-                filter: chainsaw::Filter::Detection(rule.tau.detection),
+                filter: chainsaw::Filter::Detection(
+                    rule.tau.optimise(Default::default()).detection,
+                ),
 
                 aggregate: None,
             },
@@ -144,38 +171,48 @@ pub fn load_rule(path: &Path, mapping: &bool) -> crate::Result<Vec<Rule>> {
     Ok(rules)
 }
 
-pub fn lint_rule(kind: &Kind, path: &Path) -> crate::Result<()> {
+pub fn lint_rule(kind: &Kind, path: &Path) -> crate::Result<Vec<Filter>> {
     if let Some(x) = path.extension() {
         if x != "yml" && x != "yaml" {
             anyhow::bail!("rule must have a yaml file extension");
         }
     }
-    match kind {
-        Kind::Chainsaw => {
-            unimplemented!()
-        }
-        Kind::Sigma => {
-            if let Err(e) = sigma::load(path) {
-                let file_name = match path.to_string_lossy().split('/').last() {
-                    Some(e) => e.to_string(),
-                    None => path.display().to_string(),
-                };
+    let detections = match kind {
+        Kind::Chainsaw => match chainsaw::load(path) {
+            Ok(rule) => {
+                vec![rule.filter]
+            }
+            Err(e) => {
+                anyhow::bail!("{}", e);
+            }
+        },
+        Kind::Sigma => match sigma::load(path) {
+            Ok(yamls) => {
+                let sigma = yamls
+                    .into_iter()
+                    .map(|y| serde_yaml::from_value::<Sigma>(y))
+                    .collect::<Result<Vec<_>, _>>()?;
+                sigma
+                    .into_iter()
+                    .map(|r| Filter::Detection(r.tau.detection))
+                    .collect()
+            }
+            Err(e) => {
                 if let Some(source) = e.source() {
-                    anyhow::bail!("{:?}: {} - {}", file_name, e, source);
+                    anyhow::bail!("{} - {}", e, source);
                 } else {
-                    anyhow::bail!("{:?}: {}", file_name, e);
+                    anyhow::bail!("{}", e);
                 }
             }
-        }
-        Kind::Stalker => {
-            if let Err(e) = stalker::load(path) {
-                let file_name = match path.to_string_lossy().split('/').last() {
-                    Some(e) => e.to_string(),
-                    None => path.display().to_string(),
-                };
-                anyhow::bail!("{:?}: {}", file_name, e);
+        },
+        Kind::Stalker => match stalker::load(path) {
+            Ok(rule) => {
+                vec![Filter::Detection(rule.tau.detection)]
             }
-        }
-    }
-    Ok(())
+            Err(e) => {
+                anyhow::bail!("{}", e);
+            }
+        },
+    };
+    Ok(detections)
 }
