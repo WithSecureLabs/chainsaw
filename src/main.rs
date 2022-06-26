@@ -67,10 +67,10 @@ enum Command {
         json: bool,
         /// Restrict loaded rules to specified kinds.
         #[structopt(long = "kind", number_of_values = 1)]
-        kinds: Vec<RuleKind>,
+        kind: Vec<RuleKind>,
         /// Restrict loaded rules to specified levels.
         #[structopt(long = "level", number_of_values = 1)]
-        levels: Vec<RuleLevel>,
+        level: Vec<RuleLevel>,
         /// Allow chainsaw to try and load files it cannot identify.
         #[structopt(long = "load-unknown")]
         load_unknown: bool,
@@ -91,7 +91,7 @@ enum Command {
         skip_errors: bool,
         /// Restrict loaded rules to specified statuses.
         #[structopt(long = "status", number_of_values = 1)]
-        statuses: Vec<RuleStatus>,
+        status: Vec<RuleStatus>,
         /// Output the timestamp using the timezone provided.
         #[structopt(long = "timezone", group = "tz")]
         timezone: Option<Tz>,
@@ -236,14 +236,14 @@ fn run() -> Result<()> {
             from,
             full,
             json,
-            kinds,
-            levels,
+            kind,
+            level,
             local,
             metadata,
             output,
             quiet,
             skip_errors,
-            statuses,
+            status,
             timezone,
             to,
         } => {
@@ -272,20 +272,20 @@ fn run() -> Result<()> {
                     .collect::<Vec<_>>()
                     .join(", ")
             );
-            let kinds: Option<HashSet<RuleKind>> = if kinds.is_empty() {
+            let kinds: Option<HashSet<RuleKind>> = if kind.is_empty() {
                 None
             } else {
-                Some(HashSet::from_iter(kinds.into_iter()))
+                Some(HashSet::from_iter(kind.into_iter()))
             };
-            let levels: Option<HashSet<RuleLevel>> = if levels.is_empty() {
+            let levels: Option<HashSet<RuleLevel>> = if level.is_empty() {
                 None
             } else {
-                Some(HashSet::from_iter(levels.into_iter()))
+                Some(HashSet::from_iter(level.into_iter()))
             };
-            let statuses: Option<HashSet<RuleStatus>> = if statuses.is_empty() {
+            let statuses: Option<HashSet<RuleStatus>> = if status.is_empty() {
                 None
             } else {
-                Some(HashSet::from_iter(statuses.into_iter()))
+                Some(HashSet::from_iter(status.into_iter()))
             };
             let mut failed = 0;
             let mut count = 0;
