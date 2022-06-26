@@ -257,7 +257,8 @@ fn run() -> Result<()> {
             };
 
             cs_eprintln!(
-                "[+] Loading event logs from: {}",
+                "[+] Loading event logs (.{}) from: {}",
+                if let Some(x) = &extension { x } else { "evtx" },
                 path.iter()
                     .map(|p| p.display().to_string())
                     .collect::<Vec<_>>()
@@ -346,7 +347,13 @@ fn run() -> Result<()> {
             let mut files = vec![];
             let mut size = ByteSize::mb(0);
             for path in &path {
-                let res = get_files(path, &extension, skip_errors)?;
+                let res;
+                // When loading event logs, if no extension is set then enforce evtx extension
+                if extension.is_some() {
+                    res = get_files(path, &extension, skip_errors)?;
+                } else {
+                    res = get_files(path, &Some("evtx".to_string()), skip_errors)?;
+                }
                 for i in &res {
                     size += i.metadata()?.len();
                 }
@@ -488,10 +495,26 @@ fn run() -> Result<()> {
                     std::env::current_dir().expect("could not get current working directory"),
                 );
             }
+
+            cs_eprintln!(
+                "[+] Loading event logs (.{}) from: {}",
+                if let Some(x) = &extension { x } else { "evtx" },
+                paths
+                    .iter()
+                    .map(|p| p.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
             let mut files = vec![];
             let mut size = ByteSize::mb(0);
             for path in &paths {
-                let res = get_files(path, &extension, skip_errors)?;
+                let res;
+                // When loading event logs, if no extension is set then enforce evtx extension
+                if extension.is_some() {
+                    res = get_files(path, &extension, skip_errors)?;
+                } else {
+                    res = get_files(path, &Some("evtx".to_string()), skip_errors)?;
+                }
                 for i in &res {
                     size += i.metadata()?.len();
                 }
