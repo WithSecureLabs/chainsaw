@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate chainsaw;
-extern crate bytesize;
 
+use std::collections::HashSet;
 use std::fs::File;
 use std::path::PathBuf;
 
@@ -13,8 +13,8 @@ use chrono_tz::Tz;
 use structopt::StructOpt;
 
 use chainsaw::{
-    cli, get_files, lint_rule, load_rule, set_writer, Filter, Format, Hunter, RuleKind, Searcher,
-    Writer,
+    cli, get_files, lint_rule, load_rule, set_writer, Filter, Format, Hunter, RuleKind, RuleLevel,
+    RuleStatus, Searcher, Writer,
 };
 
 #[derive(StructOpt)]
@@ -65,6 +65,12 @@ enum Command {
         /// Print the output in json format.
         #[structopt(group = "format", long = "json")]
         json: bool,
+        /// Restrict loaded rules to specified kinds.
+        #[structopt(long = "kind", number_of_values = 1)]
+        kinds: Vec<RuleKind>,
+        /// Restrict loaded rules to specified levels.
+        #[structopt(long = "level", number_of_values = 1)]
+        levels: Vec<RuleLevel>,
         /// Allow chainsaw to try and load files it cannot identify.
         #[structopt(long = "load-unknown")]
         load_unknown: bool,
@@ -83,6 +89,9 @@ enum Command {
         /// Continue to hunt when an error is encountered.
         #[structopt(long = "skip-errors")]
         skip_errors: bool,
+        /// Restrict loaded rules to specified statuses.
+        #[structopt(long = "status", number_of_values = 1)]
+        statuses: Vec<RuleStatus>,
         /// Output the timestamp using the timezone provided.
         #[structopt(long = "timezone", group = "tz")]
         timezone: Option<Tz>,
@@ -227,11 +236,14 @@ fn run() -> Result<()> {
             from,
             full,
             json,
+            kinds,
+            levels,
             local,
             metadata,
             output,
             quiet,
             skip_errors,
+            statuses,
             timezone,
             to,
         } => {
@@ -243,17 +255,49 @@ fn run() -> Result<()> {
             if let Some(rule) = rule {
                 rules.extend(rule)
             };
-            cs_eprintln!("[+] Loading event logs from: {:?}", path);
-            cs_eprintln!("[+] Loading detection rules from: {:?}", rules);
+
+            cs_eprintln!(
+                "[+] Loading event logs from: {}",
+                path.iter()
+                    .map(|p| p.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+
+            cs_eprintln!(
+                "[+] Loading detection rules from: {}",
+                rules
+                    .iter()
+                    .map(|r| r.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+            let kinds: Option<HashSet<RuleKind>> = if kinds.is_empty() {
+                None
+            } else {
+                Some(HashSet::from_iter(kinds.into_iter()))
+            };
+            let levels: Option<HashSet<RuleLevel>> = if levels.is_empty() {
+                None
+            } else {
+                Some(HashSet::from_iter(levels.into_iter()))
+            };
+            let statuses: Option<HashSet<RuleStatus>> = if statuses.is_empty() {
+                None
+            } else {
+                Some(HashSet::from_iter(statuses.into_iter()))
+            };
             let mut failed = 0;
             let mut count = 0;
             let mut rs = vec![];
             for path in &rules {
                 for file in get_files(path, &None, skip_errors)? {
-                    match load_rule(&file, &mapping.is_some()) {
+                    match load_rule(&file, &mapping.is_some(), &kinds, &levels, &statuses) {
                         Ok(mut r) => {
-                            count += 1;
-                            rs.append(&mut r)
+                            if !r.is_empty() {
+                                count += 1;
+                                rs.append(&mut r)
+                            }
                         }
                         Err(e) => {
                             // Hacky way of exposing rule types from load_rule function

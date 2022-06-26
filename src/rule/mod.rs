@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt;
 use std::path::Path;
 use std::str::FromStr;
@@ -6,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::file::Kind as FileKind;
 
-pub use self::chainsaw::{Filter, Rule as Chainsaw};
+pub use self::chainsaw::{Filter, Level, Rule as Chainsaw, Status};
 pub use self::sigma::Rule as Sigma;
 pub use self::stalker::Rule as Stalker;
 
@@ -58,7 +59,13 @@ pub struct Rule {
     pub kind: Kind,
 }
 
-pub fn load_rule(path: &Path, mapping: &bool) -> crate::Result<Vec<Rule>> {
+pub fn load_rule(
+    path: &Path,
+    mapping: &bool,
+    kinds: &Option<HashSet<Kind>>,
+    levels: &Option<HashSet<Level>>,
+    statuses: &Option<HashSet<Status>>,
+) -> crate::Result<Vec<Rule>> {
     if let Some(x) = path.extension() {
         if x != "yml" && x != "yaml" {
             anyhow::bail!("rule must have a yaml file extension");
@@ -66,7 +73,12 @@ pub fn load_rule(path: &Path, mapping: &bool) -> crate::Result<Vec<Rule>> {
     }
 
     // This is a bit crude but we try all formats then report the errors...
-    let rules = if let Ok(rule) = chainsaw::load(path) {
+    let mut rules = if let Ok(rule) = chainsaw::load(path) {
+        if let Some(kinds) = kinds.as_ref() {
+            if !kinds.contains(&Kind::Chainsaw) {
+                return Ok(vec![]);
+            }
+        }
         vec![Rule {
             chainsaw: rule,
             kind: Kind::Chainsaw,
@@ -75,6 +87,11 @@ pub fn load_rule(path: &Path, mapping: &bool) -> crate::Result<Vec<Rule>> {
         if !mapping {
             // Hacky way of exposing rule types from load_rule function
             anyhow::bail!("sigma-no-mapping");
+        }
+        if let Some(kinds) = kinds.as_ref() {
+            if !kinds.contains(&Kind::Sigma) {
+                return Ok(vec![]);
+            }
         }
         let sigma = match rules
             .into_iter()
@@ -110,9 +127,9 @@ pub fn load_rule(path: &Path, mapping: &bool) -> crate::Result<Vec<Rule>> {
                         .status
                         .map(|s| match s.as_str() {
                             "stable" => chainsaw::Status::Stable,
-                            _ => chainsaw::Status::Testing,
+                            _ => chainsaw::Status::Experimental,
                         })
-                        .unwrap_or_else(|| chainsaw::Status::Testing),
+                        .unwrap_or_else(|| chainsaw::Status::Experimental),
                     timestamp: "".to_owned(),
 
                     fields: vec![],
@@ -130,6 +147,11 @@ pub fn load_rule(path: &Path, mapping: &bool) -> crate::Result<Vec<Rule>> {
             })
             .collect()
     } else if let Ok(rule) = stalker::load(path) {
+        if let Some(kinds) = kinds.as_ref() {
+            if !kinds.contains(&Kind::Stalker) {
+                return Ok(vec![]);
+            }
+        }
         vec![Rule {
             chainsaw: Chainsaw {
                 name: rule.tag,
@@ -147,7 +169,7 @@ pub fn load_rule(path: &Path, mapping: &bool) -> crate::Result<Vec<Rule>> {
                 },
                 status: match rule.status.as_str() {
                     "stable" => chainsaw::Status::Stable,
-                    _ => chainsaw::Status::Testing,
+                    _ => chainsaw::Status::Experimental,
                 },
                 timestamp: "".to_owned(),
 
@@ -165,9 +187,19 @@ pub fn load_rule(path: &Path, mapping: &bool) -> crate::Result<Vec<Rule>> {
         anyhow::bail!("failed to load rule, run the linter for more information");
     };
 
-    if rules.is_empty() {
-        anyhow::bail!("No valid rules could be loaded from the file");
+    if let Some(levels) = levels.as_ref() {
+        rules = rules
+            .into_iter()
+            .filter(|r| levels.contains(&r.chainsaw.level))
+            .collect();
     }
+    if let Some(statuses) = statuses.as_ref() {
+        rules = rules
+            .into_iter()
+            .filter(|r| statuses.contains(&r.chainsaw.status))
+            .collect();
+    }
+
     Ok(rules)
 }
 

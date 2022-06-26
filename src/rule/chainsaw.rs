@@ -2,6 +2,7 @@ use std::fmt;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use std::str::FromStr;
 
 use serde::{
     de::{self, MapAccess, Visitor},
@@ -133,7 +134,7 @@ pub enum Format {
     Json,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Level {
     Critical,
@@ -155,19 +156,48 @@ impl fmt::Display for Level {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+impl FromStr for Level {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let v = match s {
+            "critical" => Self::Critical,
+            "high" => Self::High,
+            "medium" => Self::Medium,
+            "low" => Self::Low,
+            "info" => Self::Info,
+            _ => anyhow::bail!("unknown level, must be: critical, high, medium, low or info"),
+        };
+        Ok(v)
+    }
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Status {
     Stable,
-    Testing,
+    Experimental,
 }
 
 impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Stable => write!(f, "stable"),
-            Self::Testing => write!(f, "testing"),
+            Self::Experimental => write!(f, "experimental"),
         }
+    }
+}
+
+impl FromStr for Status {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let v = match s {
+            "stable" => Self::Stable,
+            "experimental" => Self::Experimental,
+            _ => anyhow::bail!("unknown status, must be: stable or experimental"),
+        };
+        Ok(v)
     }
 }
 
