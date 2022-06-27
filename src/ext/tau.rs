@@ -35,8 +35,14 @@ where
 
 pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
     let mut parts = kv.split(": ");
-    let key = parts.next().expect("invalid tau key value pair");
-    let value = parts.next().expect("invalid tau key value pair");
+    let key = match parts.next() {
+        Some(k) => k,
+        None => return Err(anyhow::anyhow!("Invalid tau key value pair",)),
+    };
+    let value = match parts.next() {
+        Some(v) => v,
+        None => return Err(anyhow::anyhow!("Invalid tau key value pair",)),
+    };
     let mut cast = false;
     let mut not = false;
     let (field, key) = if key.starts_with("int(") && key.ends_with(')') {
