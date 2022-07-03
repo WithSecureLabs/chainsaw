@@ -227,7 +227,7 @@ fn run() -> Result<()> {
     match opts.cmd {
         Command::Hunt {
             rules,
-            path,
+            mut path,
 
             mapping,
             rule,
@@ -255,7 +255,13 @@ fn run() -> Result<()> {
             if !opts.no_banner {
                 print_title();
             }
-            let mut rules = vec![rules];
+            let mut rs = vec![];
+            if path.is_empty() {
+                path = vec![rules];
+            } else {
+                rs = vec![rules];
+            }
+            let mut rules = rs;
             if let Some(rule) = rule {
                 rules.extend(rule)
             };
@@ -273,6 +279,7 @@ fn run() -> Result<()> {
                 "[+] Loading detection rules from: {}",
                 rules
                     .iter()
+                    .chain(sigma.iter())
                     .map(|r| r.display().to_string())
                     .collect::<Vec<_>>()
                     .join(", ")

@@ -26,6 +26,15 @@ pub struct Rule {
     pub description: String,
     pub level: Level,
     pub status: Status,
+
+    #[serde(default)]
+    pub id: Option<String>,
+    #[serde(default)]
+    pub logsource: Option<LogSource>,
+    #[serde(default)]
+    pub references: Option<Vec<String>>,
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -51,19 +60,37 @@ struct Header {
     #[serde(default)]
     pub author: Option<String>,
     #[serde(default)]
+    pub id: Option<String>,
+    #[serde(default)]
+    pub logsource: Option<LogSource>,
+    #[serde(default)]
     pub references: Option<Vec<String>>,
     #[serde(default)]
     pub status: Option<String>,
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct LogSource {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub definition: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub product: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub service: Option<String>,
 }
 
 #[derive(Clone, Deserialize)]
 struct Sigma {
+    #[serde(default)]
+    pub detection: Option<Detection>,
     #[serde(default, flatten)]
     pub header: Option<Header>,
     #[serde(default)]
     pub level: Option<String>,
-    #[serde(default)]
-    pub detection: Option<Detection>,
 }
 
 impl Sigma {
@@ -81,8 +108,20 @@ impl Sigma {
         } else {
             tau.insert("status".into(), "experimental".into());
         }
+        if let Some(id) = header.id {
+            tau.insert("id".into(), id.into());
+        }
+        if let Some(logsource) = header.logsource {
+            tau.insert(
+                "logsource".into(),
+                serde_yaml::to_value(logsource).expect("could not serialise logsource"),
+            );
+        }
         if let Some(references) = header.references {
             tau.insert("references".into(), references.into());
+        }
+        if let Some(tags) = header.tags {
+            tau.insert("tags".into(), tags.into());
         }
         if let Some(author) = header.author {
             tau.insert(
@@ -711,8 +750,14 @@ pub fn load(rule: &Path) -> Result<Vec<Yaml>> {
         if let Some(detection) = main.detection {
             let (detection, agg) = prepare(detection, None)?;
             let tau = detections_to_tau(detection)?;
-            if let Some(level) = main.level {
+            if let Some(level) = &main.level {
+                let level = match level.as_str() {
+                    "critical" | "high" | "medium" | "low" => level.to_owned(),
+                    _ => "info".to_owned(),
+                };
                 rule.insert("level".into(), level.into());
+            } else {
+                rule.insert("level".into(), "info".into());
             }
             for (k, v) in tau {
                 rule.insert(k, v);

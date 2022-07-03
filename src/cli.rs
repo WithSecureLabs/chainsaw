@@ -559,6 +559,21 @@ pub struct Detection<'a> {
     pub level: &'a Level,
     pub source: RuleKind,
     pub status: &'a Status,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sigma: Option<Sigma<'a>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Sigma<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: &'a Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logsource: &'a Option<crate::rule::sigma::LogSource>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub references: &'a Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: &'a Option<Vec<String>>,
 }
 
 pub fn print_json(
@@ -600,17 +615,29 @@ pub fn print_json(
                         source: RuleKind::Chainsaw,
                         status: &c.status,
                         timestamp: localised,
+
+                        sigma: None,
                     }),
-                    Rule::Sigma(s) => detections.push(Detection {
-                        authors: &s.authors,
-                        group: &hunt.group,
-                        kind: &d.kind,
-                        level: &s.level,
-                        name: &s.name,
-                        source: RuleKind::Sigma,
-                        status: &s.status,
-                        timestamp: localised,
-                    }),
+                    Rule::Sigma(s) => {
+                        let sigma = Sigma {
+                            id: &s.id,
+                            logsource: &s.logsource,
+                            references: &s.references,
+                            tags: &s.tags,
+                        };
+                        detections.push(Detection {
+                            authors: &s.authors,
+                            group: &hunt.group,
+                            kind: &d.kind,
+                            level: &s.level,
+                            name: &s.name,
+                            source: RuleKind::Sigma,
+                            status: &s.status,
+                            timestamp: localised,
+
+                            sigma: Some(sigma),
+                        })
+                    }
                 }
             }
             detections
