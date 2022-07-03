@@ -567,6 +567,8 @@ pub struct Detection<'a> {
 #[derive(Debug, Serialize)]
 pub struct Sigma<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub falsepositives: &'a Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id: &'a Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub logsource: &'a Option<crate::rule::sigma::LogSource>,
@@ -620,6 +622,7 @@ pub fn print_json(
                     }),
                     Rule::Sigma(s) => {
                         let sigma = Sigma {
+                            falsepositives: &s.falsepositives,
                             id: &s.id,
                             logsource: &s.logsource,
                             references: &s.references,

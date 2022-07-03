@@ -28,6 +28,8 @@ pub struct Rule {
     pub status: Status,
 
     #[serde(default)]
+    pub falsepositives: Option<Vec<String>>,
+    #[serde(default)]
     pub id: Option<String>,
     #[serde(default)]
     pub logsource: Option<LogSource>,
@@ -59,6 +61,8 @@ struct Header {
     pub action: Option<String>,
     #[serde(default)]
     pub author: Option<String>,
+    #[serde(default)]
+    pub falsepositives: Option<Vec<String>>,
     #[serde(default)]
     pub id: Option<String>,
     #[serde(default)]
@@ -107,6 +111,9 @@ impl Sigma {
             tau.insert("status".into(), status.into());
         } else {
             tau.insert("status".into(), "experimental".into());
+        }
+        if let Some(falsepositives) = header.falsepositives {
+            tau.insert("falsepositives".into(), falsepositives.into());
         }
         if let Some(id) = header.id {
             tau.insert("id".into(), id.into());
