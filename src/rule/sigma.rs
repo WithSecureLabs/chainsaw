@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 use serde_yaml::{Mapping, Sequence, Value as Yaml};
 use tau_engine::Rule as Tau;
 
+use super::{Level, Status};
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub struct Rule {
@@ -18,12 +20,12 @@ pub struct Rule {
     pub tau: Tau,
 
     #[serde(default)]
-    pub aggregate: Option<super::chainsaw::Aggregate>,
+    pub aggregate: Option<super::Aggregate>,
 
     pub authors: Vec<String>,
     pub description: String,
-    pub level: Option<String>,
-    pub status: Option<String>,
+    pub level: Level,
+    pub status: Status,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -71,9 +73,13 @@ impl Sigma {
         tau.insert("title".into(), header.title.into());
         tau.insert("description".into(), header.description.into());
         if let Some(status) = header.status {
+            let status = match status.as_str() {
+                "stable" => status.to_owned(),
+                _ => "experimental".to_owned(),
+            };
             tau.insert("status".into(), status.into());
         } else {
-            tau.insert("status".into(), "testing".into());
+            tau.insert("status".into(), "experimental".into());
         }
         if let Some(references) = header.references {
             tau.insert("references".into(), references.into());
@@ -676,8 +682,14 @@ pub fn load(rule: &Path) -> Result<Vec<Yaml>> {
                 }?;
                 let tau = detections_to_tau(detection)?;
                 let mut rule = base.clone();
-                if let Some(level) = main.level.as_ref() {
-                    rule.insert("level".into(), level.clone().into());
+                if let Some(level) = &main.level {
+                    let level = match level.as_str() {
+                        "critical" | "high" | "medium" | "low" => level.to_owned(),
+                        _ => "info".to_owned(),
+                    };
+                    rule.insert("level".into(), level.into());
+                } else {
+                    rule.insert("level".into(), "info".into());
                 }
                 for (k, v) in tau {
                     rule.insert(k, v);

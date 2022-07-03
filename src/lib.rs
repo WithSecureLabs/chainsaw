@@ -6,8 +6,7 @@ pub(crate) use anyhow::Result;
 pub use file::{evtx, get_files, Reader};
 pub use hunt::{Hunter, HunterBuilder};
 pub use rule::{
-    chainsaw::Filter, lint_rule, load_rule, sigma, Kind as RuleKind, Level as RuleLevel,
-    Status as RuleStatus,
+    lint, load, sigma, Filter, Kind as RuleKind, Level as RuleLevel, Status as RuleStatus,
 };
 pub use search::{Searcher, SearcherBuilder};
 pub use write::{set_writer, Format, Writer, WRITER};

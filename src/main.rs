@@ -13,8 +13,8 @@ use chrono_tz::Tz;
 use structopt::StructOpt;
 
 use chainsaw::{
-    cli, get_files, lint_rule, load_rule, set_writer, Filter, Format, Hunter, RuleKind, RuleLevel,
-    RuleStatus, Searcher, Writer,
+    cli, get_files, lint as lint_rule, load as load_rule, set_writer, Filter, Format, Hunter,
+    RuleKind, RuleLevel, RuleStatus, Searcher, Writer,
 };
 
 #[derive(StructOpt)]
@@ -86,6 +86,9 @@ enum Command {
         /// Supress informational output.
         #[structopt(short = "q")]
         quiet: bool,
+        /// Sigma rules to hunt with.
+        #[structopt(short = "s", long = "sigma", number_of_values = 1, requires("mapping"))]
+        sigma: Option<Vec<PathBuf>>,
         /// Continue to hunt when an error is encountered.
         #[structopt(long = "skip-errors")]
         skip_errors: bool,
@@ -242,6 +245,7 @@ fn run() -> Result<()> {
             metadata,
             output,
             quiet,
+            sigma,
             skip_errors,
             status,
             timezone,
@@ -255,6 +259,7 @@ fn run() -> Result<()> {
             if let Some(rule) = rule {
                 rules.extend(rule)
             };
+            let sigma = sigma.unwrap_or_default();
 
             cs_eprintln!(
                 "[+] Loading event logs from: {}",
@@ -292,20 +297,29 @@ fn run() -> Result<()> {
             let mut rs = vec![];
             for path in &rules {
                 for file in get_files(path, &None, skip_errors)? {
-                    match load_rule(&file, &mapping.is_some(), &kinds, &levels, &statuses) {
-                        Ok(mut r) => {
+                    match load_rule(RuleKind::Chainsaw, &file, &kinds, &levels, &statuses) {
+                        Ok(r) => {
                             if !r.is_empty() {
                                 count += 1;
-                                rs.append(&mut r)
+                                rs.extend(r)
                             }
                         }
-                        Err(e) => {
-                            // Hacky way of exposing rule types from load_rule function
-                            if e.to_string() == "sigma-no-mapping" {
-                                return Err(anyhow::anyhow!(
-                                    "No mapping file specified for provided Sigma rules, specify one with the '-m' flag",
-                                ));
+                        Err(_) => {
+                            failed += 1;
+                        }
+                    }
+                }
+            }
+            for path in &sigma {
+                for file in get_files(path, &None, skip_errors)? {
+                    match load_rule(RuleKind::Sigma, &file, &kinds, &levels, &statuses) {
+                        Ok(r) => {
+                            if !r.is_empty() {
+                                count += 1;
+                                rs.extend(r)
                             }
+                        }
+                        Err(_) => {
                             failed += 1;
                         }
                     }
@@ -370,7 +384,7 @@ fn run() -> Result<()> {
             if csv {
                 cli::print_csv(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
             } else if json {
-                cli::print_json(&detections, hunter.rules(), local, timezone)?;
+                cli::print_json(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
             } else {
                 cli::print_detections(
                     &detections,

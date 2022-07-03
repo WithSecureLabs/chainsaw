@@ -1,4 +1,4 @@
-use std::collections::{hash_map::DefaultHasher, HashMap, HashSet};
+use std::collections::{hash_map::DefaultHasher, BTreeMap, HashMap, HashSet};
 use std::fs;
 
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
@@ -12,10 +12,7 @@ use uuid::Uuid;
 
 use crate::file::Kind as FileKind;
 use crate::hunt::{Detections, Hunt, Kind};
-use crate::rule::{
-    chainsaw::{Level, Rule as Chainsaw, Status},
-    Kind as RuleKind,
-};
+use crate::rule::{Kind as RuleKind, Level, Rule, Status};
 use crate::write::WRITER;
 
 #[cfg(not(windows))]
@@ -106,13 +103,13 @@ pub struct Grouping<'a> {
 
 pub struct Hit<'a> {
     hunt: &'a Hunt,
-    rule: &'a Chainsaw,
+    rule: &'a Rule,
 }
 
 pub fn print_detections(
     detections: &[Detections],
     hunts: &[Hunt],
-    rules: &HashMap<RuleKind, Vec<(Uuid, Chainsaw)>>,
+    rules: &BTreeMap<Uuid, Rule>,
     column_width: u32,
     full: bool,
     local: bool,
@@ -160,7 +157,6 @@ pub fn print_detections(
 
     // Build lookups
     let hunts: HashMap<_, _> = hunts.iter().map(|h| (&h.id, h)).collect();
-    let rules: HashMap<_, _> = rules.values().flatten().map(|r| (&r.0, &r.1)).collect();
 
     // Unpack detections
     let mut groups: HashMap<&String, Vec<Grouping>> = HashMap::new();
@@ -173,7 +169,7 @@ pub fn print_detections(
             (*hits).push(Hit { hunt, rule });
         }
         for ((group, timestamp), mut hits) in hits {
-            hits.sort_by(|x, y| x.rule.name.cmp(&y.rule.name));
+            hits.sort_by(|x, y| x.rule.name().cmp(&y.rule.name()));
             let groups = groups.entry(group).or_insert(vec![]);
             (*groups).push(Grouping {
                 kind: &detection.kind,
@@ -239,7 +235,7 @@ pub fn print_detections(
                 };
 
                 let mut rows = vec![];
-                let mut seen: HashMap<u64, Vec<&Chainsaw>> = HashMap::new();
+                let mut seen: HashMap<u64, Vec<&Rule>> = HashMap::new();
                 if headers.is_empty() {
                     let json = serde_json::to_string(&document.data)
                         .expect("could not serialise document");
@@ -319,18 +315,30 @@ pub fn print_detections(
                             cell!("status").style_spec("c"),
                         ]));
                         for rule in &rules {
-                            table.add_row(Row::new(vec![
-                                cell!(split_tag(&rule.name)),
-                                cell!(rule.authors.join("\n")),
-                                cell!(rule.level),
-                                cell!(rule.status),
-                            ]));
+                            match rule {
+                                Rule::Chainsaw(c) => {
+                                    table.add_row(Row::new(vec![
+                                        cell!(split_tag(&c.name)),
+                                        cell!(c.authors.join("\n")),
+                                        cell!(c.level),
+                                        cell!(c.status),
+                                    ]));
+                                }
+                                Rule::Sigma(s) => {
+                                    table.add_row(Row::new(vec![
+                                        cell!(split_tag(&s.name)),
+                                        cell!(s.authors.join("\n")),
+                                        cell!(s.level),
+                                        cell!(s.status),
+                                    ]));
+                                }
+                            }
                         }
                         cells.push(cell!(table));
                     } else {
                         cells.push(cell!(rules
                             .iter()
-                            .map(|rule| format!("{} {}", RULE_PREFIX, split_tag(&rule.name)))
+                            .map(|rule| format!("{} {}", RULE_PREFIX, split_tag(&rule.name())))
                             .collect::<Vec<_>>()
                             .join("\n")));
                     }
@@ -348,7 +356,7 @@ pub fn print_detections(
 pub fn print_csv(
     detections: &[Detections],
     hunts: &[Hunt],
-    rules: &HashMap<RuleKind, Vec<(Uuid, Chainsaw)>>,
+    rules: &BTreeMap<Uuid, Rule>,
     local: bool,
     timezone: Option<Tz>,
 ) -> crate::Result<()> {
@@ -382,7 +390,6 @@ pub fn print_csv(
 
     // Build lookups
     let hunts: HashMap<_, _> = hunts.iter().map(|h| (&h.id, h)).collect();
-    let rules: HashMap<_, _> = rules.values().flatten().map(|r| (&r.0, &r.1)).collect();
 
     // Unpack detections
     let mut groups: HashMap<&String, Vec<Grouping>> = HashMap::new();
@@ -395,7 +402,7 @@ pub fn print_csv(
             (*hits).push(Hit { hunt, rule });
         }
         for ((group, timestamp), mut hits) in hits {
-            hits.sort_by(|x, y| x.rule.name.cmp(&y.rule.name));
+            hits.sort_by(|x, y| x.rule.name().cmp(&y.rule.name()));
             let groups = groups.entry(group).or_insert(vec![]);
             (*groups).push(Grouping {
                 kind: &detection.kind,
@@ -459,7 +466,7 @@ pub fn print_csv(
                 };
 
                 let mut rows = vec![];
-                let mut seen: HashMap<u64, Vec<&Chainsaw>> = HashMap::new();
+                let mut seen: HashMap<u64, Vec<&Rule>> = HashMap::new();
                 if headers.is_empty() {
                     let json = serde_json::to_string(&document.data)
                         .expect("could not serialise document");
@@ -527,7 +534,7 @@ pub fn print_csv(
                     cells.push(
                         rules
                             .iter()
-                            .map(|rule| rule.name.to_string())
+                            .map(|rule| rule.name().to_string())
                             .collect::<Vec<_>>()
                             .join(";"),
                     );
@@ -550,28 +557,25 @@ pub struct Detection<'a> {
 
     pub authors: &'a Vec<String>,
     pub level: &'a Level,
-    pub source: &'a RuleKind,
+    pub source: RuleKind,
     pub status: &'a Status,
 }
 
 pub fn print_json(
     detections: &[Detections],
-    rules: &HashMap<RuleKind, Vec<(Uuid, Chainsaw)>>,
+    hunts: &[Hunt],
+    rules: &BTreeMap<Uuid, Rule>,
     local: bool,
     timezone: Option<Tz>,
 ) -> crate::Result<()> {
-    let mut rs: HashMap<_, _> = HashMap::new();
-    for (kind, rules) in rules {
-        for (id, rule) in rules {
-            rs.insert(id, (kind, rule));
-        }
-    }
+    let hunts: HashMap<_, _> = hunts.iter().map(|h| (&h.id, h)).collect();
     let mut detections = detections
         .iter()
         .flat_map(|d| {
             let mut detections = Vec::with_capacity(d.hits.len());
             for hit in &d.hits {
-                let (kind, rule) = rs.get(&hit.rule).expect("could not get rule!");
+                let hunt = hunts.get(&hit.hunt).expect("could not get rule!");
+                let rule = rules.get(&hit.rule).expect("could not get rule!");
                 let localised = if let Some(timezone) = timezone {
                     timezone
                         .from_local_datetime(&hit.timestamp)
@@ -586,16 +590,28 @@ pub fn print_json(
                 } else {
                     DateTime::<Utc>::from_utc(hit.timestamp, Utc).to_rfc3339()
                 };
-                detections.push(Detection {
-                    authors: &rule.authors,
-                    group: &rule.group,
-                    kind: &d.kind,
-                    level: &rule.level,
-                    name: &rule.name,
-                    source: kind,
-                    status: &rule.status,
-                    timestamp: localised,
-                })
+                match rule {
+                    Rule::Chainsaw(c) => detections.push(Detection {
+                        authors: &c.authors,
+                        group: &hunt.group,
+                        kind: &d.kind,
+                        level: &c.level,
+                        name: &c.name,
+                        source: RuleKind::Chainsaw,
+                        status: &c.status,
+                        timestamp: localised,
+                    }),
+                    Rule::Sigma(s) => detections.push(Detection {
+                        authors: &s.authors,
+                        group: &hunt.group,
+                        kind: &d.kind,
+                        level: &s.level,
+                        name: &s.name,
+                        source: RuleKind::Sigma,
+                        status: &s.status,
+                        timestamp: localised,
+                    }),
+                }
             }
             detections
         })

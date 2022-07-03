@@ -1,4 +1,4 @@
-use std::collections::{hash_map::DefaultHasher, HashMap, HashSet};
+use std::collections::{hash_map::DefaultHasher, BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::hash::{Hash, Hasher};
 use std::io::Read;
@@ -18,8 +18,8 @@ use uuid::Uuid;
 
 use crate::file::{Document as File, Kind as FileKind, Reader};
 use crate::rule::{
-    chainsaw::{Aggregate, Container, Field, Filter, Format, Rule as Chainsaw},
-    Kind as RuleKind, Rule,
+    chainsaw::{Container, Field, Format},
+    Aggregate, Filter, Kind as RuleKind, Rule,
 };
 
 #[derive(Clone, Deserialize)]
@@ -89,33 +89,34 @@ impl HunterBuilder {
         let mut hunts = vec![];
         let rules = match self.rules {
             Some(mut rules) => {
-                rules.sort_by(|x, y| x.chainsaw.name.cmp(&y.chainsaw.name));
-                let mut map = HashMap::new();
+                rules.sort_by(|x, y| x.name().cmp(&y.name()));
+                let mut map = BTreeMap::new();
                 for rule in rules {
                     let uuid = Uuid::new_v4();
-                    let rules = map.entry(rule.kind.clone()).or_insert(vec![]);
-                    if rule.kind == RuleKind::Chainsaw {
-                        let mapper = Mapper::from(rule.chainsaw.fields.clone());
-                        hunts.push(Hunt {
-                            id: uuid,
+                    match &rule {
+                        Rule::Chainsaw(rule) => {
+                            let mapper = Mapper::from(rule.fields.clone());
+                            hunts.push(Hunt {
+                                id: uuid,
 
-                            group: rule.chainsaw.group.clone(),
-                            kind: HuntKind::Rule {
-                                aggregate: rule.chainsaw.aggregate.clone(),
-                                filter: rule.chainsaw.filter.clone(),
-                            },
-                            timestamp: rule.chainsaw.timestamp.clone(),
+                                group: rule.group.clone(),
+                                kind: HuntKind::Rule {
+                                    aggregate: rule.aggregate.clone(),
+                                    filter: rule.filter.clone(),
+                                },
+                                timestamp: rule.timestamp.clone(),
 
-                            file: rule.chainsaw.kind.clone(),
-                            mapper,
-                            rule: rule.kind,
-                        });
+                                file: rule.kind.clone(),
+                                mapper,
+                            });
+                        }
+                        _ => {}
                     }
-                    (*rules).push((uuid, rule.chainsaw));
+                    map.insert(uuid, rule);
                 }
                 map
             }
-            None => HashMap::new(),
+            None => BTreeMap::new(),
         };
         if let Some(mut mappings) = self.mappings {
             mappings.sort();
@@ -130,6 +131,9 @@ impl HunterBuilder {
                     Ok(a) => a,
                     Err(e) => anyhow::bail!("Provided mapping file is invalid - {}", e),
                 };
+                if let RuleKind::Chainsaw = mapping.rules {
+                    anyhow::bail!("Chainsaw rules do not support mappings");
+                }
                 mapping.groups.sort_by(|x, y| x.name.cmp(&y.name));
                 for group in mapping.groups {
                     let mapper = Mapper::from(group.fields);
@@ -140,12 +144,12 @@ impl HunterBuilder {
                         kind: HuntKind::Group {
                             exclusions: mapping.exclusions.clone(),
                             filter: group.filter,
+                            kind: mapping.rules.clone(),
                         },
                         timestamp: group.timestamp,
 
                         file: mapping.kind.clone(),
                         mapper,
-                        rule: mapping.rules.clone(),
                     });
                 }
             }
@@ -215,6 +219,7 @@ pub enum HuntKind {
     Group {
         exclusions: HashSet<String>,
         filter: Expression,
+        kind: RuleKind,
     },
     Rule {
         aggregate: Option<Aggregate>,
@@ -342,7 +347,6 @@ pub struct Hunt {
     pub timestamp: String,
 
     pub file: FileKind,
-    pub rule: RuleKind,
 }
 
 impl Hunt {
@@ -356,7 +360,7 @@ impl Hunt {
 
 pub struct HunterInner {
     hunts: Vec<Hunt>,
-    rules: HashMap<RuleKind, Vec<(Uuid, Chainsaw)>>,
+    rules: BTreeMap<Uuid, Rule>,
 
     load_unknown: bool,
     local: bool,
@@ -444,53 +448,50 @@ impl Hunter {
                 }
 
                 match &hunt.kind {
-                    HuntKind::Group { exclusions, filter } => {
-                        if let Some(rules) = self.inner.rules.get(&hunt.rule) {
-                            if tau_engine::core::solve(filter, &mapped) {
-                                for (rid, rule) in rules {
-                                    if exclusions.contains(&rule.name) {
-                                        continue;
-                                    }
-                                    let hit = match &rule.filter {
-                                        Filter::Detection(detection) => {
-                                            tau_engine::solve(detection, &mapped)
-                                        }
-                                        Filter::Expression(expression) => {
-                                            tau_engine::core::solve(expression, &mapped)
-                                        }
-                                    };
-                                    if hit {
-                                        if let Some(aggregate) = &rule.aggregate {
-                                            files
-                                                .insert(document_id, (document.clone(), timestamp));
-                                            let mut hasher = DefaultHasher::new();
-                                            let mut skip = false;
-                                            for field in &aggregate.fields {
-                                                if let Some(value) =
-                                                    mapped.find(field).and_then(|s| s.to_string())
-                                                {
-                                                    value.hash(&mut hasher);
-                                                } else {
-                                                    skip = true;
-                                                    break;
-                                                }
+                    HuntKind::Group {
+                        exclusions,
+                        filter,
+                        kind,
+                    } => {
+                        if tau_engine::core::solve(filter, &mapped) {
+                            for (rid, rule) in &self.inner.rules {
+                                if !rule.is_kind(kind) {
+                                    continue;
+                                }
+                                if exclusions.contains(rule.name()) {
+                                    continue;
+                                }
+                                let hit = rule.solve(&mapped);
+                                if hit {
+                                    if let Some(aggregate) = &rule.aggregate() {
+                                        files.insert(document_id, (document.clone(), timestamp));
+                                        let mut hasher = DefaultHasher::new();
+                                        let mut skip = false;
+                                        for field in &aggregate.fields {
+                                            if let Some(value) =
+                                                mapped.find(field).and_then(|s| s.to_string())
+                                            {
+                                                value.hash(&mut hasher);
+                                            } else {
+                                                skip = true;
+                                                break;
                                             }
-                                            if skip {
-                                                continue;
-                                            }
-                                            let id = hasher.finish();
-                                            let aggregates = aggregates
-                                                .entry((hunt.id, *rid))
-                                                .or_insert((aggregate, HashMap::new()));
-                                            let docs = aggregates.1.entry(id).or_insert(vec![]);
-                                            docs.push(document_id);
-                                        } else {
-                                            hits.push(Hit {
-                                                hunt: hunt.id,
-                                                rule: *rid,
-                                                timestamp,
-                                            });
                                         }
+                                        if skip {
+                                            continue;
+                                        }
+                                        let id = hasher.finish();
+                                        let aggregates = aggregates
+                                            .entry((hunt.id, *rid))
+                                            .or_insert((aggregate, HashMap::new()));
+                                        let docs = aggregates.1.entry(id).or_insert(vec![]);
+                                        docs.push(document_id);
+                                    } else {
+                                        hits.push(Hit {
+                                            hunt: hunt.id,
+                                            rule: *rid,
+                                            timestamp,
+                                        });
                                     }
                                 }
                             }
@@ -603,7 +604,7 @@ impl Hunter {
         &self.inner.hunts
     }
 
-    pub fn rules(&self) -> &HashMap<RuleKind, Vec<(Uuid, Chainsaw)>> {
+    pub fn rules(&self) -> &BTreeMap<Uuid, Rule> {
         &self.inner.rules
     }
 

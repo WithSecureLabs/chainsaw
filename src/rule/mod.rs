@@ -4,23 +4,100 @@ use std::path::Path;
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
+use tau_engine::{
+    core::{
+        optimiser,
+        parser::{Expression, Pattern},
+        Detection,
+    },
+    Document,
+};
 
-use crate::file::Kind as FileKind;
-
-pub use self::chainsaw::{Filter, Level, Rule as Chainsaw, Status};
+pub use self::chainsaw::Rule as Chainsaw;
 pub use self::sigma::Rule as Sigma;
-pub use self::stalker::Rule as Stalker;
 
 pub mod chainsaw;
 pub mod sigma;
-pub mod stalker;
+
+#[derive(Clone, Debug)]
+pub enum Rule {
+    Chainsaw(Chainsaw),
+    Sigma(Sigma),
+}
+
+impl Rule {
+    #[inline]
+    pub fn aggregate(&self) -> &Option<Aggregate> {
+        match self {
+            Self::Chainsaw(c) => &c.aggregate,
+            Self::Sigma(s) => &s.aggregate,
+        }
+    }
+
+    #[inline]
+    pub fn is_kind(&self, kind: &Kind) -> bool {
+        match self {
+            Self::Chainsaw(_) => kind == &Kind::Chainsaw,
+            Self::Sigma(_) => kind == &Kind::Sigma,
+        }
+    }
+
+    #[inline]
+    pub fn level(&self) -> &Level {
+        match self {
+            Self::Chainsaw(c) => &c.level,
+            Self::Sigma(s) => &s.level,
+        }
+    }
+
+    #[inline]
+    pub fn name(&self) -> &String {
+        match self {
+            Self::Chainsaw(c) => &c.name,
+            Self::Sigma(s) => &s.name,
+        }
+    }
+
+    #[inline]
+    pub fn solve(&self, document: &dyn Document) -> bool {
+        match self {
+            Self::Chainsaw(c) => match &c.filter {
+                Filter::Detection(detection) => tau_engine::solve(detection, document),
+                Filter::Expression(expression) => tau_engine::core::solve(expression, document),
+            },
+            Self::Sigma(s) => tau_engine::solve(&s.tau.detection, document),
+        }
+    }
+
+    #[inline]
+    pub fn status(&self) -> &Status {
+        match self {
+            Self::Chainsaw(c) => &c.status,
+            Self::Sigma(s) => &s.status,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct Aggregate {
+    #[serde(deserialize_with = "crate::ext::tau::deserialize_numeric")]
+    pub count: Pattern,
+    pub fields: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+pub enum Filter {
+    Detection(Detection),
+    #[serde(deserialize_with = "crate::ext::tau::deserialize_expression")]
+    Expression(Expression),
+}
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Kind {
     Chainsaw,
     Sigma,
-    Stalker,
 }
 
 impl Default for Kind {
@@ -34,7 +111,6 @@ impl fmt::Display for Kind {
         match self {
             Self::Chainsaw => write!(f, "chainsaw"),
             Self::Sigma => write!(f, "sigma"),
-            Self::Stalker => write!(f, "stalker"),
         }
     }
 }
@@ -46,22 +122,81 @@ impl FromStr for Kind {
         let v = match s {
             "chainsaw" => Self::Chainsaw,
             "sigma" => Self::Sigma,
-            "stalker" => Self::Stalker,
-            _ => anyhow::bail!("unknown kind, must be: chainsaw, sigma or stalker"),
+            _ => anyhow::bail!("unknown kind, must be: chainsaw, or sigma"),
         };
         Ok(v)
     }
 }
 
-#[derive(Debug)]
-pub struct Rule {
-    pub chainsaw: Chainsaw,
-    pub kind: Kind,
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Level {
+    Critical,
+    High,
+    Medium,
+    Low,
+    Info,
 }
 
-pub fn load_rule(
+impl fmt::Display for Level {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Critical => write!(f, "critical"),
+            Self::High => write!(f, "high"),
+            Self::Medium => write!(f, "medium"),
+            Self::Low => write!(f, "low"),
+            Self::Info => write!(f, "info"),
+        }
+    }
+}
+
+impl FromStr for Level {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let v = match s {
+            "critical" => Self::Critical,
+            "high" => Self::High,
+            "medium" => Self::Medium,
+            "low" => Self::Low,
+            "info" => Self::Info,
+            _ => anyhow::bail!("unknown level, must be: critical, high, medium, low or info"),
+        };
+        Ok(v)
+    }
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Status {
+    Stable,
+    Experimental,
+}
+
+impl fmt::Display for Status {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Stable => write!(f, "stable"),
+            Self::Experimental => write!(f, "experimental"),
+        }
+    }
+}
+
+impl FromStr for Status {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let v = match s {
+            "stable" => Self::Stable,
+            "experimental" => Self::Experimental,
+            _ => anyhow::bail!("unknown status, must be: stable or experimental"),
+        };
+        Ok(v)
+    }
+}
+pub fn load(
+    kind: Kind,
     path: &Path,
-    mapping: &bool,
     kinds: &Option<HashSet<Kind>>,
     levels: &Option<HashSet<Level>>,
     statuses: &Option<HashSet<Status>>,
@@ -71,139 +206,64 @@ pub fn load_rule(
             anyhow::bail!("rule must have a yaml file extension");
         }
     }
-
-    // This is a bit crude but we try all formats then report the errors...
-    let mut rules = if let Ok(rule) = chainsaw::load(path) {
-        if let Some(kinds) = kinds.as_ref() {
-            if !kinds.contains(&Kind::Chainsaw) {
-                return Ok(vec![]);
+    let mut rules = match kind {
+        Kind::Chainsaw => {
+            if let Some(kinds) = kinds.as_ref() {
+                if !kinds.contains(&Kind::Chainsaw) {
+                    return Ok(vec![]);
+                }
             }
+            let rule = chainsaw::load(path)?;
+            vec![Rule::Chainsaw(rule)]
         }
-        vec![Rule {
-            chainsaw: rule,
-            kind: Kind::Chainsaw,
-        }]
-    } else if let Ok(rules) = sigma::load(path) {
-        if !mapping {
-            // Hacky way of exposing rule types from load_rule function
-            anyhow::bail!("sigma-no-mapping");
-        }
-        if let Some(kinds) = kinds.as_ref() {
-            if !kinds.contains(&Kind::Sigma) {
-                return Ok(vec![]);
+        Kind::Sigma => {
+            if let Some(kinds) = kinds.as_ref() {
+                if !kinds.contains(&Kind::Sigma) {
+                    return Ok(vec![]);
+                }
             }
+            let sigma = match sigma::load(path)?
+                .into_iter()
+                .map(|y| serde_yaml::from_value::<Sigma>(y))
+                .collect::<Result<Vec<_>, _>>()
+            {
+                Ok(rules) => rules,
+                Err(_) => {
+                    anyhow::bail!("failed to load rule, run the linter for more information");
+                }
+            };
+            sigma
+                .into_iter()
+                .map(|mut s| {
+                    s.tau.detection.expression = optimiser::coalesce(
+                        s.tau.detection.expression,
+                        &s.tau.detection.identifiers,
+                    );
+                    s.tau.detection.identifiers.clear();
+                    s.tau.detection.expression = optimiser::shake(s.tau.detection.expression);
+                    s.tau.detection.expression = optimiser::rewrite(s.tau.detection.expression);
+                    s.tau.detection.expression = optimiser::matrix(s.tau.detection.expression);
+                    Rule::Sigma(s)
+                })
+                .collect()
         }
-        let sigma = match rules
-            .into_iter()
-            .map(|y| serde_yaml::from_value::<Sigma>(y))
-            .collect::<Result<Vec<_>, _>>()
-        {
-            Ok(rules) => rules,
-            Err(_) => {
-                anyhow::bail!("failed to load rule, run the linter for more information");
-            }
-        };
-        sigma
-            .into_iter()
-            .map(|rule: Sigma| Rule {
-                chainsaw: Chainsaw {
-                    name: rule.name,
-                    group: "".to_owned(),
-                    description: rule.description,
-                    authors: rule.authors,
-                    // NOTE: A fake value as this is not used for non chainsaw rules
-                    kind: FileKind::Evtx,
-                    level: rule
-                        .level
-                        .map(|l| match l.as_str() {
-                            "critical" => chainsaw::Level::Critical,
-                            "high" => chainsaw::Level::High,
-                            "medium" => chainsaw::Level::Medium,
-                            "low" => chainsaw::Level::Low,
-                            _ => chainsaw::Level::Info,
-                        })
-                        .unwrap_or_else(|| chainsaw::Level::Info),
-                    status: rule
-                        .status
-                        .map(|s| match s.as_str() {
-                            "stable" => chainsaw::Status::Stable,
-                            _ => chainsaw::Status::Experimental,
-                        })
-                        .unwrap_or_else(|| chainsaw::Status::Experimental),
-                    timestamp: "".to_owned(),
-
-                    fields: vec![],
-
-                    filter: chainsaw::Filter::Detection(
-                        rule.tau.optimise(Default::default()).detection,
-                    ),
-
-                    aggregate: rule.aggregate.map(|a| chainsaw::Aggregate {
-                        count: a.count,
-                        fields: a.fields,
-                    }),
-                },
-                kind: Kind::Sigma,
-            })
-            .collect()
-    } else if let Ok(rule) = stalker::load(path) {
-        if let Some(kinds) = kinds.as_ref() {
-            if !kinds.contains(&Kind::Stalker) {
-                return Ok(vec![]);
-            }
-        }
-        vec![Rule {
-            chainsaw: Chainsaw {
-                name: rule.tag,
-                group: "".to_owned(),
-                description: rule.description,
-                authors: rule.authors,
-                // NOTE: A fake value as this is not used for non chainsaw rules
-                kind: FileKind::Evtx,
-                level: match rule.level.as_str() {
-                    "critical" => chainsaw::Level::Critical,
-                    "high" => chainsaw::Level::High,
-                    "medium" => chainsaw::Level::Medium,
-                    "low" => chainsaw::Level::Low,
-                    _ => chainsaw::Level::Info,
-                },
-                status: match rule.status.as_str() {
-                    "stable" => chainsaw::Status::Stable,
-                    _ => chainsaw::Status::Experimental,
-                },
-                timestamp: "".to_owned(),
-
-                fields: vec![],
-
-                filter: chainsaw::Filter::Detection(
-                    rule.tau.optimise(Default::default()).detection,
-                ),
-
-                aggregate: None,
-            },
-            kind: Kind::Stalker,
-        }]
-    } else {
-        anyhow::bail!("failed to load rule, run the linter for more information");
     };
-
     if let Some(levels) = levels.as_ref() {
         rules = rules
             .into_iter()
-            .filter(|r| levels.contains(&r.chainsaw.level))
+            .filter(|r| levels.contains(&r.level()))
             .collect();
     }
     if let Some(statuses) = statuses.as_ref() {
         rules = rules
             .into_iter()
-            .filter(|r| statuses.contains(&r.chainsaw.status))
+            .filter(|r| statuses.contains(&r.status()))
             .collect();
     }
-
     Ok(rules)
 }
 
-pub fn lint_rule(kind: &Kind, path: &Path) -> crate::Result<Vec<Filter>> {
+pub fn lint(kind: &Kind, path: &Path) -> crate::Result<Vec<Filter>> {
     if let Some(x) = path.extension() {
         if x != "yml" && x != "yaml" {
             anyhow::bail!("rule must have a yaml file extension");
@@ -235,14 +295,6 @@ pub fn lint_rule(kind: &Kind, path: &Path) -> crate::Result<Vec<Filter>> {
                 } else {
                     anyhow::bail!("{}", e);
                 }
-            }
-        },
-        Kind::Stalker => match stalker::load(path) {
-            Ok(rule) => {
-                vec![Filter::Detection(rule.tau.detection)]
-            }
-            Err(e) => {
-                anyhow::bail!("{}", e);
             }
         },
     };

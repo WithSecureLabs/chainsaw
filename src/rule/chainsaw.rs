@@ -2,26 +2,15 @@ use std::fmt;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-use std::str::FromStr;
 
 use serde::{
     de::{self, MapAccess, Visitor},
-    Deserialize, Serialize,
+    Deserialize,
 };
-use tau_engine::core::{
-    optimiser,
-    parser::{Expression, Pattern},
-    Detection,
-};
+use tau_engine::core::optimiser;
 
 use crate::file::Kind;
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct Aggregate {
-    #[serde(deserialize_with = "crate::ext::tau::deserialize_numeric")]
-    pub count: Pattern,
-    pub fields: Vec<String>,
-}
+use crate::rule::{Aggregate, Filter, Level, Status};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Container {
@@ -121,84 +110,9 @@ impl<'de> Deserialize<'de> for Field {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(untagged)]
-pub enum Filter {
-    Detection(Detection),
-    #[serde(deserialize_with = "crate::ext::tau::deserialize_expression")]
-    Expression(Expression),
-}
-
-#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Format {
     Json,
-}
-
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Level {
-    Critical,
-    High,
-    Medium,
-    Low,
-    Info,
-}
-
-impl fmt::Display for Level {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Critical => write!(f, "critical"),
-            Self::High => write!(f, "high"),
-            Self::Medium => write!(f, "medium"),
-            Self::Low => write!(f, "low"),
-            Self::Info => write!(f, "info"),
-        }
-    }
-}
-
-impl FromStr for Level {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let v = match s {
-            "critical" => Self::Critical,
-            "high" => Self::High,
-            "medium" => Self::Medium,
-            "low" => Self::Low,
-            "info" => Self::Info,
-            _ => anyhow::bail!("unknown level, must be: critical, high, medium, low or info"),
-        };
-        Ok(v)
-    }
-}
-
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Status {
-    Stable,
-    Experimental,
-}
-
-impl fmt::Display for Status {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Stable => write!(f, "stable"),
-            Self::Experimental => write!(f, "experimental"),
-        }
-    }
-}
-
-impl FromStr for Status {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let v = match s {
-            "stable" => Self::Stable,
-            "experimental" => Self::Experimental,
-            _ => anyhow::bail!("unknown status, must be: stable or experimental"),
-        };
-        Ok(v)
-    }
 }
 
 #[derive(Clone, Debug, Deserialize)]
