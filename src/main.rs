@@ -13,8 +13,8 @@ use chrono_tz::Tz;
 use structopt::StructOpt;
 
 use chainsaw::{
-    cli, get_files, lint as lint_rule, load as load_rule, set_writer, Filter, Format, Hunter,
-    RuleKind, RuleLevel, RuleStatus, Searcher, Writer,
+    cli, get_files, lint as lint_rule, load as load_rule, set_writer, FileKind, Filter, Format,
+    Hunter, RuleKind, RuleLevel, RuleStatus, Searcher, Writer,
 };
 
 #[derive(StructOpt)]
@@ -54,8 +54,8 @@ enum Command {
         #[structopt(group = "format", long = "csv", requires("output"))]
         csv: bool,
         /// Only hunt through files with the provided extension.
-        #[structopt(long = "extension")]
-        extension: Option<String>,
+        #[structopt(long = "extensions", number_of_values = 1)]
+        extensions: Option<Vec<String>>,
         /// The timestamp to hunt from. Drops any documents older than the value provided.
         #[structopt(long = "from")]
         from: Option<NaiveDateTime>,
@@ -129,8 +129,8 @@ enum Command {
         regexp: Option<Vec<String>>,
 
         /// Only search through files with the provided extension.
-        #[structopt(long = "extension")]
-        extension: Option<String>,
+        #[structopt(long = "extensions", number_of_values = 1)]
+        extensions: Option<Vec<String>>,
         /// The timestamp to search from. Drops any documents older than the value provided.
         #[structopt(long = "from")]
         from: Option<NaiveDateTime>,
@@ -235,7 +235,7 @@ fn run() -> Result<()> {
             load_unknown,
             column_width,
             csv,
-            extension,
+            mut extensions,
             from,
             full,
             json,
@@ -266,14 +266,6 @@ fn run() -> Result<()> {
                 rules.extend(rule)
             };
             let sigma = sigma.unwrap_or_default();
-
-            cs_eprintln!(
-                "[+] Loading event logs from: {}",
-                path.iter()
-                    .map(|p| p.display().to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            );
 
             cs_eprintln!(
                 "[+] Loading detection rules from: {}",
@@ -364,10 +356,58 @@ fn run() -> Result<()> {
                 hunter = hunter.to(to);
             }
             let hunter = hunter.build()?;
+
+            /* if no user-defined extensions are specified, then we parse rules and
+            mappings to build a list of file extensions that should be loaded */
+            let mut types = vec![];
+            if extensions.is_none() {
+                for rule in &hunter.inner.rules {
+                    let a = rule.1.types();
+                    if !types.contains(a) {
+                        types.push(a.clone());
+                    }
+                }
+                for hunt in &hunter.inner.hunts {
+                    if !types.contains(&hunt.file) {
+                        types.push(hunt.file.clone());
+                    }
+                }
+
+                if !types.is_empty() {
+                    let mut scratch = vec![];
+                    for t in types {
+                        if let Some(ext) = FileKind::extensions(t) {
+                            scratch.extend(ext);
+                        }
+                    }
+                    if !scratch.is_empty() {
+                        extensions = Some(scratch);
+                    }
+                } else {
+                    return Err(anyhow::anyhow!(
+                        "No target file extensions were specified or found in the provided rules or mappings",
+                    ));
+                }
+            }
+
+            if let Some(ext) = &extensions {
+                cs_eprintln!(
+                    "[+] Loading event logs from: {} (extensions: {})",
+                    path.iter()
+                        .map(|p| p.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    ext.iter()
+                        .map(|x| format!(".{}", x))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            };
+
             let mut files = vec![];
             let mut size = ByteSize::mb(0);
             for path in &path {
-                let res = get_files(path, &extension, skip_errors)?;
+                let res = get_files(path, &extensions, skip_errors)?;
                 for i in &res {
                     size += i.metadata()?.len();
                 }
@@ -476,7 +516,7 @@ fn run() -> Result<()> {
             mut pattern,
             regexp,
 
-            extension,
+            extensions,
             from,
             ignore_case,
             json,
@@ -512,12 +552,36 @@ fn run() -> Result<()> {
             let mut files = vec![];
             let mut size = ByteSize::mb(0);
             for path in &paths {
-                let res = get_files(path, &extension, skip_errors)?;
+                let res = get_files(path, &extensions, skip_errors)?;
                 for i in &res {
                     size += i.metadata()?.len();
                 }
                 files.extend(res);
             }
+
+            if let Some(ext) = &extensions {
+                cs_eprintln!(
+                    "[+] Loading event logs from: {} (extensions: {})",
+                    paths
+                        .iter()
+                        .map(|p| p.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    ext.iter()
+                        .map(|x| format!(".{}", x))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            } else {
+                cs_eprintln!(
+                    "[+] Loading event logs from: {}",
+                    paths
+                        .iter()
+                        .map(|p| p.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                )
+            };
 
             if files.is_empty() {
                 return Err(anyhow::anyhow!(

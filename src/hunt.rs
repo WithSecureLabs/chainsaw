@@ -359,8 +359,8 @@ impl Hunt {
 }
 
 pub struct HunterInner {
-    hunts: Vec<Hunt>,
-    rules: BTreeMap<Uuid, Rule>,
+    pub hunts: Vec<Hunt>,
+    pub rules: BTreeMap<Uuid, Rule>,
 
     load_unknown: bool,
     local: bool,
@@ -371,7 +371,7 @@ pub struct HunterInner {
 }
 
 pub struct Hunter {
-    inner: HunterInner,
+    pub inner: HunterInner,
 }
 
 impl Hunter {

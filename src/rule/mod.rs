@@ -1,3 +1,4 @@
+use crate::file::Kind as FileKind;
 use std::collections::HashSet;
 use std::fmt;
 use std::path::Path;
@@ -47,6 +48,14 @@ impl Rule {
         match self {
             Self::Chainsaw(c) => &c.level,
             Self::Sigma(s) => &s.level,
+        }
+    }
+
+    #[inline]
+    pub fn types(&self) -> &FileKind {
+        match self {
+            Self::Chainsaw(c) => &c.kind,
+            Self::Sigma(_) => &FileKind::Unknown,
         }
     }
 

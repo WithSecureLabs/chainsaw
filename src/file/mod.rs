@@ -31,6 +31,17 @@ pub enum Kind {
     Unknown,
 }
 
+impl Kind {
+    pub fn extensions(kind: Kind) -> Option<Vec<String>> {
+        match kind {
+            Kind::Evtx => Some(vec!["evtx".to_string()]),
+            Kind::Json => Some(vec!["json".to_string()]),
+            Kind::Xml => Some(vec!["xml".to_string()]),
+            Kind::Unknown => None,
+        }
+    }
+}
+
 impl<'a> Iterator for Documents<'a> {
     type Item = crate::Result<Document>;
 
@@ -161,7 +172,7 @@ impl Reader {
 
 pub fn get_files(
     path: &PathBuf,
-    extension: &Option<String>,
+    extension: &Option<Vec<String>>,
     skip_errors: bool,
 ) -> crate::Result<Vec<PathBuf>> {
     let mut files: Vec<PathBuf> = vec![];
@@ -205,8 +216,10 @@ pub fn get_files(
             }
         } else if let Some(extension) = extension {
             if let Some(ext) = path.extension() {
-                if ext == extension.as_str() {
-                    files.push(path.to_path_buf());
+                for e in extension {
+                    if ext == e.as_str() {
+                        files.push(path.to_path_buf());
+                    }
                 }
             }
         } else {
