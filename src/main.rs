@@ -54,8 +54,8 @@ enum Command {
         #[structopt(group = "format", long = "csv", requires("output"))]
         csv: bool,
         /// Only hunt through files with the provided extension.
-        #[structopt(long = "extension")]
-        extension: Option<String>,
+        #[structopt(long = "extension", number_of_values = 1)]
+        extension: Option<Vec<String>>,
         /// The timestamp to hunt from. Drops any documents older than the value provided.
         #[structopt(long = "from")]
         from: Option<NaiveDateTime>,
@@ -129,8 +129,8 @@ enum Command {
         regexp: Option<Vec<String>>,
 
         /// Only search through files with the provided extension.
-        #[structopt(long = "extension")]
-        extension: Option<String>,
+        #[structopt(long = "extension", number_of_values = 1)]
+        extension: Option<Vec<String>>,
         /// The timestamp to search from. Drops any documents older than the value provided.
         #[structopt(long = "from")]
         from: Option<NaiveDateTime>,
@@ -268,14 +268,6 @@ fn run() -> Result<()> {
             let sigma = sigma.unwrap_or_default();
 
             cs_eprintln!(
-                "[+] Loading event logs from: {}",
-                path.iter()
-                    .map(|p| p.display().to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            );
-
-            cs_eprintln!(
                 "[+] Loading detection rules from: {}",
                 rules
                     .iter()
@@ -364,10 +356,54 @@ fn run() -> Result<()> {
                 hunter = hunter.to(to);
             }
             let hunter = hunter.build()?;
+
+            /* if no user-defined extensions are specified, then we parse rules and
+            mappings to build a list of file extensions that should be loaded */
+            let mut scratch = HashSet::new();
+            let message;
+            let exts = if load_unknown {
+                message = "*".to_string();
+                None
+            } else {
+                scratch.extend(hunter.extensions());
+                if scratch.is_empty() {
+                    return Err(anyhow::anyhow!(
+                        "No valid file extensions for the 'kind' specified in the mapping or rules files"
+                    ));
+                }
+                if let Some(e) = extension {
+                    // User has provided specific extensions
+                    scratch = scratch
+                        .intersection(&HashSet::from_iter(e.iter().cloned()))
+                        .cloned()
+                        .collect();
+                    if scratch.is_empty() {
+                        return Err(anyhow::anyhow!(
+                        "The specified file extension is not supported. Use --load-unknown to force loading",
+                    ));
+                    }
+                };
+                message = scratch
+                    .iter()
+                    .map(|x| format!(".{}", x))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                Some(scratch)
+            };
+
+            cs_eprintln!(
+                "[+] Loading event logs from: {} (extensions: {})",
+                path.iter()
+                    .map(|p| p.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                message
+            );
+
             let mut files = vec![];
             let mut size = ByteSize::mb(0);
             for path in &path {
-                let res = get_files(path, &extension, skip_errors)?;
+                let res = get_files(path, &exts, skip_errors)?;
                 for i in &res {
                     size += i.metadata()?.len();
                 }
@@ -509,15 +545,45 @@ fn run() -> Result<()> {
                     std::env::current_dir().expect("could not get current working directory"),
                 );
             }
+            let types = if let Some(e) = &extension {
+                Some(HashSet::from_iter(e.clone()))
+            } else {
+                None
+            };
+
             let mut files = vec![];
             let mut size = ByteSize::mb(0);
             for path in &paths {
-                let res = get_files(path, &extension, skip_errors)?;
+                let res = get_files(path, &types, skip_errors)?;
                 for i in &res {
                     size += i.metadata()?.len();
                 }
                 files.extend(res);
             }
+
+            if let Some(ext) = &extension {
+                cs_eprintln!(
+                    "[+] Loading event logs from: {} (extensions: {})",
+                    paths
+                        .iter()
+                        .map(|p| p.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    ext.iter()
+                        .map(|x| format!(".{}", x))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            } else {
+                cs_eprintln!(
+                    "[+] Loading event logs from: {}",
+                    paths
+                        .iter()
+                        .map(|p| p.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                )
+            };
 
             if files.is_empty() {
                 return Err(anyhow::anyhow!(

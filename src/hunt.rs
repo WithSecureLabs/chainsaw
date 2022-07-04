@@ -359,8 +359,8 @@ impl Hunt {
 }
 
 pub struct HunterInner {
-    hunts: Vec<Hunt>,
-    rules: BTreeMap<Uuid, Rule>,
+    pub hunts: Vec<Hunt>,
+    pub rules: BTreeMap<Uuid, Rule>,
 
     load_unknown: bool,
     local: bool,
@@ -371,7 +371,7 @@ pub struct HunterInner {
 }
 
 pub struct Hunter {
-    inner: HunterInner,
+    pub inner: HunterInner,
 }
 
 impl Hunter {
@@ -606,6 +606,20 @@ impl Hunter {
 
     pub fn rules(&self) -> &BTreeMap<Uuid, Rule> {
         &self.inner.rules
+    }
+    pub fn extensions(&self) -> HashSet<String> {
+        let mut extensions = HashSet::new();
+        for rule in &self.inner.rules {
+            if let Some(e) = FileKind::extensions(&rule.1.types()) {
+                extensions.extend(e.iter().cloned());
+            }
+        }
+        for hunt in &self.inner.hunts {
+            if let Some(e) = FileKind::extensions(&hunt.file) {
+                extensions.extend(e.iter().cloned());
+            }
+        }
+        extensions
     }
 
     fn skip(&self, timestamp: NaiveDateTime) -> crate::Result<bool> {
