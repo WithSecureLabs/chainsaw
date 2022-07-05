@@ -217,10 +217,8 @@ pub fn get_files(
             }
         } else if let Some(e) = extensions {
             if let Some(ext) = path.extension() {
-                if let Some(ex) = ext.to_str() {
-                    if e.contains(ex) {
-                        files.push(path.to_path_buf());
-                    }
+                if e.contains(&ext.to_string_lossy().into_owned()) {
+                    files.push(path.to_path_buf());
                 }
             }
         } else {
