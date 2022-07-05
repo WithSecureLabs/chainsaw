@@ -13,8 +13,8 @@ use chrono_tz::Tz;
 use structopt::StructOpt;
 
 use chainsaw::{
-    cli, get_files, lint as lint_rule, load as load_rule, set_writer, FileKind, Filter, Format,
-    Hunter, RuleKind, RuleLevel, RuleStatus, Searcher, Writer,
+    cli, get_files, lint as lint_rule, load as load_rule, set_writer, Filter, Format, Hunter,
+    RuleKind, RuleLevel, RuleStatus, Searcher, Writer,
 };
 
 #[derive(StructOpt)]
@@ -295,7 +295,7 @@ fn run() -> Result<()> {
             let mut count = 0;
             let mut rs = vec![];
             for path in &rules {
-                for file in get_files(path, &HashSet::new(), skip_errors)? {
+                for file in get_files(path, &None, skip_errors)? {
                     match load_rule(RuleKind::Chainsaw, &file, &kinds, &levels, &statuses) {
                         Ok(r) => {
                             if !r.is_empty() {
@@ -310,7 +310,7 @@ fn run() -> Result<()> {
                 }
             }
             for path in &sigma {
-                for file in get_files(path, &HashSet::new(), skip_errors)? {
+                for file in get_files(path, &None, skip_errors)? {
                     match load_rule(RuleKind::Sigma, &file, &kinds, &levels, &statuses) {
                         Ok(r) => {
                             if !r.is_empty() {
@@ -359,41 +359,37 @@ fn run() -> Result<()> {
 
             /* if no user-defined extensions are specified, then we parse rules and
             mappings to build a list of file extensions that should be loaded */
-            let mut exts = HashSet::new();
+            let mut scratch = HashSet::new();
             let message;
-            if load_unknown {
+            let exts = if load_unknown {
                 message = "*".to_string();
+                None
             } else {
-                let filekinds = hunter.extensions();
-                for t in filekinds {
-                    if let Some(ext) = FileKind::extensions(&t) {
-                        exts.extend(ext.iter().cloned());
-                    }
-                }
-
-                if exts.is_empty() {
+                scratch.extend(hunter.extensions());
+                if scratch.is_empty() {
                     return Err(anyhow::anyhow!(
                         "No valid file extensions for the 'kind' specified in the mapping or rules files"
                     ));
                 }
                 if let Some(e) = extension {
                     // User has provided specific extensions
-                    exts = exts
+                    scratch = scratch
                         .intersection(&HashSet::from_iter(e.iter().cloned()))
                         .cloned()
                         .collect();
-                    if exts.is_empty() {
+                    if scratch.is_empty() {
                         return Err(anyhow::anyhow!(
                         "The specified file extension is not supported. Use --load-unknown to force loading",
                     ));
                     }
                 };
-                message = exts
+                message = scratch
                     .iter()
                     .map(|x| format!(".{}", x))
                     .collect::<Vec<_>>()
                     .join(", ");
-            }
+                Some(scratch)
+            };
 
             cs_eprintln!(
                 "[+] Loading event logs from: {} (extensions: {})",
@@ -458,7 +454,7 @@ fn run() -> Result<()> {
             cs_eprintln!("[+] Validating as {} for supplied detection rules...", kind);
             let mut count = 0;
             let mut failed = 0;
-            for file in get_files(&path, &HashSet::new(), false)? {
+            for file in get_files(&path, &None, false)? {
                 match lint_rule(&kind, &file) {
                     Ok(filters) => {
                         if tau {
@@ -550,9 +546,9 @@ fn run() -> Result<()> {
                 );
             }
             let types = if let Some(e) = &extension {
-                HashSet::from_iter(e.clone())
+                Some(HashSet::from_iter(e.clone()))
             } else {
-                HashSet::new()
+                None
             };
 
             let mut files = vec![];

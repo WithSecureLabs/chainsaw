@@ -607,15 +607,19 @@ impl Hunter {
     pub fn rules(&self) -> &BTreeMap<Uuid, Rule> {
         &self.inner.rules
     }
-    pub fn extensions(&self) -> HashSet<FileKind> {
-        let mut filekinds = HashSet::new();
+    pub fn extensions(&self) -> HashSet<String> {
+        let mut extensions = HashSet::new();
         for rule in &self.inner.rules {
-            filekinds.insert(rule.1.types().clone());
+            if let Some(e) = FileKind::extensions(&rule.1.types()) {
+                extensions.extend(e.iter().cloned());
+            }
         }
         for hunt in &self.inner.hunts {
-            filekinds.insert(hunt.file.clone());
+            if let Some(e) = FileKind::extensions(&hunt.file) {
+                extensions.extend(e.iter().cloned());
+            }
         }
-        filekinds
+        extensions
     }
 
     fn skip(&self, timestamp: NaiveDateTime) -> crate::Result<bool> {
