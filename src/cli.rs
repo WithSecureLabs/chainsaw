@@ -668,7 +668,7 @@ pub struct Detection<'a> {
     pub source: RuleKind,
     pub status: &'a Status,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
     pub sigma: Option<Sigma<'a>>,
 }
 
