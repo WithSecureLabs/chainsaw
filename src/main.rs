@@ -551,12 +551,8 @@ fn run() -> Result<()> {
                     std::env::current_dir().expect("could not get current working directory"),
                 );
             }
-            let types = if let Some(e) = &extension {
-                Some(HashSet::from_iter(e.clone()))
-            } else {
-                None
-            };
 
+            let types = extension.as_ref().map(|e| HashSet::from_iter(e.clone()));
             let mut files = vec![];
             let mut size = ByteSize::mb(0);
             for path in &paths {
