@@ -88,6 +88,19 @@ impl Reader {
                 }),
                 _ => {
                     if load_unknown {
+                        if let Ok(parser) = EvtxParser::load(file) {
+                            return Ok(Self {
+                                parser: Parser::Evtx(parser),
+                            });
+                        } else if let Ok(parser) = JsonParser::load(file) {
+                            return Ok(Self {
+                                parser: Parser::Json(parser),
+                            });
+                        } else if let Ok(parser) = XmlParser::load(file) {
+                            return Ok(Self {
+                                parser: Parser::Xml(parser),
+                            });
+                        }
                         if skip_errors {
                             cs_eyellowln!(
                                 "file type is not currently supported - {}",
@@ -98,7 +111,7 @@ impl Reader {
                             })
                         } else {
                             anyhow::bail!(
-                                "file type is not currently supported - {}, use --skip-errors to continue",
+                                "file type is not currently supported - {}, use --skip-errors to continue...",
                                 file.display()
                             )
                         }
@@ -126,12 +139,14 @@ impl Reader {
                     }
                     if skip_errors {
                         cs_eyellowln!("file type is not known - {}", file.display());
-
                         Ok(Self {
                             parser: Parser::Unknown,
                         })
                     } else {
-                        anyhow::bail!("file type is not known - {}", file.display())
+                        anyhow::bail!(
+                            "file type is not known - {}, use --skip-errors to continue...",
+                            file.display()
+                        )
                     }
                 } else {
                     Ok(Self {
