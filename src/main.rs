@@ -83,6 +83,9 @@ enum Command {
         /// The file/directory to output to.
         #[structopt(short = "o", long = "output")]
         output: Option<PathBuf>,
+        /// Print the output in log like format.
+        #[structopt(group = "format", long = "log")]
+        log: bool,
         /// Supress informational output.
         #[structopt(short = "q")]
         quiet: bool,
@@ -244,6 +247,7 @@ fn run() -> Result<()> {
             local,
             metadata,
             output,
+            log,
             quiet,
             sigma,
             skip_errors,
@@ -428,6 +432,8 @@ fn run() -> Result<()> {
                 cli::print_csv(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
             } else if json {
                 cli::print_json(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
+            } else if log {
+                cli::print_log(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
             } else {
                 cli::print_detections(
                     &detections,

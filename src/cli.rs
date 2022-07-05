@@ -106,6 +106,112 @@ pub struct Hit<'a> {
     rule: &'a Rule,
 }
 
+pub fn print_log(
+    detections: &[Detections],
+    hunts: &[Hunt],
+    rules: &BTreeMap<Uuid, Rule>,
+    local: bool,
+    timezone: Option<Tz>,
+) -> crate::Result<()> {
+    let hunts: HashMap<_, _> = hunts.iter().map(|h| (&h.id, h)).collect();
+    let mut rule_width = 1;
+    for rule in rules.values() {
+        let width = rule.name().len();
+        if width > rule_width {
+            rule_width = width;
+        }
+    }
+
+    let mut rows = vec![];
+    for detection in detections {
+        for hit in &detection.hits {
+            rows.push((hit, &detection.kind));
+        }
+    }
+    rows.sort_by(|x, y| x.0.timestamp.cmp(&y.0.timestamp));
+    for (hit, kind) in rows {
+        let hunt = &hunts.get(&hit.hunt).expect("could not get hunt");
+        let rule = &rules.get(&hit.rule).expect("could not get rule");
+        let mut columns = vec![];
+
+        let localised = if let Some(timezone) = timezone {
+            timezone
+                .from_local_datetime(&hit.timestamp)
+                .single()
+                .expect("failed to localise timestamp")
+                .to_rfc3339()
+        } else if local {
+            Utc.from_local_datetime(&hit.timestamp)
+                .single()
+                .expect("failed to localise timestamp")
+                .to_rfc3339()
+        } else {
+            DateTime::<Utc>::from_utc(hit.timestamp, Utc).to_rfc3339()
+        };
+        columns.push(localised.to_string());
+
+        let count;
+        let document = match kind {
+            Kind::Individual { document } => {
+                count = 1;
+                document
+            }
+            Kind::Aggregate { documents } => {
+                count = documents.len();
+                documents.first().expect("could not get document")
+            }
+        };
+
+        let name = match rule {
+            Rule::Chainsaw(rule) => {
+                columns.push("c".to_string());
+                &rule.name
+            }
+            Rule::Sigma(rule) => {
+                columns.push("σ".to_string());
+                &rule.name
+            }
+        };
+        //columns.push(format!("{: <width$}", name, width = rule_width - 1));
+        //columns.push(format!("{: >6}", count));
+        columns.push(name.to_string());
+        columns.push(format!("{}", count));
+
+        let mut values = vec![];
+        for field in hunt.mapper.fields() {
+            if field.visible {
+                let wrapper;
+                let mapped = match &document.kind {
+                    FileKind::Evtx => {
+                        wrapper = crate::evtx::Wrapper(&document.data);
+                        hunt.mapper.mapped(&wrapper)
+                    }
+                    FileKind::Json | FileKind::Xml => hunt.mapper.mapped(&document.data),
+                    FileKind::Unknown => continue,
+                };
+                let fields: HashMap<_, _> =
+                    hunt.mapper.fields().iter().map(|f| (&f.name, f)).collect();
+                if let Some(field) = fields.get(&field.name) {
+                    if let Some(value) = mapped.find(&field.from) {
+                        match value.to_string() {
+                            Some(v) => {
+                                values.push(v);
+                            }
+                            None => {
+                                values.push("<see raw event>".to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        columns.push(values.join("  ::  "));
+
+        println!("{}", columns.join("  |  "));
+    }
+    Ok(())
+}
+
 pub fn print_detections(
     detections: &[Detections],
     hunts: &[Hunt],
