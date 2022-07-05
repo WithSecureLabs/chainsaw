@@ -308,6 +308,7 @@ pub fn print_detections(
                     if metadata {
                         let mut table = Table::new();
                         table.add_row(Row::new(vec![
+                            cell!("").style_spec("c"),
                             cell!("name").style_spec("c"),
                             cell!("authors").style_spec("c"),
                             cell!("level").style_spec("c"),
@@ -317,6 +318,7 @@ pub fn print_detections(
                             match rule {
                                 Rule::Chainsaw(c) => {
                                     table.add_row(Row::new(vec![
+                                        cell!('c'),
                                         cell!(split_tag(&c.name)),
                                         cell!(c.authors.join("\n")),
                                         cell!(c.level),
@@ -325,6 +327,7 @@ pub fn print_detections(
                                 }
                                 Rule::Sigma(s) => {
                                     table.add_row(Row::new(vec![
+                                        cell!('σ'),
                                         cell!(split_tag(&s.name)),
                                         cell!(s.authors.join("\n")),
                                         cell!(s.level),
