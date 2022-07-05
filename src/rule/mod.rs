@@ -1,4 +1,3 @@
-use crate::file::Kind as FileKind;
 use std::collections::HashSet;
 use std::fmt;
 use std::path::Path;
@@ -13,6 +12,8 @@ use tau_engine::{
     },
     Document,
 };
+
+use crate::file::Kind as FileKind;
 
 pub use self::chainsaw::Rule as Chainsaw;
 pub use self::sigma::Rule as Sigma;
