@@ -72,7 +72,7 @@ enum Command {
         #[structopt(long = "level", number_of_values = 1)]
         level: Vec<RuleLevel>,
         /// Allow chainsaw to try and load files it cannot identify.
-        #[structopt(long = "load-unknown", conflicts_with = "extension")]
+        #[structopt(long = "load-unknown")]
         load_unknown: bool,
         /// Output the timestamp using the local machine's timestamp.
         #[structopt(long = "local", group = "tz")]
@@ -141,7 +141,7 @@ enum Command {
         #[structopt(long = "json")]
         json: bool,
         /// Allow chainsaw to try and load files it cannot identify.
-        #[structopt(long = "load-unknown", conflicts_with = "extension")]
+        #[structopt(long = "load-unknown")]
         load_unknown: bool,
         /// Output the timestamp using the local machine's timestamp.
         #[structopt(long = "local", group = "tz")]
