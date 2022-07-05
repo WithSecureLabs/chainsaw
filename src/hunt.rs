@@ -351,10 +351,10 @@ pub struct Hunt {
 
 impl Hunt {
     pub fn is_aggregation(&self) -> bool {
-        if let HuntKind::Rule { aggregate, .. } = &self.kind {
-            return aggregate.is_some();
+        match &self.kind {
+            HuntKind::Group { .. } => true,
+            HuntKind::Rule { aggregate, .. } => aggregate.is_some(),
         }
-        false
     }
 }
 
