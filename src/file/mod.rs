@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -22,7 +23,7 @@ pub struct Documents<'a> {
     iterator: Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Hash, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Kind {
     Evtx,
@@ -32,8 +33,8 @@ pub enum Kind {
 }
 
 impl Kind {
-    pub fn extensions(kind: Kind) -> Option<Vec<String>> {
-        match kind {
+    pub fn extensions(&self) -> Option<Vec<String>> {
+        match self {
             Kind::Evtx => Some(vec!["evtx".to_string()]),
             Kind::Json => Some(vec!["json".to_string()]),
             Kind::Xml => Some(vec!["xml".to_string()]),
@@ -97,7 +98,7 @@ impl Reader {
                             })
                         } else {
                             anyhow::bail!(
-                                "file type is not currently supported - {}",
+                                "file type is not currently supported - {}, use --skip-errors to continue",
                                 file.display()
                             )
                         }
@@ -172,7 +173,7 @@ impl Reader {
 
 pub fn get_files(
     path: &PathBuf,
-    extension: &Option<Vec<String>>,
+    extensions: &HashSet<String>,
     skip_errors: bool,
 ) -> crate::Result<Vec<PathBuf>> {
     let mut files: Vec<PathBuf> = vec![];
@@ -212,11 +213,11 @@ pub fn get_files(
                         }
                     }
                 };
-                files.extend(get_files(&dir.path(), extension, skip_errors)?);
+                files.extend(get_files(&dir.path(), extensions, skip_errors)?);
             }
-        } else if let Some(extension) = extension {
+        } else if !extensions.is_empty() {
             if let Some(ext) = path.extension() {
-                for e in extension {
+                for e in extensions {
                     if ext == e.as_str() {
                         files.push(path.to_path_buf());
                     }
