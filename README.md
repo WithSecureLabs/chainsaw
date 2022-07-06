@@ -111,7 +111,7 @@ Windows event logs provide a rich source of forensic information for threat hunt
 
 At WithSecure Countercept, we ingest a wide range of telemetry sources from endpoints via our EDR agent to provide our managed detection and response service. However, there are circumstances where we need to quickly analyze event log data that hasn’t been captured by our EDR, a common example being incident response investigations on an estate where our EDR wasn’t installed at the time of the compromise. Chainsaw was created to provide our threat hunters and incident response consultants with a tool to perform rapid triage of Windows event logs in these circumstances.
 
-At the time of writing, there are very few open-source, standalone tools that provide a simple and fast method of triaging Windows event logs, identifying interesting elements within the logs and applying a detection logic rule format (such as Sigma) to detect signs of malicious activity. In our testing, the tools that did exist struggled to efficiently apply detection logic to large volumes of event logs making them unsuitable for scenarios where quick triage is required. 
+At the time of writing, there are very few open-source, standalone tools that provide a simple and fast method of triaging Windows event logs, identifying interesting elements within the logs and applying a detection logic rule format (such as Sigma) to detect signs of malicious activity. In our testing, the tools that did exist struggled to efficiently apply detection logic to large volumes of event logs making them unsuitable for scenarios where quick triage is required.
 
 ## Hunting Logic
 
@@ -142,14 +142,26 @@ In addition to supporting sigma rules, Chainsaw also supports a custom rule form
 
 ## Quick Start Guide
 ### Downloading and Running
-You can find pre-compiled versions of chainsaw in the [releases section](https://github.com/countercept/chainsaw/releases) of this Github repo, or you can clone the repo (and the submodules) by running:
- `git clone --recurse-submodules https://github.com/countercept/chainsaw.git`
 
-You can then compile the code yourself by running:  `cargo build --release`. Once the build has finished, you will find a copy of the compiled binary in the target/release folder.
+With the release of Chainsaw v2, we decided to no longer include the Sigma Rules and EVTX-Attack-Samples repositories as Chainsaw submodules. We recommend that you clone these repositories separately to ensure you have the latest versions.
+
+If you still need an all-in-one package containing the Chainsaw binary, Sigma rules and example Event logs, you can download it from the [releases section](https://github.com/countercept/chainsaw/releases) section of this Github repo. In this releases section you will also find pre-compiled binary-only versions of Chainsaw for various platforms and architectures.
+
+If you want to compile Chainsaw yourself, you can clone the Chainsaw repo:
+
+ `git clone https://github.com/countercept/chainsaw.git`
+
+and compile the code yourself by running:  `cargo build --release`. Once the build has finished, you will find a copy of the compiled binary in the target/release folder.
 
 **Make sure to build with the `--release` flag as this will ensure significantly faster execution time.**
 
-If you want to quickly see what Chainsaw looks like when it runs, you can use the command:
+If you want to quickly see what Chainsaw looks like when it runs, you can clone the [Sigma Rules](https://github.com/SigmaHQ/sigma) and [EVTX-Attack-Samples](https://github.com/sbousseaden/EVTX-ATTACK-SAMPLES) repositories:
+
+```
+git clone https://github.com/SigmaHQ/sigma
+git clone https://github.com/sbousseaden/EVTX-ATTACK-SAMPLES.git
+```
+and then run Chainsaw with the parameters below:
 ```
 ./chainsaw hunt evtx_attack_samples/ -s sigma_rules/ --mapping mappings/sigma-event-logs.yml
 ```
