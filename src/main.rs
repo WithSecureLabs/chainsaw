@@ -20,7 +20,21 @@ use chainsaw::{
 #[derive(StructOpt)]
 #[structopt(
     name = "chainsaw",
-    about = "Rapidly Search and Hunt through windows event logs"
+    about = "Rapidly Search and Hunt through windows event logs",
+    after_help = r"Examples:
+    
+    Hunt with Sigma and Chainsaw Rules: 
+        ./chainsaw hunt evtx_attack_samples/ -s sigma_rules/ --mapping mappings/sigma-event-logs.yml -r rules/
+
+    Hunt with Sigma rules and output in JSON: 
+        ./chainsaw hunt evtx_attack_samples/ -s sigma_rules/ --mapping mappings/sigma-event-logs.yml --json
+
+    Search for the case-insensitive word 'mimikatz':
+        ./chainsaw search mimikatz -i evtx_attack_samples/
+
+    Search for Powershell Script Block Events (EventID 4014):
+        ./chainsaw search -t 'Event.System.EventID: =4104' evtx_attack_samples/
+    "
 )]
 struct Opts {
     /// Hide Chainsaw's banner.
@@ -32,18 +46,18 @@ struct Opts {
 
 #[derive(StructOpt)]
 enum Command {
-    /// Hunt through event logs using detection rules and builtin logic.
+    /// Hunt through event logs using detection rules for threat detection
     Hunt {
-        /// The path to a collection of rules.
+        /// The path to a collection of rules to use for hunting.
         rules: PathBuf,
 
-        /// The paths containing event logs to hunt through.
+        /// The paths containing event logs to load and hunt through.
         path: Vec<PathBuf>,
 
-        /// A mapping file to hunt with.
+        /// A mapping file to tell Chainsaw how to use third-party rules.
         #[structopt(short = "m", long = "mapping", number_of_values = 1)]
         mapping: Option<Vec<PathBuf>>,
-        /// Additional rules to hunt with.
+        /// A path containing additional rules to hunt with.
         #[structopt(short = "r", long = "rule", number_of_values = 1)]
         rule: Option<Vec<PathBuf>>,
 
@@ -77,7 +91,7 @@ enum Command {
         /// Output the timestamp using the local machine's timestamp.
         #[structopt(long = "local", group = "tz")]
         local: bool,
-        /// Apply addional metadata for the tablar output.
+        /// Display additional metadata in the tablar output.
         #[structopt(long = "metadata", conflicts_with = "json")]
         metadata: bool,
         /// The file/directory to output to.
@@ -89,7 +103,7 @@ enum Command {
         /// Supress informational output.
         #[structopt(short = "q")]
         quiet: bool,
-        /// Sigma rules to hunt with.
+        /// A path containing Sigma rules to hunt with.
         #[structopt(short = "s", long = "sigma", number_of_values = 1, requires("mapping"))]
         sigma: Option<Vec<PathBuf>>,
         /// Continue to hunt when an error is encountered.
@@ -124,10 +138,10 @@ enum Command {
         #[structopt(required_unless_one=&["regexp", "tau"])]
         pattern: Option<String>,
 
-        /// The paths containing event logs to hunt through.
+        /// The paths containing event logs to load and hunt through.
         path: Vec<PathBuf>,
 
-        /// A pattern to search for.
+        /// A regular expressions (RegEx) pattern to search for.
         #[structopt(short = "e", long = "regexp", number_of_values = 1)]
         regexp: Option<Vec<String>>,
 
