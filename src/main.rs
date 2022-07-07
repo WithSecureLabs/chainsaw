@@ -206,12 +206,12 @@ fn resolve_col_width() -> Option<u32> {
     // Get windows size and return a rough mapping for sutiable col width
     match term_size::dimensions() {
         Some((w, _h)) => match w {
-            50..=120 => Some(30),
-            121..=239 => Some(40),
-            240..=340 => Some(70),
-            341..=430 => Some(110),
-            431..=550 => Some(150),
-            551.. => Some(180),
+            50..=120 => Some(20),
+            121..=239 => Some(30),
+            240..=340 => Some(50),
+            341..=430 => Some(90),
+            431..=550 => Some(130),
+            551.. => Some(160),
             _ => None,
         },
         None => None,
