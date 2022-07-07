@@ -3,7 +3,7 @@ name: Chainsaw's Sigma mappings for Event Logs
 kind: evtx
 rules: sigma
 
-ignore:
+exclusions:
   - Defense evasion via process reimaging
   - Exports Registry Key To an Alternate Data Stream
   - NetNTLM Downgrade Attack

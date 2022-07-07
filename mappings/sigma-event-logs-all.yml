@@ -3,6 +3,14 @@ name: Chainsaw's groupless Sigma mappings for Event Logs
 kind: evtx
 rules: sigma
 
+exclusions:
+- Defense evasion via process reimaging
+- Exports Registry Key To an Alternate Data Stream
+- NetNTLM Downgrade Attack
+- Non Interactive PowerShell
+- Wuauclt Network Connection
+- Raw Disk Access From Illegitimate Tools
+
 groups:
   - name: Sigma
     timestamp: Event.System.TimeCreated
@@ -21,7 +29,7 @@ groups:
         from: Computer
         to: Event.System.Computer
       - name: Event Data
-        from: EventData 
+        from: EventData
         to: Event.EventData
 
       - from: AccessList
