@@ -628,8 +628,10 @@ pub fn print_csv(
                                             cells.push(v);
                                         }
                                         None => {
-                                            "<see raw event>".hash(&mut hasher);
-                                            cells.push("<see raw event>".to_owned());
+                                            let yaml = serde_yaml::to_string(&tau_to_json(value))
+                                                .expect("could not get yaml");
+                                            yaml.hash(&mut hasher);
+                                            cells.push(yaml);
                                         }
                                     }
                                     continue;
