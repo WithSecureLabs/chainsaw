@@ -9,7 +9,9 @@ exclusions:
 - NetNTLM Downgrade Attack
 - Non Interactive PowerShell
 - Wuauclt Network Connection
-- Raw Disk Access From Illegitimate Tools
+- Raw Disk Access Using Illegitimate Tools
+- Executable in ADS
+- Space After Filename - macOS
 
 groups:
   - name: Sigma

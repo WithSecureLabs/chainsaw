@@ -48,29 +48,29 @@ pub fn init_progress_bar(size: u64, msg: String) -> indicatif::ProgressBar {
     pb
 }
 
-pub fn format_field_length(data: &str, full_output: bool, length: u32) -> String {
+pub fn format_field_length(data: &str, full_output: bool, col_width: u32) -> String {
     // Take the context_field and format it for printing. Remove newlines, break into even chunks etc.
     // If this is a scheduled task we need to parse the XML to make it more readable
-    let mut data = data
+    let mut scratch = data
         .replace('\n', "")
         .replace('\r', "")
         .replace('\t', "")
         .replace("  ", " ")
         .chars()
         .collect::<Vec<char>>()
-        .chunks(length as usize)
+        .chunks(col_width as usize)
         .map(|c| c.iter().collect::<String>())
         .collect::<Vec<String>>()
         .join("\n");
 
-    let truncate_len = 1000;
+    let truncate_len = 500;
 
-    if !full_output && data.len() > truncate_len {
-        data.truncate(truncate_len);
-        data.push_str("...\n\n(use --full to show all content)");
+    if !full_output && scratch.len() > truncate_len {
+        scratch.truncate(truncate_len);
+        scratch.push_str("...\n(use --full to show all content)");
     }
 
-    data
+    scratch
 }
 
 fn split_tag(tag_name: &str) -> String {
@@ -384,19 +384,24 @@ pub fn print_detections(
                                             cells.push(cell!(format_field_length(
                                                 &v,
                                                 full,
-                                                column_width
+                                                column_width,
                                             )));
                                         }
                                         None => {
-                                            let yaml = serde_yaml::to_string(&to_json_truncated(
-                                                value,
-                                                column_width,
-                                            ))
-                                            .expect("could not get yaml");
+                                            let mut yaml =
+                                                serde_yaml::to_string(&tau_to_json(value))
+                                                    .expect("could not get yaml");
+
+                                            yaml = yaml
+                                                .split('\n')
+                                                .collect::<Vec<&str>>()
+                                                .iter()
+                                                .map(|x| format_field_length(x, full, column_width))
+                                                .collect::<Vec<String>>()
+                                                .join("\n")
+                                                .replace("\\n", "\n");
                                             yaml.hash(&mut hasher);
                                             cells.push(cell!(yaml));
-                                            //"<see raw event>".hash(&mut hasher);
-                                            //cells.push(cell!("<see raw event>"));
                                         }
                                     }
                                     continue;
@@ -767,27 +772,20 @@ pub fn print_json(
     Ok(())
 }
 
-pub fn to_json_truncated(tau: Tau, width: u32) -> Json {
+pub fn tau_to_json(tau: Tau) -> Json {
     match tau {
         Tau::Null => Json::Null,
         Tau::Bool(b) => Json::Bool(b),
         Tau::Float(f) => Json::Number(Number::from_f64(f).expect("could not set f64")),
         Tau::Int(i) => Json::Number(Number::from(i)),
         Tau::UInt(u) => Json::Number(Number::from(u)),
-        Tau::String(s) => {
-            let mut x = s.to_string();
-            x.truncate(width as usize);
-            if x.len() != s.len() {
-                x = format!("{}...", x);
-            }
-            Json::String(x)
-        }
-        Tau::Array(a) => Json::Array(a.iter().map(|x| to_json_truncated(x, width)).collect()),
+        Tau::String(s) => Json::String(s.to_string()),
+        Tau::Array(a) => Json::Array(a.iter().map(tau_to_json).collect()),
         Tau::Object(o) => {
             let mut map = Map::new();
             for k in o.keys() {
                 let v = o.get(&k).expect("could not get value");
-                map.insert(k.to_string(), to_json_truncated(v, width));
+                map.insert(k.to_string(), tau_to_json(v));
             }
             Json::Object(map)
         }
