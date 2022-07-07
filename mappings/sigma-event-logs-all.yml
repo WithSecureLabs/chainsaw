@@ -76,7 +76,7 @@ groups:
         to: Event.EventData.CertThumbprint
         visible: false
       - from: Channel
-        to: Event.EventData.Channel
+        to: Event.System.Channel
         visible: false
       - from: ClassName
         to: Event.EventData.ClassName
@@ -196,13 +196,13 @@ groups:
         to: Event.EventData.KeyLength
         visible: false
       - from: Keywords
-        to: Event.EventData.Keywords
+        to: Event.System.Keywords
         visible: false
       - from: LayerRTID
         to: Event.EventData.LayerRTID
         visible: false
       - from: Level
-        to: Event.EventData.Level
+        to: Event.System.Level
         visible: false
       - from: LocalName
         to: Event.EventData.LocalName
