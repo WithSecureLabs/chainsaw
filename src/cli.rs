@@ -6,8 +6,9 @@ use chrono_tz::Tz;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use prettytable::{cell, format, Row, Table};
 use serde::Serialize;
+use serde_json::{Map, Number, Value as Json};
 use std::hash::{Hash, Hasher};
-use tau_engine::Document;
+use tau_engine::{Document, Value as Tau};
 use uuid::Uuid;
 
 use crate::file::Kind as FileKind;
@@ -387,8 +388,15 @@ pub fn print_detections(
                                             )));
                                         }
                                         None => {
-                                            "<see raw event>".hash(&mut hasher);
-                                            cells.push(cell!("<see raw event>"));
+                                            let yaml = serde_yaml::to_string(&to_json_truncated(
+                                                value,
+                                                column_width,
+                                            ))
+                                            .expect("could not get yaml");
+                                            yaml.hash(&mut hasher);
+                                            cells.push(cell!(yaml));
+                                            //"<see raw event>".hash(&mut hasher);
+                                            //cells.push(cell!("<see raw event>"));
                                         }
                                     }
                                     continue;
@@ -757,4 +765,31 @@ pub fn print_json(
     detections.sort_by(|x, y| x.timestamp.cmp(&y.timestamp));
     cs_print_json!(&detections)?;
     Ok(())
+}
+
+pub fn to_json_truncated(tau: Tau, width: u32) -> Json {
+    match tau {
+        Tau::Null => Json::Null,
+        Tau::Bool(b) => Json::Bool(b),
+        Tau::Float(f) => Json::Number(Number::from_f64(f).expect("could not set f64")),
+        Tau::Int(i) => Json::Number(Number::from(i)),
+        Tau::UInt(u) => Json::Number(Number::from(u)),
+        Tau::String(s) => {
+            let mut x = s.to_string();
+            x.truncate(width as usize);
+            if x.len() != s.len() {
+                x = format!("{}...", x);
+            }
+            Json::String(x)
+        }
+        Tau::Array(a) => Json::Array(a.iter().map(|x| to_json_truncated(x, width)).collect()),
+        Tau::Object(o) => {
+            let mut map = Map::new();
+            for k in o.keys() {
+                let v = o.get(&k).expect("could not get value");
+                map.insert(k.to_string(), to_json_truncated(v, width));
+            }
+            Json::Object(map)
+        }
+    }
 }

@@ -20,6 +20,9 @@ groups:
       - name: Computer
         from: Computer
         to: Event.System.Computer
+      - name: Event Data
+        from: EventData 
+        to: Event.EventData
 
       - from: AccessList
         to: Event.EventData.AccessList
