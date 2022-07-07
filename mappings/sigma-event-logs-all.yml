@@ -12,6 +12,10 @@ exclusions:
 - Raw Disk Access Using Illegitimate Tools
 - Executable in ADS
 - Space After Filename - macOS
+- Execution Of Non-Existing File
+- Execution of Suspicious File Type Extension
+- Execution from Suspicious Folder
+- Process Start From Suspicious Folder
 
 groups:
   - name: Sigma
