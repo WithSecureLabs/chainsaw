@@ -342,6 +342,9 @@ fn run() -> Result<()> {
                     }
                 }
             }
+            if failed > 500 && sigma.is_empty() {
+                cs_eyellowln!("[!] {} rules failed to load, ensure Sigma rule paths are specified with the '-s' flag", failed);
+            }
             if count == 0 {
                 return Err(anyhow::anyhow!(
                     "No valid detection rules were found in the provided paths",
