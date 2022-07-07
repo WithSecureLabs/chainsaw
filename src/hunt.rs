@@ -8,6 +8,7 @@ use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
 // https://github.com/rust-lang/rust/issues/74465
 use once_cell::unsync::OnceCell;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 use tau_engine::{
@@ -454,45 +455,65 @@ impl Hunter {
                         kind,
                     } => {
                         if tau_engine::core::solve(filter, &mapped) {
-                            for (rid, rule) in &self.inner.rules {
-                                if !rule.is_kind(kind) {
-                                    continue;
-                                }
-                                if exclusions.contains(rule.name()) {
-                                    continue;
-                                }
-                                let hit = rule.solve(&mapped);
-                                if hit {
-                                    if let Some(aggregate) = &rule.aggregate() {
-                                        files.insert(document_id, (document.clone(), timestamp));
-                                        let mut hasher = DefaultHasher::new();
-                                        let mut skip = false;
-                                        for field in &aggregate.fields {
-                                            if let Some(value) =
-                                                mapped.find(field).and_then(|s| s.to_string())
-                                            {
-                                                value.hash(&mut hasher);
-                                            } else {
-                                                skip = true;
-                                                break;
-                                            }
+                            let matches = &self
+                                .inner
+                                .rules
+                                .par_iter()
+                                .filter_map(|(rid, rule)| {
+                                    // NOTE: Needed as Document is not Sync
+                                    let wrapper;
+                                    let mapped = match &document {
+                                        File::Evtx(evtx) => {
+                                            wrapper = crate::evtx::Wrapper(&evtx.data);
+                                            hunt.mapper.mapped(&wrapper)
                                         }
-                                        if skip {
-                                            continue;
-                                        }
-                                        let id = hasher.finish();
-                                        let aggregates = aggregates
-                                            .entry((hunt.id, *rid))
-                                            .or_insert((aggregate, HashMap::new()));
-                                        let docs = aggregates.1.entry(id).or_insert(vec![]);
-                                        docs.push(document_id);
-                                    } else {
-                                        hits.push(Hit {
-                                            hunt: hunt.id,
-                                            rule: *rid,
-                                            timestamp,
-                                        });
+                                        File::Json(json) => hunt.mapper.mapped(json),
+                                        File::Xml(xml) => hunt.mapper.mapped(xml),
+                                    };
+
+                                    if !rule.is_kind(kind) {
+                                        return None;
                                     }
+                                    if exclusions.contains(rule.name()) {
+                                        return None;
+                                    }
+                                    if rule.solve(&mapped) {
+                                        Some((*rid, rule))
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect::<Vec<(_, _)>>();
+                            for (rid, rule) in matches {
+                                if let Some(aggregate) = &rule.aggregate() {
+                                    files.insert(document_id, (document.clone(), timestamp));
+                                    let mut hasher = DefaultHasher::new();
+                                    let mut skip = false;
+                                    for field in &aggregate.fields {
+                                        if let Some(value) =
+                                            mapped.find(field).and_then(|s| s.to_string())
+                                        {
+                                            value.hash(&mut hasher);
+                                        } else {
+                                            skip = true;
+                                            break;
+                                        }
+                                    }
+                                    if skip {
+                                        continue;
+                                    }
+                                    let id = hasher.finish();
+                                    let aggregates = aggregates
+                                        .entry((hunt.id, *rid))
+                                        .or_insert((aggregate, HashMap::new()));
+                                    let docs = aggregates.1.entry(id).or_insert(vec![]);
+                                    docs.push(document_id);
+                                } else {
+                                    hits.push(Hit {
+                                        hunt: hunt.id,
+                                        rule: *rid,
+                                        timestamp,
+                                    });
                                 }
                             }
                         }
