@@ -28,6 +28,7 @@ serde_json = "1.0"
 serde_yaml = "0.8"
 structopt = "0.3"
 tau-engine = { version = "1.0", features = ["core", "json"] }
+term_size = "0.3"
 uuid = { version = "1.1", features = ["serde", "v4"] }
 
 

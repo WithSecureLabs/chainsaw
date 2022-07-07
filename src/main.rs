@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate chainsaw;
+extern crate term_size;
 
 use std::collections::HashSet;
 use std::fs::File;
@@ -201,6 +202,22 @@ fn print_title() {
     );
 }
 
+fn resolve_col_width() -> Option<u32> {
+    // Get windows size and return a rough mapping for sutiable col width
+    match term_size::dimensions() {
+        Some((w, _h)) => match w {
+            50..=120 => Some(30),
+            121..=239 => Some(40),
+            240..=340 => Some(70),
+            341..=430 => Some(110),
+            431..=550 => Some(150),
+            551.. => Some(180),
+            _ => None,
+        },
+        None => None,
+    }
+}
+
 fn init_writer(output: Option<PathBuf>, csv: bool, json: bool, quiet: bool) -> crate::Result<()> {
     let (path, output) = match &output {
         Some(path) => {
@@ -250,7 +267,7 @@ fn run() -> Result<()> {
             rule,
 
             load_unknown,
-            column_width,
+            mut column_width,
             csv,
             extension,
             from,
@@ -269,6 +286,9 @@ fn run() -> Result<()> {
             timezone,
             to,
         } => {
+            if column_width.is_none() {
+                column_width = resolve_col_width();
+            }
             init_writer(output, csv, json, quiet)?;
             if !opts.no_banner {
                 print_title();
