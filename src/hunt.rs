@@ -90,28 +90,25 @@ impl HunterBuilder {
         let mut hunts = vec![];
         let rules = match self.rules {
             Some(mut rules) => {
-                rules.sort_by(|x, y| x.name().cmp(&y.name()));
+                rules.sort_by(|x, y| x.name().cmp(y.name()));
                 let mut map = BTreeMap::new();
                 for rule in rules {
                     let uuid = Uuid::new_v4();
-                    match &rule {
-                        Rule::Chainsaw(rule) => {
-                            let mapper = Mapper::from(rule.fields.clone());
-                            hunts.push(Hunt {
-                                id: uuid,
+                    if let Rule::Chainsaw(rule) = &rule {
+                        let mapper = Mapper::from(rule.fields.clone());
+                        hunts.push(Hunt {
+                            id: uuid,
 
-                                group: rule.group.clone(),
-                                kind: HuntKind::Rule {
-                                    aggregate: rule.aggregate.clone(),
-                                    filter: rule.filter.clone(),
-                                },
-                                timestamp: rule.timestamp.clone(),
+                            group: rule.group.clone(),
+                            kind: HuntKind::Rule {
+                                aggregate: rule.aggregate.clone(),
+                                filter: rule.filter.clone(),
+                            },
+                            timestamp: rule.timestamp.clone(),
 
-                                file: rule.kind.clone(),
-                                mapper,
-                            });
-                        }
-                        _ => {}
+                            file: rule.kind.clone(),
+                            mapper,
+                        });
                     }
                     map.insert(uuid, rule);
                 }
@@ -624,7 +621,7 @@ impl Hunter {
     pub fn extensions(&self) -> HashSet<String> {
         let mut extensions = HashSet::new();
         for rule in &self.inner.rules {
-            if let Some(e) = FileKind::extensions(&rule.1.types()) {
+            if let Some(e) = FileKind::extensions(rule.1.types()) {
                 extensions.extend(e.iter().cloned());
             }
         }

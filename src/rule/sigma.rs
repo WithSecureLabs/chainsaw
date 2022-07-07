@@ -289,7 +289,7 @@ fn prepare_condition(condition: &str) -> Result<(String, Option<Aggregate>)> {
         // agg-function(agg-field) [ by group-field ] comparison-op value
         if let Some(kind) = parts.next() {
             if let Some(rest) = kind.strip_prefix("count(") {
-                if let Some(field) = rest.strip_suffix(")") {
+                if let Some(field) = rest.strip_suffix(')') {
                     if !field.is_empty() {
                         fields.push(field.to_owned());
                     }
@@ -413,7 +413,7 @@ fn prepare(
             }
         }
         detection = Detection {
-            condition: Some(Yaml::String(condition.to_owned())),
+            condition: Some(Yaml::String(condition)),
             identifiers,
         }
     }
@@ -451,8 +451,7 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
         match v {
             Yaml::Sequence(sequence) => {
                 let mut blocks = vec![];
-                let mut index = 0;
-                for entry in sequence {
+                for (index, entry) in sequence.into_iter().enumerate() {
                     let mapping = match entry.as_mapping() {
                         Some(mapping) => mapping,
                         None => bail!("keyless identifiers cannot be converted"),
@@ -475,7 +474,7 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
                         if modifiers.contains("all") {
                             f = format!("all({})", f);
                         }
-                        let v = parse_identifier(&v, &modifiers)?;
+                        let v = parse_identifier(v, &modifiers)?;
                         let f = f.into();
                         let mut map = Mapping::new();
                         map.insert(f, v);
@@ -497,7 +496,6 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
                             Yaml::Sequence(maps.into_iter().map(|m| m.into()).collect()),
                         ));
                     }
-                    index += 1;
                 }
                 patches.insert(
                     k,
@@ -512,7 +510,7 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
                     ),
                 );
                 for (k, v) in blocks {
-                    det.insert(k.into(), v.into());
+                    det.insert(k.into(), v);
                 }
             }
             Yaml::Mapping(mapping) => {
@@ -569,7 +567,7 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
         .replace(" OR ", " or ")
         .split_whitespace()
         .map(|ident| {
-            let key = ident.trim_start_matches("(").trim_end_matches(")");
+            let key = ident.trim_start_matches('(').trim_end_matches(')');
             match patches.get(key) {
                 Some(v) => ident.replace(key, v),
                 None => ident.to_owned(),
@@ -603,7 +601,7 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
         let mut parts = condition.split_whitespace();
         while let Some(part) = parts.next() {
             let mut token = part;
-            while let Some(tail) = token.strip_prefix("(") {
+            while let Some(tail) = token.strip_prefix('(') {
                 mutated.push("(".to_owned());
                 token = tail;
             }
@@ -619,11 +617,11 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
                         if let Some(next) = parts.next() {
                             let mut brackets = vec![];
                             let mut identifier = next;
-                            while let Some(head) = identifier.strip_suffix(")") {
+                            while let Some(head) = identifier.strip_suffix(')') {
                                 brackets.push(")".to_owned());
                                 identifier = head;
                             }
-                            if let Some(ident) = identifier.strip_suffix("*") {
+                            if let Some(ident) = identifier.strip_suffix('*') {
                                 let mut keys = vec![];
                                 for (k, _) in &det {
                                     if let Yaml::String(key) = k {
@@ -651,7 +649,7 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
                                     Some(i) => i,
                                     None => identifier,
                                 };
-                                let key = next.replace(identifier, &key);
+                                let key = next.replace(identifier, key);
                                 if part == "all" {
                                     mutated.push(format!("all({})", key));
                                 } else if part == "1" {

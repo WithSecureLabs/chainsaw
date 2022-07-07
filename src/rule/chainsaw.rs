@@ -155,8 +155,7 @@ pub fn load(rule: &Path) -> crate::Result<Rule> {
         Filter::Expression(expression) => Filter::Expression({
             let expression = optimiser::shake(expression);
             let expression = optimiser::rewrite(expression);
-            let expression = optimiser::matrix(expression);
-            expression
+            optimiser::matrix(expression)
         }),
     };
     Ok(rule)

@@ -234,7 +234,7 @@ pub fn load(
             }
             let sigma = match sigma::load(path)?
                 .into_iter()
-                .map(|y| serde_yaml::from_value::<Sigma>(y))
+                .map(serde_yaml::from_value::<Sigma>)
                 .collect::<Result<Vec<_>, _>>()
             {
                 Ok(rules) => rules,
@@ -261,13 +261,13 @@ pub fn load(
     if let Some(levels) = levels.as_ref() {
         rules = rules
             .into_iter()
-            .filter(|r| levels.contains(&r.level()))
+            .filter(|r| levels.contains(r.level()))
             .collect();
     }
     if let Some(statuses) = statuses.as_ref() {
         rules = rules
             .into_iter()
-            .filter(|r| statuses.contains(&r.status()))
+            .filter(|r| statuses.contains(r.status()))
             .collect();
     }
     Ok(rules)
@@ -292,7 +292,7 @@ pub fn lint(kind: &Kind, path: &Path) -> crate::Result<Vec<Filter>> {
             Ok(yamls) => {
                 let sigma = yamls
                     .into_iter()
-                    .map(|y| serde_yaml::from_value::<Sigma>(y))
+                    .map(serde_yaml::from_value::<Sigma>)
                     .collect::<Result<Vec<_>, _>>()?;
                 sigma
                     .into_iter()

@@ -274,7 +274,7 @@ pub fn print_detections(
             (*hits).push(Hit { hunt, rule });
         }
         for ((group, timestamp), mut hits) in hits {
-            hits.sort_by(|x, y| x.rule.name().cmp(&y.rule.name()));
+            hits.sort_by(|x, y| x.rule.name().cmp(y.rule.name()));
             let groups = groups.entry(group).or_insert(vec![]);
             (*groups).push(Grouping {
                 kind: &detection.kind,
@@ -446,7 +446,7 @@ pub fn print_detections(
                     } else {
                         cells.push(cell!(rules
                             .iter()
-                            .map(|rule| format!("{} {}", RULE_PREFIX, split_tag(&rule.name())))
+                            .map(|rule| format!("{} {}", RULE_PREFIX, split_tag(rule.name())))
                             .collect::<Vec<_>>()
                             .join("\n")));
                     }
@@ -510,7 +510,7 @@ pub fn print_csv(
             (*hits).push(Hit { hunt, rule });
         }
         for ((group, timestamp), mut hits) in hits {
-            hits.sort_by(|x, y| x.rule.name().cmp(&y.rule.name()));
+            hits.sort_by(|x, y| x.rule.name().cmp(y.rule.name()));
             let groups = groups.entry(group).or_insert(vec![]);
             (*groups).push(Grouping {
                 kind: &detection.kind,
