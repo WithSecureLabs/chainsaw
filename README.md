@@ -225,7 +225,7 @@ In July 2022 we released version 2 of Chainsaw which is a major overhaul of how 
  - Inbuilt Chainsaw Detection rules have been broken out into dedicated Chainsaw rule files
  - A clean and rewrite of Chainsaw's code to improve readability and to reduce the overhead for community contributions.
 
-If you still wish to use the version 1 of Chainsaw, you can find compiled binaries in the [releases section](https://github.com/countercept/chainsaw/releases), or you can access the source code in the [v1.1.7 branch](https://github.com/countercept/chainsaw/tree/v1.1.7). Please note that Chainsaw v1 is no longer being maintained, and all users should look to move to Chainsaw v2.
+If you still wish to use the version 1 of Chainsaw, you can find compiled binaries in the [releases section](https://github.com/countercept/chainsaw/releases), or you can access the source code in the [v1.x.x branch](https://github.com/countercept/chainsaw/tree/v1.x.x). Please note that Chainsaw v1 is no longer being maintained, and all users should look to move to Chainsaw v2.
 
 A massive thank you to  [@AlexKornitzer](https://twitter.com/AlexKornitzer?lang=en) who managed to convert Chainsaw v1's "Christmas Project" codebase into a polished product in v2.
 
