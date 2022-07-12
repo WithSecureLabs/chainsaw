@@ -1,0 +1,32 @@
+---
+title: System Logs Cleared
+group: Log Tampering
+description: The system logs were cleared.
+authors:
+  - FranticTyping
+
+
+kind: evtx
+level: high
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: User
+    to: Event.UserData.LogFileCleared.SubjectUserName
+
+
+filter:
+  condition: system_log_cleared and not empty
+
+  system_log_cleared:
+    Event.System.EventID: 104
+  empty:
+    Event.UserData.LogFileCleared.SubjectUserName:

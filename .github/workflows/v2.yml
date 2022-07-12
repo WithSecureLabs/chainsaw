@@ -28,6 +28,14 @@ jobs:
       - name: Build
         run: cargo build --all --release --target x86_64-unknown-linux-gnu && strip target/x86_64-unknown-linux-gnu/release/chainsaw
 
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-binary
+          path: target/x86_64-unknown-linux-gnu/release/chainsaw
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Move files to artifacts
         run: mv target/x86_64-unknown-linux-gnu/release/chainsaw mappings LICENCE README.md chainsaw/
 
@@ -65,6 +73,14 @@ jobs:
       - name: Build
         run: cargo build --all --release --target x86_64-unknown-linux-musl && strip target/x86_64-unknown-linux-musl/release/chainsaw
 
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-static-binary
+          path: target/x86_64-unknown-linux-musl/release/chainsaw
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Move files to artifacts
         run: mv target/x86_64-unknown-linux-musl/release/chainsaw mappings LICENCE README.md chainsaw/
 
@@ -97,6 +113,14 @@ jobs:
 
       - name: Build
         run: cargo build --all --release
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: win-binary
+          path: target/release/chainsaw.exe
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Create artifacts directory
         run: mkdir chainsaw
@@ -139,6 +163,14 @@ jobs:
       - name: Build for mac
         run: cargo build --all --release && strip target/release/chainsaw
 
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: mac-binary
+          path: target/release/chainsaw
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Move files to artifacts
         run: mv target/release/chainsaw mappings LICENCE README.md chainsaw/
 
@@ -150,5 +182,71 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: chainsaw_x86_64-apple-darwin.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-complete:
+    needs: [build-linux, build-linux-static, build-win, build-mac]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create artifacts directory
+        run: mkdir chainsaw
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          path: ./chainsaw-root
+
+      - name: Checkout Sigma Repo
+        uses: actions/checkout@v3
+        with:
+          repository: SigmaHQ/sigma
+          path: ./sigma
+
+      - name: Checkout EVTX Samples Repo
+        uses: actions/checkout@v3
+        with:
+          repository: sbousseaden/EVTX-ATTACK-SAMPLES
+          path: ./EVTX-ATTACK-SAMPLES
+
+      - name: Move files to artifacts
+        run: mv sigma EVTX-ATTACK-SAMPLES chainsaw/
+
+      - name: Download build-linux binary
+        uses: actions/download-artifact@v3
+        with:
+          name: linux-binary
+          path: ./chainsaw-linux
+
+      - name: Download build-linux-static binary
+        uses: actions/download-artifact@v3
+        with:
+          name: linux-static-binary
+          path: ./chainsaw-linux-static
+
+      - name: Download build-win binary
+        uses: actions/download-artifact@v3
+        with:
+          name: win-binary
+          path: ./chainsaw-win
+
+      - name: Download build-mac binary
+        uses: actions/download-artifact@v3
+        with:
+          name: mac-binary
+          path: ./chainsaw-mac
+
+      - name: build zip file content
+        run: mv ./chainsaw-linux/chainsaw ./chainsaw/chainsaw_x86_64-unknown-linux-gnu; mv ./chainsaw-linux-static/chainsaw ./chainsaw/chainsaw_x86_64-unknown-linux-mus; mv ./chainsaw-win/chainsaw.exe ./chainsaw/chainsaw_x86_64-pc-windows-msvc.exe; mv ./chainsaw-mac/chainsaw ./chainsaw/chainsaw_x86_64-apple-darwin ; mv ./chainsaw-root/mappings ./chainsaw-root/LICENCE ./chainsaw-root/README.md ./chainsaw-root/rules/ ./chainsaw/
+
+      - name: Create ZIP File
+        run: tar -czf chainsaw_all_platforms+rules+examples.tar.gz chainsaw/*
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: chainsaw_all_platforms+rules+examples.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

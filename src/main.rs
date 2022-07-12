@@ -1,34 +1,191 @@
-use anyhow::Result;
-use std::fs::File;
+#[macro_use]
+extern crate chainsaw;
+extern crate term_size;
 
-// TODO: Clean this, we have crudely split into a lib for testing purposes, this needs refinement.
-use chainsaw::*;
+use std::collections::HashSet;
+use std::fs::File;
+use std::path::PathBuf;
+
+use anyhow::Result;
+use bytesize::ByteSize;
+use chrono::NaiveDateTime;
+use chrono_tz::Tz;
 
 use structopt::StructOpt;
+
+use chainsaw::{
+    cli, get_files, lint as lint_rule, load as load_rule, set_writer, Filter, Format, Hunter,
+    RuleKind, RuleLevel, RuleStatus, Searcher, Writer,
+};
 
 #[derive(StructOpt)]
 #[structopt(
     name = "chainsaw",
-    about = "Rapidly Search and Hunt through windows event logs"
+    about = "Rapidly Search and Hunt through windows event logs",
+    after_help = r"Examples:
+    
+    Hunt with Sigma and Chainsaw Rules: 
+        ./chainsaw hunt evtx_attack_samples/ -s sigma_rules/ --mapping mappings/sigma-event-logs.yml -r rules/
+
+    Hunt with Sigma rules and output in JSON: 
+        ./chainsaw hunt evtx_attack_samples/ -s sigma_rules/ --mapping mappings/sigma-event-logs.yml --json
+
+    Search for the case-insensitive word 'mimikatz':
+        ./chainsaw search mimikatz -i evtx_attack_samples/
+
+    Search for Powershell Script Block Events (EventID 4014):
+        ./chainsaw search -t 'Event.System.EventID: =4104' evtx_attack_samples/
+    "
 )]
 struct Opts {
+    /// Hide Chainsaw's banner.
+    #[structopt(long)]
+    no_banner: bool,
     #[structopt(subcommand)]
-    cmd: Chainsaw,
+    cmd: Command,
 }
 
 #[derive(StructOpt)]
-enum Chainsaw {
-    /// Hunt through event logs using detection rules and builtin logic
-    #[structopt(name = "hunt")]
-    Hunt(hunt::HuntOpts),
+enum Command {
+    /// Hunt through event logs using detection rules for threat detection
+    Hunt {
+        /// The path to a collection of rules to use for hunting.
+        rules: PathBuf,
+
+        /// The paths containing event logs to load and hunt through.
+        path: Vec<PathBuf>,
+
+        /// A mapping file to tell Chainsaw how to use third-party rules.
+        #[structopt(short = "m", long = "mapping", number_of_values = 1)]
+        mapping: Option<Vec<PathBuf>>,
+        /// A path containing additional rules to hunt with.
+        #[structopt(short = "r", long = "rule", number_of_values = 1)]
+        rule: Option<Vec<PathBuf>>,
+
+        /// Set the column width for the tabular output.
+        #[structopt(long = "column-width", conflicts_with = "json")]
+        column_width: Option<u32>,
+        /// Print the output in csv format.
+        #[structopt(group = "format", long = "csv", requires("output"))]
+        csv: bool,
+        /// Only hunt through files with the provided extension.
+        #[structopt(long = "extension", number_of_values = 1)]
+        extension: Option<Vec<String>>,
+        /// The timestamp to hunt from. Drops any documents older than the value provided.
+        #[structopt(long = "from")]
+        from: Option<NaiveDateTime>,
+        /// Print the full values for the tabular output.
+        #[structopt(long = "full", conflicts_with = "json")]
+        full: bool,
+        /// Print the output in json format.
+        #[structopt(group = "format", long = "json")]
+        json: bool,
+        /// Restrict loaded rules to specified kinds.
+        #[structopt(long = "kind", number_of_values = 1)]
+        kind: Vec<RuleKind>,
+        /// Restrict loaded rules to specified levels.
+        #[structopt(long = "level", number_of_values = 1)]
+        level: Vec<RuleLevel>,
+        /// Allow chainsaw to try and load files it cannot identify.
+        #[structopt(long = "load-unknown")]
+        load_unknown: bool,
+        /// Output the timestamp using the local machine's timestamp.
+        #[structopt(long = "local", group = "tz")]
+        local: bool,
+        /// Display additional metadata in the tablar output.
+        #[structopt(long = "metadata", conflicts_with = "json")]
+        metadata: bool,
+        /// The file/directory to output to.
+        #[structopt(short = "o", long = "output")]
+        output: Option<PathBuf>,
+        /// Print the output in log like format.
+        #[structopt(group = "format", long = "log")]
+        log: bool,
+        /// Supress informational output.
+        #[structopt(short = "q")]
+        quiet: bool,
+        /// A path containing Sigma rules to hunt with.
+        #[structopt(short = "s", long = "sigma", number_of_values = 1, requires("mapping"))]
+        sigma: Option<Vec<PathBuf>>,
+        /// Continue to hunt when an error is encountered.
+        #[structopt(long = "skip-errors")]
+        skip_errors: bool,
+        /// Restrict loaded rules to specified statuses.
+        #[structopt(long = "status", number_of_values = 1)]
+        status: Vec<RuleStatus>,
+        /// Output the timestamp using the timezone provided.
+        #[structopt(long = "timezone", group = "tz")]
+        timezone: Option<Tz>,
+        /// The timestamp to hunt up to. Drops any documents newer than the value provided.
+        #[structopt(long = "to")]
+        to: Option<NaiveDateTime>,
+    },
+
+    /// Lint provided rules to ensure that they load correctly
+    Lint {
+        /// The path to a collection of rules.
+        path: PathBuf,
+        /// The kind of rule to lint: chainsaw, sigma or stalker
+        #[structopt(long = "kind")]
+        kind: RuleKind,
+        /// Output tau logic.
+        #[structopt(short = "t", long = "tau")]
+        tau: bool,
+    },
 
     /// Search through event logs for specific event IDs and/or keywords
-    #[structopt(name = "search")]
-    Search(search::SearchOpts),
+    Search {
+        /// A pattern to search for.
+        #[structopt(required_unless_one=&["regexp", "tau"])]
+        pattern: Option<String>,
 
-    /// Validate provided detection rules to ensure they load correctly
-    #[structopt(name = "check")]
-    Check(check::CheckOpts),
+        /// The paths containing event logs to load and hunt through.
+        path: Vec<PathBuf>,
+
+        /// A regular expressions (RegEx) pattern to search for.
+        #[structopt(short = "e", long = "regexp", number_of_values = 1)]
+        regexp: Option<Vec<String>>,
+
+        /// Only search through files with the provided extension.
+        #[structopt(long = "extension", number_of_values = 1)]
+        extension: Option<Vec<String>>,
+        /// The timestamp to search from. Drops any documents older than the value provided.
+        #[structopt(long = "from")]
+        from: Option<NaiveDateTime>,
+        /// Ignore the case when searching patterns
+        #[structopt(short = "i", long = "ignore-case")]
+        ignore_case: bool,
+        /// Print the output in json format.
+        #[structopt(long = "json")]
+        json: bool,
+        /// Allow chainsaw to try and load files it cannot identify.
+        #[structopt(long = "load-unknown")]
+        load_unknown: bool,
+        /// Output the timestamp using the local machine's timestamp.
+        #[structopt(long = "local", group = "tz")]
+        local: bool,
+        /// The file to output to.
+        #[structopt(short = "o", long = "output")]
+        output: Option<PathBuf>,
+        /// Supress informational output.
+        #[structopt(short = "q")]
+        quiet: bool,
+        /// Continue to search when an error is encountered.
+        #[structopt(long = "skip-errors")]
+        skip_errors: bool,
+        /// Tau expressions to search with.
+        #[structopt(short = "t", long = "tau", number_of_values = 1)]
+        tau: Option<Vec<String>>,
+        /// The field that contains the timestamp.
+        #[structopt(long = "timestamp", requires_if("from", "to"))]
+        timestamp: Option<String>,
+        /// Output the timestamp using the timezone provided.
+        #[structopt(long = "timezone", group = "tz")]
+        timezone: Option<Tz>,
+        /// The timestamp to search up to. Drops any documents newer than the value provided.
+        #[structopt(long = "to")]
+        to: Option<NaiveDateTime>,
+    },
 }
 
 fn print_title() {
@@ -45,94 +202,500 @@ fn print_title() {
     );
 }
 
-fn main() {
-    // Get command line arguments
-    let opt = Opts::from_args();
-    // Load up the writer
-    let writer = match &opt.cmd {
-        Chainsaw::Hunt(args) => {
-            let output = match &args.output {
-                Some(path) => {
-                    let file = match File::create(path) {
-                        Ok(f) => f,
-                        Err(e) => {
-                            return exit_chainsaw(Err(anyhow::anyhow!(
-                                "Unable to write to specified output file - {} - {}",
-                                path.display(),
-                                e
-                            )));
-                        }
-                    };
-                    Some(file)
-                }
-                None => None,
-            };
-            if args.json {
-                write::Writer {
-                    format: write::Format::Json,
-                    output,
-                    quiet: args.quiet,
-                }
-            } else if let Some(dir) = &args.csv {
-                write::Writer {
-                    format: write::Format::Csv(dir.clone()),
-                    output,
-                    quiet: args.quiet,
-                }
-            } else {
-                write::Writer {
-                    format: write::Format::Std,
-                    output,
-                    quiet: args.quiet,
-                }
-            }
-        }
-        Chainsaw::Search(args) => {
-            let output = match &args.output {
-                Some(path) => {
-                    let file = match File::create(path) {
-                        Ok(f) => f,
-                        Err(e) => {
-                            return exit_chainsaw(Err(anyhow::anyhow!(
-                                "Unable to write to specified output file - {} - {}",
-                                path.display(),
-                                e
-                            )));
-                        }
-                    };
-                    Some(file)
-                }
-                None => None,
-            };
-            write::Writer {
-                format: write::Format::Std,
-                output,
-                quiet: args.quiet,
-            }
-        }
-        _ => write::Writer::default(),
-    };
-    write::set_writer(writer).unwrap();
-    print_title();
-    // Determine sub-command: hunt/search/check
-    let result = match opt.cmd {
-        Chainsaw::Search(args) => search::run_search(args),
-        Chainsaw::Hunt(args) => hunt::run_hunt(args),
-        Chainsaw::Check(args) => check::run_check(args),
-    };
-    exit_chainsaw(result);
+fn resolve_col_width() -> Option<u32> {
+    // Get windows size and return a rough mapping for sutiable col width
+    match term_size::dimensions() {
+        Some((w, _h)) => match w {
+            50..=120 => Some(20),
+            121..=239 => Some(30),
+            240..=340 => Some(50),
+            341..=430 => Some(90),
+            431..=550 => Some(130),
+            551.. => Some(160),
+            _ => None,
+        },
+        None => None,
+    }
 }
 
-fn exit_chainsaw(result: Result<String>) {
-    // Handle successful/failed status messages returned by chainsaw
-    std::process::exit(match result {
-        Ok(m) => {
-            cs_egreenln!("{}", m);
-            0
+fn init_writer(output: Option<PathBuf>, csv: bool, json: bool, quiet: bool) -> crate::Result<()> {
+    let (path, output) = match &output {
+        Some(path) => {
+            if csv {
+                (Some(path.to_path_buf()), None)
+            } else {
+                let file = match File::create(path) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        return Err(anyhow::anyhow!(
+                            "Unable to write to specified output file - {} - {}",
+                            path.display(),
+                            e
+                        ));
+                    }
+                };
+                (None, Some(file))
+            }
         }
-        Err(e) => {
-            cs_eredln!("[!] Chainsaw exited: {}", e);
-            1
+        None => (None, None),
+    };
+    let format = if csv {
+        Format::Csv
+    } else if json {
+        Format::Json
+    } else {
+        Format::Std
+    };
+    let writer = Writer {
+        format,
+        output,
+        path,
+        quiet,
+    };
+    set_writer(writer).expect("could not set writer");
+    Ok(())
+}
+
+fn run() -> Result<()> {
+    let opts = Opts::from_args();
+    match opts.cmd {
+        Command::Hunt {
+            rules,
+            mut path,
+
+            mapping,
+            rule,
+
+            load_unknown,
+            mut column_width,
+            csv,
+            extension,
+            from,
+            full,
+            json,
+            kind,
+            level,
+            local,
+            metadata,
+            output,
+            log,
+            quiet,
+            sigma,
+            skip_errors,
+            status,
+            timezone,
+            to,
+        } => {
+            if column_width.is_none() {
+                column_width = resolve_col_width();
+            }
+            init_writer(output, csv, json, quiet)?;
+            if !opts.no_banner {
+                print_title();
+            }
+            let mut rs = vec![];
+            if path.is_empty() {
+                path = vec![rules];
+            } else {
+                rs = vec![rules];
+            }
+            let mut rules = rs;
+            if let Some(rule) = rule {
+                rules.extend(rule)
+            };
+            let sigma = sigma.unwrap_or_default();
+
+            cs_eprintln!(
+                "[+] Loading detection rules from: {}",
+                rules
+                    .iter()
+                    .chain(sigma.iter())
+                    .map(|r| r.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+            let kinds: Option<HashSet<RuleKind>> = if kind.is_empty() {
+                None
+            } else {
+                Some(HashSet::from_iter(kind.into_iter()))
+            };
+            let levels: Option<HashSet<RuleLevel>> = if level.is_empty() {
+                None
+            } else {
+                Some(HashSet::from_iter(level.into_iter()))
+            };
+            let statuses: Option<HashSet<RuleStatus>> = if status.is_empty() {
+                None
+            } else {
+                Some(HashSet::from_iter(status.into_iter()))
+            };
+            let mut failed = 0;
+            let mut count = 0;
+            let mut rs = vec![];
+            for path in &rules {
+                for file in get_files(path, &None, skip_errors)? {
+                    match load_rule(RuleKind::Chainsaw, &file, &kinds, &levels, &statuses) {
+                        Ok(r) => {
+                            if !r.is_empty() {
+                                count += 1;
+                                rs.extend(r)
+                            }
+                        }
+                        Err(_) => {
+                            failed += 1;
+                        }
+                    }
+                }
+            }
+            for path in &sigma {
+                for file in get_files(path, &None, skip_errors)? {
+                    match load_rule(RuleKind::Sigma, &file, &kinds, &levels, &statuses) {
+                        Ok(r) => {
+                            if !r.is_empty() {
+                                count += 1;
+                                rs.extend(r)
+                            }
+                        }
+                        Err(_) => {
+                            failed += 1;
+                        }
+                    }
+                }
+            }
+            if failed > 500 && sigma.is_empty() {
+                cs_eyellowln!("[!] {} rules failed to load, ensure Sigma rule paths are specified with the '-s' flag", failed);
+            }
+            if count == 0 {
+                return Err(anyhow::anyhow!(
+                    "No valid detection rules were found in the provided paths",
+                ));
+            }
+            if failed > 0 {
+                cs_eprintln!(
+                    "[+] Loaded {} detection rules ({} not loaded)",
+                    count,
+                    failed
+                );
+            } else {
+                cs_eprintln!("[+] Loaded {} detection rules", count);
+            }
+
+            let rules = rs;
+            let mut hunter = Hunter::builder()
+                .rules(rules)
+                .mappings(mapping.unwrap_or_default())
+                .load_unknown(load_unknown)
+                .local(local)
+                .skip_errors(skip_errors);
+            if let Some(from) = from {
+                hunter = hunter.from(from);
+            }
+            if let Some(timezone) = timezone {
+                hunter = hunter.timezone(timezone);
+            }
+            if let Some(to) = to {
+                hunter = hunter.to(to);
+            }
+            let hunter = hunter.build()?;
+
+            /* if no user-defined extensions are specified, then we parse rules and
+            mappings to build a list of file extensions that should be loaded */
+            let mut scratch = HashSet::new();
+            let message;
+            let exts = if load_unknown {
+                message = "*".to_string();
+                None
+            } else {
+                scratch.extend(hunter.extensions());
+                if scratch.is_empty() {
+                    return Err(anyhow::anyhow!(
+                        "No valid file extensions for the 'kind' specified in the mapping or rules files"
+                    ));
+                }
+                if let Some(e) = extension {
+                    // User has provided specific extensions
+                    scratch = scratch
+                        .intersection(&HashSet::from_iter(e.iter().cloned()))
+                        .cloned()
+                        .collect();
+                    if scratch.is_empty() {
+                        return Err(anyhow::anyhow!(
+                        "The specified file extension is not supported. Use --load-unknown to force loading",
+                    ));
+                    }
+                };
+                message = scratch
+                    .iter()
+                    .map(|x| format!(".{}", x))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                Some(scratch)
+            };
+
+            cs_eprintln!(
+                "[+] Loading event logs from: {} (extensions: {})",
+                path.iter()
+                    .map(|p| p.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                message
+            );
+
+            let mut files = vec![];
+            let mut size = ByteSize::mb(0);
+            for path in &path {
+                let res = get_files(path, &exts, skip_errors)?;
+                for i in &res {
+                    size += i.metadata()?.len();
+                }
+                files.extend(res);
+            }
+            if files.is_empty() {
+                return Err(anyhow::anyhow!(
+                    "No event logs were found in the provided paths",
+                ));
+            } else {
+                cs_eprintln!("[+] Loaded {} EVTX files ({})", files.len(), size);
+            }
+            let mut detections = vec![];
+            let pb = cli::init_progress_bar(files.len() as u64, "Hunting".to_string());
+            for file in &files {
+                pb.tick();
+                detections.extend(hunter.hunt(file)?);
+                pb.inc(1);
+            }
+            pb.finish();
+            if csv {
+                cli::print_csv(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
+            } else if json {
+                cli::print_json(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
+            } else if log {
+                cli::print_log(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
+            } else {
+                cli::print_detections(
+                    &detections,
+                    hunter.hunts(),
+                    hunter.rules(),
+                    column_width.unwrap_or(40),
+                    full,
+                    local,
+                    metadata,
+                    timezone,
+                );
+            }
+            cs_eprintln!(
+                "[+] {} Detections found on {} documents",
+                detections.iter().map(|d| d.hits.len()).sum::<usize>(),
+                detections.len()
+            );
         }
-    })
+        Command::Lint { path, kind, tau } => {
+            init_writer(None, false, false, false)?;
+            if !opts.no_banner {
+                print_title();
+            }
+            cs_eprintln!("[+] Validating as {} for supplied detection rules...", kind);
+            let mut count = 0;
+            let mut failed = 0;
+            for file in get_files(&path, &None, false)? {
+                match lint_rule(&kind, &file) {
+                    Ok(filters) => {
+                        if tau {
+                            cs_eprintln!("[+] Rule {}:", file.to_string_lossy());
+                            for filter in filters {
+                                let yaml = match filter {
+                                    Filter::Detection(mut d) => {
+                                        d.expression = tau_engine::core::optimiser::coalesce(
+                                            d.expression,
+                                            &d.identifiers,
+                                        );
+                                        d.identifiers.clear();
+                                        d.expression =
+                                            tau_engine::core::optimiser::shake(d.expression);
+                                        d.expression =
+                                            tau_engine::core::optimiser::rewrite(d.expression);
+                                        d.expression =
+                                            tau_engine::core::optimiser::matrix(d.expression);
+                                        serde_yaml::to_string(&d)?
+                                    }
+                                    Filter::Expression(_) => {
+                                        cs_eyellowln!("[!] Tau does not support visual representation of expressions");
+                                        continue;
+                                    }
+                                };
+                                println!("{}", yaml);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        failed += 1;
+                        let file_name = match file
+                            .display()
+                            .to_string()
+                            .strip_prefix(&path.display().to_string())
+                        {
+                            Some(e) => e.to_string(),
+                            None => file.display().to_string(),
+                        };
+                        cs_eprintln!("[!] {}: {}", file_name, e);
+                        continue;
+                    }
+                }
+                count += 1;
+            }
+            cs_eprintln!(
+                "[+] Validated {} detection rules out of {}",
+                count,
+                count + failed
+            );
+        }
+        Command::Search {
+            path,
+
+            mut pattern,
+            regexp,
+
+            extension,
+            from,
+            ignore_case,
+            json,
+            load_unknown,
+            local,
+            output,
+            quiet,
+            skip_errors,
+            tau,
+            timestamp,
+            timezone,
+            to,
+        } => {
+            init_writer(output, false, json, quiet)?;
+            if !opts.no_banner {
+                print_title();
+            }
+            let mut paths = if regexp.is_some() || tau.is_some() {
+                let mut scratch = pattern
+                    .take()
+                    .map(|p| vec![PathBuf::from(p)])
+                    .unwrap_or_default();
+                scratch.extend(path);
+                scratch
+            } else {
+                path
+            };
+            if paths.is_empty() {
+                paths.push(
+                    std::env::current_dir().expect("could not get current working directory"),
+                );
+            }
+
+            let types = extension.as_ref().map(|e| HashSet::from_iter(e.clone()));
+            let mut files = vec![];
+            let mut size = ByteSize::mb(0);
+            for path in &paths {
+                let res = get_files(path, &types, skip_errors)?;
+                for i in &res {
+                    size += i.metadata()?.len();
+                }
+                files.extend(res);
+            }
+
+            if let Some(ext) = &extension {
+                cs_eprintln!(
+                    "[+] Loading event logs from: {} (extensions: {})",
+                    paths
+                        .iter()
+                        .map(|p| p.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    ext.iter()
+                        .map(|x| format!(".{}", x))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            } else {
+                cs_eprintln!(
+                    "[+] Loading event logs from: {}",
+                    paths
+                        .iter()
+                        .map(|p| p.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                )
+            };
+
+            if files.is_empty() {
+                return Err(anyhow::anyhow!(
+                    "No event logs were found in the provided paths",
+                ));
+            } else {
+                cs_eprintln!("[+] Loaded {} EVTX files ({})", files.len(), size);
+            }
+            let mut searcher = Searcher::builder()
+                .ignore_case(ignore_case)
+                .load_unknown(load_unknown)
+                .local(local)
+                .skip_errors(skip_errors);
+            if let Some(patterns) = regexp {
+                searcher = searcher.patterns(patterns);
+            } else if let Some(pattern) = pattern {
+                searcher = searcher.patterns(vec![pattern]);
+            }
+            if let Some(from) = from {
+                searcher = searcher.from(from);
+            }
+            if let Some(tau) = tau {
+                searcher = searcher.tau(tau);
+            }
+            if let Some(timestamp) = timestamp {
+                searcher = searcher.timestamp(timestamp);
+            }
+            if let Some(timezone) = timezone {
+                searcher = searcher.timezone(timezone);
+            }
+            if let Some(to) = to {
+                searcher = searcher.to(to);
+            }
+            let searcher = searcher.build()?;
+            cs_eprintln!("[+] Searching event logs...");
+            if json {
+                cs_print!("[");
+            }
+            let mut hits = 0;
+            for file in &files {
+                for res in searcher.search(file)?.iter() {
+                    let hit = match res {
+                        Ok(hit) => hit,
+                        Err(e) => {
+                            if skip_errors {
+                                continue;
+                            }
+                            anyhow::bail!("Failed to search file... - {}", e);
+                        }
+                    };
+                    if json {
+                        if hits != 0 {
+                            cs_print!(",");
+                        }
+                        cs_print_json!(&hit)?;
+                    } else {
+                        cs_print_yaml!(&hit)?;
+                    }
+                    hits += 1;
+                }
+            }
+            if json {
+                cs_println!("]");
+            }
+            cs_println!("[+] Found {} matching log entries", hits);
+        }
+    }
+    Ok(())
+}
+
+fn main() {
+    if let Err(e) = run() {
+        cs_eredln!("[x] {}", e);
+        std::process::exit(1);
+    }
 }

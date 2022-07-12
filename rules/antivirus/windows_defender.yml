@@ -1,0 +1,31 @@
+---
+title: Windows Defender
+group: Antivirus
+description: Events from Windows Defender.
+authors:
+  - FranticTyping
+
+
+kind: evtx
+level: critical
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: User
+    to: Event.EventData.Detection User
+  - name: Threat Name
+    to: Event.EventData.Threat Name
+  - name: Threat Path
+    to: Event.EventData.Path
+
+
+filter:
+  Event.System.Provider: Microsoft-Windows-Windows Defender

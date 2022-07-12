@@ -1,0 +1,32 @@
+---
+title: Security Audit Logs Cleared
+group: Log Tampering
+description: The security audit logs were cleared.
+authors:
+  - FranticTyping
+
+
+kind: evtx
+level: critical
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: User
+    to: Event.UserData.LogFileCleared.SubjectUserName
+
+
+filter:
+  condition: security_log_cleared and not empty
+
+  security_log_cleared:
+    Event.System.EventID: 1102
+  empty:
+    Event.UserData.LogFileCleared.SubjectUserName:

@@ -1,0 +1,282 @@
+---
+name: Chainsaw's Sigma mappings for Event Logs
+kind: evtx
+rules: sigma
+
+exclusions:
+  - Defense evasion via process reimaging
+  - Exports Registry Key To an Alternate Data Stream
+  - NetNTLM Downgrade Attack
+  - Non Interactive PowerShell
+  - Wuauclt Network Connection
+  - Raw Disk Access Using Illegitimate Tools
+  - Executable in ADS
+  - Space After Filename - macOS
+  - Execution Of Non-Existing File
+  - Execution of Suspicious File Type Extension
+  - Execution from Suspicious Folder
+  - Process Start From Suspicious Folder
+
+
+groups:
+  - name: Suspicious Process Creation
+    timestamp: Event.System.TimeCreated
+    filter:
+      int(EventID): 1
+      Provider: Microsoft-Windows-Sysmon
+    fields:
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: Image
+        from: Image
+        to: Event.EventData.Image
+      - name: Command Line
+        from: CommandLine
+        to: Event.EventData.CommandLine
+      - name: Original File Name
+        from: OriginalFileName
+        to: Event.EventData.OriginalFileName
+      - name: Parent Image
+        from: ParentImage
+        to: Event.EventData.ParentImage
+      - name: Parent Command Line
+        from: ParentCommandLine
+        to: Event.EventData.ParentCommandLine
+
+  - name: Suspicious Network Connection
+    timestamp: Event.System.TimeCreated
+    filter:
+      int(EventID): 3
+      Provider: Microsoft-Windows-Sysmon
+    fields:
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: User
+        from: User
+        to: Event.EventData.User
+      - name: Image
+        from: Image
+        to: Event.EventData.Image
+      - name: Destination IP
+        from: DestinationIp
+        to: Event.EventData.DestinationIp
+      - name: Destination Port
+        from: DestinationPort
+        to: Event.EventData.DestinationPort
+      - name: Destination Hostname
+        from: DestinationHostname
+        to: Event.EventData.DestinationHostname
+      - name: Destination Is IPv6
+        from: DestinationIsIpv6
+        to: Event.EventData.DestinationIsIpv6
+        visible: false
+      - name: Initiated
+        from: Initiated
+        to: Event.EventData.Initiated
+      - name: Source Port
+        from: SourcePort
+        to: Event.EventData.SourcePort
+
+  - name: Suspicious Image Load
+    timestamp: Event.System.TimeCreated
+    filter:
+      int(EventID): 7
+      Provider: Microsoft-Windows-Sysmon
+    fields:
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: Image
+        from: Image
+        to: Event.EventData.Image
+      - name: Image Loaded
+        from: ImageLoaded
+        to: Event.EventData.ImageLoaded
+
+  - name: Suspicious File Creation
+    timestamp: Event.System.TimeCreated
+    filter:
+      int(EventID): 11
+      Provider: Microsoft-Windows-Sysmon
+    fields:
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: Image
+        from: Image
+        to: Event.EventData.Image
+      - name: Target File Name
+        from: TargetFilename
+        to: Event.EventData.TargetFilename
+
+  - name: Suspicious Registry Event
+    timestamp: Event.System.TimeCreated
+    filter:
+      int(EventID): 13
+      Provider: Microsoft-Windows-Sysmon
+    fields:
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: Image
+        from: Image
+        to: Event.EventData.Image
+      - name: Details
+        from: Details
+        to: Event.EventData.Details
+      - name: Target Object
+        from: TargetObject
+        to: Event.EventData.TargetObject
+
+  - name: Suspicious Service Installed
+    timestamp: Event.System.TimeCreated
+    filter:
+      int(EventID): 7045
+      Provider: Service Control Manager
+    fields:
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: Service
+        from: ServiceName
+        to: Event.EventData.ServiceName
+      # TODO: Can someone check if this is a typo...?
+      - name: Command Line
+        from: CommandLine
+        to: Event.EventData.ImagePath
+
+  - name: Suspicious Command Line
+    timestamp: Event.System.TimeCreated
+    filter:
+      int(EventID): 4688
+      Provider: Microsoft-Windows-Security-Auditing
+    fields:
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: User
+        from: UserName
+        to: Event.EventData.SubjectUserName
+      # TODO: Can someone check if this is a typo...?
+      - name: Process
+        from: Image
+        to: Event.EventData.NewProcessName
+      - name: Command Line
+        from: CommandLine
+        to: Event.EventData.CommandLine
+
+  - name: Suspicious Powershell ScriptBlock
+    timestamp: Event.System.TimeCreated
+    filter:
+      int(EventID): 4104
+      Provider: Microsoft-Windows-PowerShell
+    fields:
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: Script Block
+        from: ScriptBlockText
+        to: Event.EventData.ScriptBlockText
+
+  - name: Suspicious Scheduled Task Created
+    timestamp: Event.System.TimeCreated
+    filter:
+      int(EventID): 4698
+      Provider: Microsoft-Windows-Security-Auditing
+    fields:
+      - from: Provider
+        to: Event.System.Provider
+        visible: false
+      - name: Event ID
+        from: EventID
+        to: Event.System.EventID
+      - name: Record ID
+        from: EventRecordID
+        to: Event.System.EventRecordID
+      - name: Computer
+        from: Computer
+        to: Event.System.Computer
+      - name: User
+        from: UserName
+        to: Event.EventData.SubjectUserName
+      - name: Name
+        from: TaskName 
+        to: Event.EventData.TaskName
+      # TODO: Can someone check if this is a typo...?
+      - name: Command Line
+        from: CommandLine
+        to: Event.EventData.TaskContent

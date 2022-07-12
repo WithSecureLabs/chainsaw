@@ -1,0 +1,29 @@
+---
+title: New User Created
+group: Account Tampering
+description: A new user was created.
+authors:
+  - FranticTyping
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: User
+    to: Event.EventData.TargetUserName
+  - name: User SID
+    to: Event.EventData.TargetSid
+
+
+filter:
+  Event.System.EventID: 4720
