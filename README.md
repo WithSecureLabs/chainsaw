@@ -248,15 +248,15 @@ A massive thank you to  [@AlexKornitzer](https://twitter.com/AlexKornitzer?lang=
 	OPTIONS:
 	        --extension <extension>...    Only search through files with the provided extension
 	        --from <from>                 The timestamp to search from. Drops any documents older than the value provided
-	    -o, --output <output>             The file to output to
-	    -e, --regexp <regexp>...          A regular expressions (RegEx) pattern to search for
-	    -t, --tau <tau>...                Tau expressions to search with
+	    -o, --output <output>             The path to output results to
+	    -e, --regex <pattern>...          A string or regular expression pattern to search for
+	    -t, --tau <tau>...                Tau expressions to search with. e.g. 'Event.System.EventID: =4104'
 	        --timestamp <timestamp>       The field that contains the timestamp
 	        --timezone <timezone>         Output the timestamp using the timezone provided
 	        --to <to>                     The timestamp to search up to. Drops any documents newer than the value provided
 
 	ARGS:
-	    <pattern>    A pattern to search for
+	    <pattern>    A string or regular expression pattern to search for. Not used when -e or -t is specified
 	    <path>...    The paths containing event logs to load and hunt through
 
 #### Command Examples
@@ -277,7 +277,7 @@ A massive thank you to  [@AlexKornitzer](https://twitter.com/AlexKornitzer?lang=
 ### Hunting
 
 	USAGE:
-		    chainsaw hunt [FLAGS] [OPTIONS] <rules> [--] [path]...
+	    chainsaw hunt [FLAGS] [OPTIONS] <rules> [--] [path]...
 
 	FLAGS:
 	        --csv             Print the output in csv format
@@ -299,7 +299,7 @@ A massive thank you to  [@AlexKornitzer](https://twitter.com/AlexKornitzer?lang=
 	        --kind <kind>...                 Restrict loaded rules to specified kinds
 	        --level <level>...               Restrict loaded rules to specified levels
 	    -m, --mapping <mapping>...           A mapping file to tell Chainsaw how to use third-party rules
-	    -o, --output <output>                The file/directory to output to
+	    -o, --output <output>                A path to output results to
 	    -r, --rule <rule>...                 A path containing additional rules to hunt with
 	    -s, --sigma <sigma>...               A path containing Sigma rules to hunt with
 	        --status <status>...             Restrict loaded rules to specified statuses
@@ -309,6 +309,7 @@ A massive thank you to  [@AlexKornitzer](https://twitter.com/AlexKornitzer?lang=
 	ARGS:
 	    <rules>      The path to a collection of rules to use for hunting
 	    <path>...    The paths containing event logs to load and hunt through
+
 #### Command Examples
 
    *Hunt through all evtx files using Sigma rules for detection logic*

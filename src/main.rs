@@ -95,7 +95,7 @@ enum Command {
         /// Display additional metadata in the tablar output.
         #[structopt(long = "metadata", conflicts_with = "json")]
         metadata: bool,
-        /// The file/directory to output to.
+        /// A path to output results to.
         #[structopt(short = "o", long = "output")]
         output: Option<PathBuf>,
         /// Print the output in log like format.
@@ -135,16 +135,22 @@ enum Command {
 
     /// Search through event logs for specific event IDs and/or keywords
     Search {
-        /// A pattern to search for.
+        /// A string or regular expression pattern to search for.
+        /// Not used when -e or -t is specified.
         #[structopt(required_unless_one=&["regexp", "tau"])]
         pattern: Option<String>,
 
         /// The paths containing event logs to load and hunt through.
         path: Vec<PathBuf>,
 
-        /// A regular expressions (RegEx) pattern to search for.
-        #[structopt(short = "e", long = "regexp", number_of_values = 1)]
-        regexp: Option<Vec<String>>,
+        /// A string or regular expression pattern to search for.
+        #[structopt(
+            short = "e",
+            long = "regex",
+            value_name = "pattern",
+            number_of_values = 1
+        )]
+        additional_pattern: Option<Vec<String>>,
 
         /// Only search through files with the provided extension.
         #[structopt(long = "extension", number_of_values = 1)]
@@ -164,7 +170,7 @@ enum Command {
         /// Output the timestamp using the local machine's timestamp.
         #[structopt(long = "local", group = "tz")]
         local: bool,
-        /// The file to output to.
+        /// The path to output results to.
         #[structopt(short = "o", long = "output")]
         output: Option<PathBuf>,
         /// Supress informational output.
@@ -173,7 +179,7 @@ enum Command {
         /// Continue to search when an error is encountered.
         #[structopt(long = "skip-errors")]
         skip_errors: bool,
-        /// Tau expressions to search with.
+        /// Tau expressions to search with. e.g. 'Event.System.EventID: =4104'
         #[structopt(short = "t", long = "tau", number_of_values = 1)]
         tau: Option<Vec<String>>,
         /// The field that contains the timestamp.
@@ -553,7 +559,7 @@ fn run() -> Result<()> {
             path,
 
             mut pattern,
-            regexp,
+            additional_pattern,
 
             extension,
             from,
@@ -573,7 +579,7 @@ fn run() -> Result<()> {
             if !opts.no_banner {
                 print_title();
             }
-            let mut paths = if regexp.is_some() || tau.is_some() {
+            let mut paths = if additional_pattern.is_some() || tau.is_some() {
                 let mut scratch = pattern
                     .take()
                     .map(|p| vec![PathBuf::from(p)])
@@ -636,7 +642,7 @@ fn run() -> Result<()> {
                 .load_unknown(load_unknown)
                 .local(local)
                 .skip_errors(skip_errors);
-            if let Some(patterns) = regexp {
+            if let Some(patterns) = additional_pattern {
                 searcher = searcher.patterns(patterns);
             } else if let Some(pattern) = pattern {
                 searcher = searcher.patterns(vec![pattern]);
