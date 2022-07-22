@@ -103,7 +103,7 @@ impl Reader {
                         }
                         if skip_errors {
                             cs_eyellowln!(
-                                "file type is not currently supported - {}",
+                                "[!] file type is not currently supported - {}",
                                 file.display()
                             );
                             Ok(Self {
@@ -138,7 +138,7 @@ impl Reader {
                         });
                     }
                     if skip_errors {
-                        cs_eyellowln!("file type is not known - {}", file.display());
+                        cs_eyellowln!("[!] file type is not known - {}", file.display());
                         Ok(Self {
                             parser: Parser::Unknown,
                         })
@@ -197,7 +197,7 @@ pub fn get_files(
             Ok(metadata) => metadata,
             Err(e) => {
                 if skip_errors {
-                    cs_eyellowln!("failed to get metadata for file - {}", e);
+                    cs_eyellowln!("[!] failed to get metadata for file - {}", e);
                     return Ok(files);
                 } else {
                     anyhow::bail!(e);
@@ -209,7 +209,7 @@ pub fn get_files(
                 Ok(directory) => directory,
                 Err(e) => {
                     if skip_errors {
-                        cs_eyellowln!("failed to read directory - {}", e);
+                        cs_eyellowln!("[!] failed to read directory - {}", e);
                         return Ok(files);
                     } else {
                         anyhow::bail!(e);
@@ -221,7 +221,7 @@ pub fn get_files(
                     Ok(dir) => dir,
                     Err(e) => {
                         if skip_errors {
-                            cs_eyellowln!("failed to enter directory - {}", e);
+                            cs_eyellowln!("[!] failed to enter directory - {}", e);
                             return Ok(files);
                         } else {
                             anyhow::bail!(e);
