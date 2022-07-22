@@ -296,6 +296,8 @@ pub fn get_files(
         } else {
             files.push(path.to_path_buf());
         }
+    } else if skip_errors {
+        cs_eyellowln!("[!] Specified path does not exist - {}", path.display());
     } else {
         anyhow::bail!("Specified event log path is invalid - {}", path.display());
     }
