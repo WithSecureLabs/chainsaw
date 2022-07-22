@@ -77,15 +77,72 @@ impl Reader {
         // for now we assume that the file extensions are correct!
         match file.extension().and_then(|e| e.to_str()) {
             Some(extension) => match extension {
-                "evtx" => Ok(Self {
-                    parser: Parser::Evtx(EvtxParser::load(file)?),
-                }),
-                "json" => Ok(Self {
-                    parser: Parser::Json(JsonParser::load(file)?),
-                }),
-                "xml" => Ok(Self {
-                    parser: Parser::Xml(XmlParser::load(file)?),
-                }),
+                "evtx" => {
+                    let parser = match EvtxParser::load(file) {
+                        Ok(parser) => parser,
+                        Err(e) => {
+                            if skip_errors {
+                                cs_eyellowln!(
+                                    "[!] failed to load file '{}' - {}\n",
+                                    file.display(),
+                                    e
+                                );
+                                return Ok(Self {
+                                    parser: Parser::Unknown,
+                                });
+                            } else {
+                                anyhow::bail!(e);
+                            }
+                        }
+                    };
+                    Ok(Self {
+                        parser: Parser::Evtx(parser),
+                    })
+                }
+                "json" => {
+                    let parser = match JsonParser::load(file) {
+                        Ok(parser) => parser,
+                        Err(e) => {
+                            if skip_errors {
+                                cs_eyellowln!(
+                                    "[!] failed to load file '{}' - {}\n",
+                                    file.display(),
+                                    e
+                                );
+                                return Ok(Self {
+                                    parser: Parser::Unknown,
+                                });
+                            } else {
+                                anyhow::bail!(e);
+                            }
+                        }
+                    };
+                    Ok(Self {
+                        parser: Parser::Json(parser),
+                    })
+                }
+                "xml" => {
+                    let parser = match XmlParser::load(file) {
+                        Ok(parser) => parser,
+                        Err(e) => {
+                            if skip_errors {
+                                cs_eyellowln!(
+                                    "[!] failed to load file '{}' - {}\n",
+                                    file.display(),
+                                    e
+                                );
+                                return Ok(Self {
+                                    parser: Parser::Unknown,
+                                });
+                            } else {
+                                anyhow::bail!(e);
+                            }
+                        }
+                    };
+                    Ok(Self {
+                        parser: Parser::Xml(parser),
+                    })
+                }
                 _ => {
                     if load_unknown {
                         if let Ok(parser) = EvtxParser::load(file) {
@@ -103,7 +160,7 @@ impl Reader {
                         }
                         if skip_errors {
                             cs_eyellowln!(
-                                "[!] file type is not currently supported - {}",
+                                "[!] file type is not currently supported - {}\n",
                                 file.display()
                             );
                             Ok(Self {
@@ -138,7 +195,7 @@ impl Reader {
                         });
                     }
                     if skip_errors {
-                        cs_eyellowln!("[!] file type is not known - {}", file.display());
+                        cs_eyellowln!("[!] file type is not known - {}\n", file.display());
                         Ok(Self {
                             parser: Parser::Unknown,
                         })
