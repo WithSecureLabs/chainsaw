@@ -16,6 +16,10 @@ exclusions:
 - Execution of Suspicious File Type Extension
 - Execution from Suspicious Folder
 - Process Start From Suspicious Folder
+- Setting Change in Windows Firewall with Advanced Security
+- Group Modification Logging
+- WMI Event Subscription
+- USB Device Plugged
 
 groups:
   - name: Sigma

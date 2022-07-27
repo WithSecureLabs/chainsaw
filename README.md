@@ -28,7 +28,7 @@ Chainsaw provides a powerful ‘first-response’ capability to quickly identify
 	██║     ██╔══██║██╔══██║██║██║╚██╗██║╚════██║██╔══██║██║███╗██║
 	╚██████╗██║  ██║██║  ██║██║██║ ╚████║███████║██║  ██║╚███╔███╔╝
 	 ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝
-	    By F-Secure Countercept (@FranticTyping, @AlexKornitzer)
+	    By Countercept (@FranticTyping, @AlexKornitzer)
 
 	[+] Loading detection rules from: ../../rules/, /tmp/sigma/rules
 	[+] Loaded 129 detection rules (198 not loaded)

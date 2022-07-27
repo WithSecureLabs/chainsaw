@@ -203,7 +203,7 @@ fn print_title() {
 ██║     ██╔══██║██╔══██║██║██║╚██╗██║╚════██║██╔══██║██║███╗██║
 ╚██████╗██║  ██║██║  ██║██║██║ ╚████║███████║██║  ██║╚███╔███╔╝
  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝
-    By F-Secure Countercept (@FranticTyping, @AlexKornitzer)
+    By Countercept (@FranticTyping, @AlexKornitzer)
 "
     );
 }
@@ -295,7 +295,7 @@ fn run() -> Result<()> {
             if column_width.is_none() {
                 column_width = resolve_col_width();
             }
-            init_writer(output, csv, json, quiet)?;
+            init_writer(output.clone(), csv, json, quiet)?;
             if !opts.no_banner {
                 print_title();
             }
@@ -474,6 +474,9 @@ fn run() -> Result<()> {
             if csv {
                 cli::print_csv(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
             } else if json {
+                if output.is_some() {
+                    cs_eprintln!("[+] Writing results to output file...");
+                }
                 cli::print_json(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
             } else if log {
                 cli::print_log(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
