@@ -398,7 +398,7 @@ impl Hunter {
                         );
                         continue;
                     }
-                    return Err(e);
+                    return Err(anyhow!(format!("{} in {}", e, file.display())));
                 }
             };
             let mut hits = vec![];
