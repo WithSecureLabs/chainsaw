@@ -186,7 +186,7 @@ In addition to supporting sigma rules, Chainsaw also supports a custom rule form
 
 With the release of Chainsaw v2, we decided to no longer include the Sigma Rules and EVTX-Attack-Samples repositories as Chainsaw submodules. We recommend that you clone these repositories separately to ensure you have the latest versions.
 
-If you still need an all-in-one package containing the Chainsaw binary, Sigma rules and example Event logs, you can download it from the [releases section](https://github.com/countercept/chainsaw/releases) section of this Github repo. In this releases section you will also find pre-compiled binary-only versions of Chainsaw for various platforms and architectures.
+If you still need an all-in-one package containing the Chainsaw binary, Sigma rules and example Event logs, you can download it from the [releases section](https://github.com/countercept/chainsaw/releases) of this Github repo. In this releases section you will also find pre-compiled binary-only versions of Chainsaw for various platforms and architectures.
 
 If you want to compile Chainsaw yourself, you can clone the Chainsaw repo:
 
