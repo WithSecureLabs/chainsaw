@@ -204,7 +204,7 @@ git clone https://github.com/sbousseaden/EVTX-ATTACK-SAMPLES.git
 ```
 and then run Chainsaw with the parameters below:
 ```
-./chainsaw hunt evtx_attack_samples/ -s sigma_rules/ --mapping mappings/sigma-event-logs-all.yml
+./chainsaw hunt EVTX-ATTACK-SAMPLES/ -s sigma/ --mapping mappings/sigma-event-logs-all.yml
 ```
 ### EDR and AV Warnings
 
