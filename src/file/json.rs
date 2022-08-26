@@ -71,9 +71,13 @@ pub mod lines {
     impl Parser {
         pub fn load(path: &Path) -> crate::Result<Self> {
             let file = File::open(path)?;
-            let reader = BufReader::new(file);
-            // TODO: Check we are some sort of .jsonl?
-            //let json = serde_json::from_reader(reader)?;
+            let mut reader = BufReader::new(file);
+            // A crude check where we read the first line to see if its JSON, we should probably
+            // read more than this?
+            let mut line = String::new();
+            reader.read_line(&mut line)?;
+            let _ = serde_json::from_str::<Json>(&line)?;
+            reader.rewind()?;
             Ok(Self {
                 inner: Some(reader),
             })
