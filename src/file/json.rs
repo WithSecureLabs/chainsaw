@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
+use std::vec::IntoIter;
 
 use anyhow::Error;
 use regex::RegexSet;
@@ -23,15 +24,31 @@ impl Parser {
     pub fn parse(&mut self) -> impl Iterator<Item = Result<Json, Error>> + '_ {
         if let Some(json) = self.inner.take() {
             return match json {
-                Json::Array(array) => array.into_iter().map(Ok).collect::<Vec<_>>().into_iter(),
-                _ => vec![json]
-                    .into_iter()
-                    .map(Ok)
-                    .collect::<Vec<_>>()
-                    .into_iter(),
+                Json::Array(array) => ParserIter(Some(array.into_iter())),
+                _ => ParserIter(Some(vec![json].into_iter())),
             };
         }
-        vec![].into_iter()
+        ParserIter(None)
+    }
+}
+
+struct ParserIter(Option<IntoIter<Json>>);
+
+impl Iterator for ParserIter {
+    type Item = Result<Json, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &mut self.0 {
+            Some(i) => i.next().map(Ok),
+            None => None,
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match &self.0 {
+            Some(i) => i.size_hint(),
+            None => (0, Some(0)),
+        }
     }
 }
 
@@ -45,6 +62,7 @@ pub mod lines {
     use super::*;
 
     use std::io::prelude::*;
+    use std::io::Lines;
 
     pub struct Parser {
         pub inner: Option<BufReader<File>>,
@@ -63,17 +81,32 @@ pub mod lines {
 
         pub fn parse(&mut self) -> impl Iterator<Item = Result<Json, Error>> + '_ {
             if let Some(file) = self.inner.take() {
-                return file
-                    .lines()
-                    .into_iter()
-                    .map(|line| match line {
-                        Ok(l) => serde_json::from_str(l.as_str()).map_err(Error::from),
-                        Err(e) => Err(Error::from(e)),
-                    })
-                    .collect::<Vec<_>>()
-                    .into_iter();
+                return ParserIter(Some(file.lines().into_iter()));
             }
-            vec![].into_iter()
+            ParserIter(None)
+        }
+    }
+
+    struct ParserIter(Option<Lines<BufReader<File>>>);
+
+    impl Iterator for ParserIter {
+        type Item = Result<Json, Error>;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            match &mut self.0 {
+                Some(i) => i.next().map(|l| match l {
+                    Ok(l) => serde_json::from_str(l.as_str()).map_err(Error::from),
+                    Err(e) => Err(Error::from(e)),
+                }),
+                None => None,
+            }
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            match &self.0 {
+                Some(i) => i.size_hint(),
+                None => (0, Some(0)),
+            }
         }
     }
 }
