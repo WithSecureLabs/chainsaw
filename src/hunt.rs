@@ -356,6 +356,7 @@ impl<'a> TauDocument for Mapped<'a> {
                     },
                     _ => unreachable!(),
                 },
+                Some((v, None, None)) => self.document.find(v),
                 _ => self.document.find(key),
             },
         }
