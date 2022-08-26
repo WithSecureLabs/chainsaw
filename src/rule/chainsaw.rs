@@ -7,7 +7,10 @@ use serde::{
     de::{self, MapAccess, Visitor},
     Deserialize,
 };
-use tau_engine::core::optimiser;
+use tau_engine::core::{
+    optimiser,
+    parser::{Expression, ModSym},
+};
 
 use crate::file::Kind;
 use crate::rule::{Aggregate, Filter, Level, Status};
@@ -24,6 +27,7 @@ pub struct Field {
     pub from: String,
     pub to: String,
 
+    pub cast: Option<ModSym>,
     pub container: Option<Container>,
     pub visible: bool,
 }
@@ -46,6 +50,7 @@ impl<'de> Deserialize<'de> for Field {
             where
                 V: MapAccess<'de>,
             {
+                let mut cast = None;
                 let mut container = None;
                 let mut from = None;
                 let mut name = None;
@@ -69,7 +74,15 @@ impl<'de> Deserialize<'de> for Field {
                             if to.is_some() {
                                 return Err(de::Error::duplicate_field("to"));
                             }
-                            to = Some(map.next_value()?);
+                            let field: String = map.next_value()?;
+                            match crate::ext::tau::parse_field(&field) {
+                                Expression::Cast(key, sym) => {
+                                    to = Some(key);
+                                    cast = Some(sym);
+                                }
+                                Expression::Field(key) => to = Some(key),
+                                _ => unreachable!(),
+                            }
                         }
                         "container" => {
                             if container.is_some() {
@@ -89,6 +102,11 @@ impl<'de> Deserialize<'de> for Field {
                 if name.is_none() && to.is_none() {
                     return Err(de::Error::missing_field("to"));
                 }
+                if cast.is_some() && container.is_some() {
+                    return Err(de::Error::custom(
+                        "cast and container are mutually exclusive",
+                    ));
+                }
                 let to: String = to.ok_or_else(|| de::Error::missing_field("to"))?;
                 let name = name.unwrap_or_else(|| to.clone());
                 let from = from.unwrap_or_else(|| to.clone());
@@ -98,6 +116,7 @@ impl<'de> Deserialize<'de> for Field {
                     name,
                     to,
                     from,
+                    cast,
                     container,
                     visible,
                 })

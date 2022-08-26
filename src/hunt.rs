@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::{hash_map::DefaultHasher, BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::hash::{Hash, Hasher};
@@ -12,7 +13,7 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 use tau_engine::{
-    core::parser::{Expression, Pattern},
+    core::parser::{Expression, ModSym, Pattern},
     Document as TauDocument, Value as Tau,
 };
 use uuid::Uuid;
@@ -228,7 +229,7 @@ pub enum HuntKind {
 pub enum MapperKind {
     None,
     Fast(HashMap<String, String>),
-    Full(HashMap<String, (String, Option<Container>)>),
+    Full(HashMap<String, (String, Option<Container>, Option<ModSym>)>),
 }
 
 pub struct Mapper {
@@ -241,7 +242,7 @@ impl Mapper {
         let mut fast = false;
         let mut full = false;
         for field in &fields {
-            if field.container.is_some() {
+            if field.cast.is_some() || field.container.is_some() {
                 full = true;
                 break;
             }
@@ -254,7 +255,11 @@ impl Mapper {
             for field in &fields {
                 map.insert(
                     field.from.clone(),
-                    (field.to.clone(), field.container.clone()),
+                    (
+                        field.to.clone(),
+                        field.container.clone(),
+                        field.cast.clone(),
+                    ),
                 );
             }
             MapperKind::Full(map)
@@ -300,7 +305,7 @@ impl<'a> TauDocument for Mapped<'a> {
                 None => self.document.find(key),
             },
             MapperKind::Full(map) => match map.get(key) {
-                Some((v, Some(container))) => {
+                Some((v, Some(container), None)) => {
                     if let Some(cache) = self.cache.get() {
                         return cache.get(&container.field).and_then(|hit| hit.find(v));
                     }
@@ -331,6 +336,26 @@ impl<'a> TauDocument for Mapped<'a> {
                     }
                     None
                 }
+                Some((v, None, Some(sym))) => match sym {
+                    ModSym::Int => match self.document.find(v) {
+                        Some(res) => {
+                            // NOTE: We only parse string into i64 for now, we leave the other
+                            // types alone...
+                            if let Tau::String(s) = &res {
+                                if let Ok(i) = str::parse::<i64>(s) {
+                                    return Some(Tau::Int(i));
+                                }
+                            }
+                            Some(res)
+                        }
+                        res => res,
+                    },
+                    ModSym::Str => match self.document.find(v) {
+                        Some(value) => value.to_string().map(|s| Tau::String(Cow::Owned(s))),
+                        res => res,
+                    },
+                    _ => unreachable!(),
+                },
                 _ => self.document.find(key),
             },
         }

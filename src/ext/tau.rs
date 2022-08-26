@@ -33,6 +33,18 @@ where
     Ok(identifier.pattern)
 }
 
+pub fn parse_field(key: &str) -> Expression {
+    if key.starts_with("int(") && key.ends_with(')') {
+        let key = key[4..key.len() - 1].to_owned();
+        Expression::Cast(key.to_owned(), ModSym::Int)
+    } else if key.starts_with("str(") && key.ends_with(')') {
+        let key = key[4..key.len() - 1].to_owned();
+        Expression::Cast(key.to_owned(), ModSym::Str)
+    } else {
+        Expression::Field(key.to_owned())
+    }
+}
+
 pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
     let mut parts = kv.split(": ");
     let key = parts.next().expect("invalid tau key value pair");
