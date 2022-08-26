@@ -187,7 +187,9 @@ pub fn print_log(
                         wrapper = crate::evtx::Wrapper(&document.data);
                         hunt.mapper.mapped(&wrapper)
                     }
-                    FileKind::Json | FileKind::Xml => hunt.mapper.mapped(&document.data),
+                    FileKind::Json | FileKind::Jsonl | FileKind::Xml => {
+                        hunt.mapper.mapped(&document.data)
+                    }
                     FileKind::Unknown => continue,
                 };
                 let fields: HashMap<_, _> =
@@ -361,7 +363,7 @@ pub fn print_detections(
                                 wrapper = crate::evtx::Wrapper(&document.data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
-                            FileKind::Json | FileKind::Xml => {
+                            FileKind::Json | FileKind::Jsonl | FileKind::Xml => {
                                 hit.hunt.mapper.mapped(&document.data)
                             }
                             FileKind::Unknown => continue,
@@ -604,7 +606,7 @@ pub fn print_csv(
                                 wrapper = crate::evtx::Wrapper(&document.data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
-                            FileKind::Json | FileKind::Xml => {
+                            FileKind::Json | FileKind::Jsonl | FileKind::Xml => {
                                 hit.hunt.mapper.mapped(&document.data)
                             }
                             FileKind::Unknown => continue,

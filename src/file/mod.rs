@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use self::evtx::{Evtx, Parser as EvtxParser};
-use self::json::{Json, Parser as JsonParser};
+use self::json::{lines::Parser as JsonlParser, Json, Parser as JsonParser};
 use self::xml::{Parser as XmlParser, Xml};
 
 pub mod evtx;
@@ -28,6 +28,7 @@ pub struct Documents<'a> {
 pub enum Kind {
     Evtx,
     Json,
+    Jsonl,
     Xml,
     Unknown,
 }
@@ -37,6 +38,7 @@ impl Kind {
         match self {
             Kind::Evtx => Some(vec!["evtx".to_string()]),
             Kind::Json => Some(vec!["json".to_string()]),
+            Kind::Jsonl => Some(vec!["jsonl".to_string()]),
             Kind::Xml => Some(vec!["xml".to_string()]),
             Kind::Unknown => None,
         }
@@ -63,6 +65,7 @@ impl Iterator for Unknown {
 pub enum Parser {
     Evtx(EvtxParser),
     Json(JsonParser),
+    Jsonl(JsonlParser),
     Xml(XmlParser),
     Unknown,
 }
@@ -119,6 +122,28 @@ impl Reader {
                     };
                     Ok(Self {
                         parser: Parser::Json(parser),
+                    })
+                }
+                "jsonl" => {
+                    let parser = match JsonlParser::load(file) {
+                        Ok(parser) => parser,
+                        Err(e) => {
+                            if skip_errors {
+                                cs_eyellowln!(
+                                    "[!] failed to load file '{}' - {}\n",
+                                    file.display(),
+                                    e
+                                );
+                                return Ok(Self {
+                                    parser: Parser::Unknown,
+                                });
+                            } else {
+                                anyhow::bail!(e);
+                            }
+                        }
+                    };
+                    Ok(Self {
+                        parser: Parser::Jsonl(parser),
                     })
                 }
                 "xml" => {
@@ -194,6 +219,8 @@ impl Reader {
                             parser: Parser::Xml(parser),
                         });
                     }
+                    // NOTE: We don't support the JSONL parser as it is too generic, maybe we are
+                    // happy to use it as the fallback...?
                     if skip_errors {
                         cs_eyellowln!("[!] file type is not known - {}\n", file.display());
                         Ok(Self {
@@ -224,6 +251,8 @@ impl Reader {
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
             Parser::Json(parser) => Box::new(parser.parse().map(|r| r.map(Document::Json)))
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
+            Parser::Jsonl(parser) => Box::new(parser.parse().map(|r| r.map(Document::Json)))
+                as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
             Parser::Xml(parser) => Box::new(parser.parse().map(|r| r.map(Document::Xml)))
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
             Parser::Unknown => {
@@ -237,6 +266,7 @@ impl Reader {
         match self.parser {
             Parser::Evtx(_) => Kind::Evtx,
             Parser::Json(_) => Kind::Json,
+            Parser::Jsonl(_) => Kind::Jsonl,
             Parser::Xml(_) => Kind::Xml,
             Parser::Unknown => Kind::Unknown,
         }
