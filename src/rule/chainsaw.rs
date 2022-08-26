@@ -99,17 +99,26 @@ impl<'de> Deserialize<'de> for Field {
                         _ => return Err(de::Error::unknown_field(&key, FIELDS)),
                     }
                 }
-                if name.is_none() && to.is_none() {
-                    return Err(de::Error::missing_field("to"));
+                if name.is_none() && from.is_none() && to.is_none() {
+                    return Err(de::Error::missing_field("name"));
                 }
                 if cast.is_some() && container.is_some() {
                     return Err(de::Error::custom(
                         "cast and container are mutually exclusive",
                     ));
                 }
-                let to: String = to.ok_or_else(|| de::Error::missing_field("to"))?;
-                let name = name.unwrap_or_else(|| to.clone());
-                let from = from.unwrap_or_else(|| to.clone());
+
+                let (name, from, to) = if from.is_none() && to.is_none() {
+                    let name: String = name.ok_or_else(|| de::Error::missing_field("name"))?;
+                    let from = from.unwrap_or_else(|| name.clone());
+                    let to = to.unwrap_or_else(|| name.clone());
+                    (name, from, to)
+                } else {
+                    let to: String = to.ok_or_else(|| de::Error::missing_field("to"))?;
+                    let name = name.unwrap_or_else(|| to.clone());
+                    let from = from.unwrap_or_else(|| to.clone());
+                    (name, from, to)
+                };
                 let container = container.unwrap_or_default();
                 let visible = visible.unwrap_or(true);
                 Ok(Field {
