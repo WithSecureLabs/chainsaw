@@ -52,7 +52,7 @@ enum Command {
         /// The path to a collection of rules to use for hunting.
         rules: PathBuf,
 
-        /// The paths containing event logs to load and hunt through.
+        /// The paths containing files to load and hunt through.
         path: Vec<PathBuf>,
 
         /// A mapping file to tell Chainsaw how to use third-party rules.
@@ -140,7 +140,7 @@ enum Command {
         #[structopt(required_unless_one=&["regexp", "tau"])]
         pattern: Option<String>,
 
-        /// The paths containing event logs to load and hunt through.
+        /// The paths containing files to load and hunt through.
         path: Vec<PathBuf>,
 
         /// A string or regular expression pattern to search for.
@@ -451,6 +451,7 @@ fn run() -> Result<()> {
             let mut size = ByteSize::mb(0);
             for path in &path {
                 let res = get_files(path, &exts, skip_errors)?;
+                println!("{:?}", res);
                 for i in &res {
                     size += i.metadata()?.len();
                 }
@@ -458,7 +459,7 @@ fn run() -> Result<()> {
             }
             if files.is_empty() {
                 return Err(anyhow::anyhow!(
-                    "No event logs were found in the provided paths",
+                    "No compatible files were found in the provided paths",
                 ));
             } else {
                 cs_eprintln!("[+] Loaded {} EVTX files ({})", files.len(), size);
@@ -608,7 +609,6 @@ fn run() -> Result<()> {
                 }
                 files.extend(res);
             }
-
             if let Some(ext) = &extension {
                 cs_eprintln!(
                     "[+] Loading event logs from: {} (extensions: {})",

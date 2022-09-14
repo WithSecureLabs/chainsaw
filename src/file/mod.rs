@@ -6,15 +6,18 @@ use serde::{Deserialize, Serialize};
 
 use self::evtx::{Evtx, Parser as EvtxParser};
 use self::json::{lines::Parser as JsonlParser, Json, Parser as JsonParser};
+use self::mft::{Mft, Parser as MftParser};
 use self::xml::{Parser as XmlParser, Xml};
 
 pub mod evtx;
 pub mod json;
+pub mod mft;
 pub mod xml;
 
 #[derive(Clone)]
 pub enum Document {
     Evtx(Evtx),
+    Mft(Mft),
     Json(Json),
     Xml(Xml),
 }
@@ -27,6 +30,7 @@ pub struct Documents<'a> {
 #[serde(rename_all = "snake_case")]
 pub enum Kind {
     Evtx,
+    Mft,
     Json,
     Jsonl,
     Xml,
@@ -37,6 +41,7 @@ impl Kind {
     pub fn extensions(&self) -> Option<Vec<String>> {
         match self {
             Kind::Evtx => Some(vec!["evt".to_string(), "evtx".to_string()]),
+            Kind::Mft => Some(vec!["mft".to_string(), "bin".to_string()]),
             Kind::Json => Some(vec!["json".to_string()]),
             Kind::Jsonl => Some(vec!["jsonl".to_string()]),
             Kind::Xml => Some(vec!["xml".to_string()]),
@@ -64,6 +69,7 @@ impl Iterator for Unknown {
 
 pub enum Parser {
     Evtx(EvtxParser),
+    Mft(MftParser),
     Json(JsonParser),
     Jsonl(JsonlParser),
     Xml(XmlParser),
@@ -100,6 +106,28 @@ impl Reader {
                     };
                     Ok(Self {
                         parser: Parser::Evtx(parser),
+                    })
+                }
+                "mft" => {
+                    let parser = match MftParser::load(file) {
+                        Ok(parser) => parser,
+                        Err(e) => {
+                            if skip_errors {
+                                cs_eyellowln!(
+                                    "[!] failed to load file '{}' - {}\n",
+                                    file.display(),
+                                    e
+                                );
+                                return Ok(Self {
+                                    parser: Parser::Unknown,
+                                });
+                            } else {
+                                anyhow::bail!(e);
+                            }
+                        }
+                    };
+                    Ok(Self {
+                        parser: Parser::Mft(parser),
                     })
                 }
                 "json" => {
@@ -174,6 +202,10 @@ impl Reader {
                             return Ok(Self {
                                 parser: Parser::Evtx(parser),
                             });
+                        } else if let Ok(parser) = MftParser::load(file) {
+                            return Ok(Self {
+                                parser: Parser::Mft(parser),
+                            });
                         } else if let Ok(parser) = JsonParser::load(file) {
                             return Ok(Self {
                                 parser: Parser::Json(parser),
@@ -209,6 +241,10 @@ impl Reader {
                     if let Ok(parser) = EvtxParser::load(file) {
                         return Ok(Self {
                             parser: Parser::Evtx(parser),
+                        });
+                    } else if let Ok(parser) = MftParser::load(file) {
+                        return Ok(Self {
+                            parser: Parser::Mft(parser),
                         });
                     } else if let Ok(parser) = JsonParser::load(file) {
                         return Ok(Self {
@@ -249,6 +285,8 @@ impl Reader {
                     .map(|r| r.map(Document::Evtx).map_err(|e| e.into())),
             )
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
+            Parser::Mft(parser) => Box::new(parser.parse().map(|r| r.map(Document::Mft)))
+                as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
             Parser::Json(parser) => Box::new(parser.parse().map(|r| r.map(Document::Json)))
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
             Parser::Jsonl(parser) => Box::new(parser.parse().map(|r| r.map(Document::Json)))
@@ -265,6 +303,7 @@ impl Reader {
     pub fn kind(&self) -> Kind {
         match self.parser {
             Parser::Evtx(_) => Kind::Evtx,
+            Parser::Mft(_) => Kind::Mft,
             Parser::Json(_) => Kind::Json,
             Parser::Jsonl(_) => Kind::Jsonl,
             Parser::Xml(_) => Kind::Xml,
