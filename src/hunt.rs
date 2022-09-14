@@ -440,6 +440,7 @@ impl Hunter {
                         hunt.mapper.mapped(&wrapper)
                     }
                     File::Json(json) => hunt.mapper.mapped(json),
+                    File::Mft(mft) => hunt.mapper.mapped(mft),
                     File::Xml(xml) => hunt.mapper.mapped(xml),
                 };
 
@@ -495,6 +496,7 @@ impl Hunter {
                                             wrapper = crate::evtx::Wrapper(&evtx.data);
                                             hunt.mapper.mapped(&wrapper)
                                         }
+                                        File::Mft(mft) => hunt.mapper.mapped(mft),
                                         File::Json(json) => hunt.mapper.mapped(json),
                                         File::Xml(xml) => hunt.mapper.mapped(xml),
                                     };
@@ -591,6 +593,7 @@ impl Hunter {
             if !hits.is_empty() {
                 let data = match &document {
                     File::Evtx(evtx) => evtx.data.clone(),
+                    File::Mft(mft) => mft.clone(),
                     File::Json(json) => json.clone(),
                     File::Xml(xml) => xml.clone(),
                 };
@@ -622,6 +625,7 @@ impl Hunter {
                         let (document, timestamp) = files.get(id).expect("could not get document");
                         let data = match &document {
                             File::Evtx(evtx) => evtx.data.clone(),
+                            File::Mft(mft) => mft.clone(),
                             File::Json(json) => json.clone(),
                             File::Xml(xml) => xml.clone(),
                         };

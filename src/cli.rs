@@ -1,5 +1,5 @@
 use std::collections::{hash_map::DefaultHasher, BTreeMap, HashMap, HashSet};
-use std::fs;
+use std::fs::{self, File};
 
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
@@ -187,7 +187,7 @@ pub fn print_log(
                         wrapper = crate::evtx::Wrapper(&document.data);
                         hunt.mapper.mapped(&wrapper)
                     }
-                    FileKind::Json | FileKind::Jsonl | FileKind::Xml => {
+                    FileKind::Json | FileKind::Jsonl | FileKind::Xml | FileKind::Mft => {
                         hunt.mapper.mapped(&document.data)
                     }
                     FileKind::Unknown => continue,
@@ -363,7 +363,7 @@ pub fn print_detections(
                                 wrapper = crate::evtx::Wrapper(&document.data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
-                            FileKind::Json | FileKind::Jsonl | FileKind::Xml => {
+                            FileKind::Json | FileKind::Jsonl | FileKind::Xml | FileKind::Mft => {
                                 hit.hunt.mapper.mapped(&document.data)
                             }
                             FileKind::Unknown => continue,
@@ -606,7 +606,7 @@ pub fn print_csv(
                                 wrapper = crate::evtx::Wrapper(&document.data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
-                            FileKind::Json | FileKind::Jsonl | FileKind::Xml => {
+                            FileKind::Json | FileKind::Jsonl | FileKind::Xml | FileKind::Mft => {
                                 hit.hunt.mapper.mapped(&document.data)
                             }
                             FileKind::Unknown => continue,

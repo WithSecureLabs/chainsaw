@@ -1,0 +1,12 @@
+---
+name: Chainsaw's groupless Sigma mappings for Master File Tables
+kind: mft
+rules: sigma
+# WIP
+groups:
+  - name: Sigma
+    timestamp: FileNameCreated
+    fields:
+      - name: FileName
+        from: FullPath
+        to: FileName
