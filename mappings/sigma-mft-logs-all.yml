@@ -3,11 +3,11 @@ name: Chainsaw's groupless Sigma mappings for Master File Tables
 kind: mft
 rules: sigma
 
-# TODO: Flesh this out...
+# TODO: Flesh this out... but sigma does not seem geared for this?
 groups:
   - name: Sigma
     timestamp: FileNameCreated
     fields:
-      - name: FileName
+      - name: Full Path
         from: FullPath
         to: FileName
