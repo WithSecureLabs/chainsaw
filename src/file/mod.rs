@@ -36,7 +36,7 @@ pub enum Kind {
 impl Kind {
     pub fn extensions(&self) -> Option<Vec<String>> {
         match self {
-            Kind::Evtx => Some(vec!["evtx".to_string()]),
+            Kind::Evtx => Some(vec!["evt".to_string(), "evtx".to_string()]),
             Kind::Json => Some(vec!["json".to_string()]),
             Kind::Jsonl => Some(vec!["jsonl".to_string()]),
             Kind::Xml => Some(vec!["xml".to_string()]),
