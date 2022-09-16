@@ -86,7 +86,7 @@ impl Reader {
         // for now we assume that the file extensions are correct!
         match file.extension().and_then(|e| e.to_str()) {
             Some(extension) => match extension {
-                "evtx" => {
+                "evt" | "evtx" => {
                     let parser = match EvtxParser::load(file) {
                         Ok(parser) => parser,
                         Err(e) => {
@@ -152,7 +152,7 @@ impl Reader {
                         parser: Parser::Jsonl(parser),
                     })
                 }
-                "mft" => {
+                "bin" | "mft" => {
                     let parser = match MftParser::load(file) {
                         Ok(parser) => parser,
                         Err(e) => {
