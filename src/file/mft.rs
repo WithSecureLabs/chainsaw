@@ -1,14 +1,10 @@
-use std::f32::consts::E;
 use std::path::Path;
 use std::{fs::File, io::BufReader};
 
 use mft::csv::FlatMftEntryWithName;
-use mft::{err::Error, MftEntry, MftParser};
-use regex::RegexSet;
+use mft::{MftEntry, MftParser};
 use serde_json::Value as Json;
 use tau_engine::{Document, Value as Tau};
-
-use crate::search::Searchable;
 
 pub type Mft = Json;
 

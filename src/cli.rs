@@ -1,5 +1,5 @@
 use std::collections::{hash_map::DefaultHasher, BTreeMap, HashMap, HashSet};
-use std::fs::{self, File};
+use std::fs;
 
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
