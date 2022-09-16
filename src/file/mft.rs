@@ -2,9 +2,8 @@ use std::path::Path;
 use std::{fs::File, io::BufReader};
 
 use mft::csv::FlatMftEntryWithName;
-use mft::{MftEntry, MftParser};
+use mft::MftParser;
 use serde_json::Value as Json;
-use tau_engine::{Document, Value as Tau};
 
 pub type Mft = Json;
 
@@ -19,28 +18,13 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> impl Iterator<Item = crate::Result<Json>> + '_ {
-        // Really don't love this but I'm limited by parsing lib
-        let entries: Vec<Result<MftEntry, mft::err::Error>> = self.inner.iter_entries().collect();
-        let mut flat: Vec<crate::Result<FlatMftEntryWithName>> = vec![];
-        for entry in entries {
-            flat.push(match entry {
-                Ok(e) => Ok(mft::csv::FlatMftEntryWithName::from_entry(
-                    &e,
-                    &mut self.inner,
-                )),
-                Err(err) => Err(anyhow!(err)),
-            });
-        }
-        let mut json = vec![];
-        for entry in flat {
-            json.push(match entry {
-                Ok(e) => match serde_json::to_value(e) {
-                    Ok(j) => Ok(j),
-                    Err(err) => Err(anyhow!(err)),
-                },
-                Err(err) => Err(anyhow!(err)),
-            });
-        }
-        json.into_iter()
+        // FIXME: Due to the nested borrowing we still have to do a full pass which is memory
+        // hungry but there is no easy way around this for now...
+        let entries = self.inner.iter_entries().collect::<Vec<_>>();
+        entries.into_iter().map(|e| match e {
+            Ok(e) => serde_json::to_value(FlatMftEntryWithName::from_entry(&e, &mut self.inner))
+                .map_err(|e| e.into()),
+            Err(e) => anyhow::bail!(e),
+        })
     }
 }
