@@ -439,7 +439,7 @@ fn run() -> Result<()> {
             };
 
             cs_eprintln!(
-                "[+] Loading forensic arefacts from: {} (extensions: {})",
+                "[+] Loading forensic artefacts from: {} (extensions: {})",
                 path.iter()
                     .map(|p| p.display().to_string())
                     .collect::<Vec<_>>()
