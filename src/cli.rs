@@ -1,5 +1,7 @@
 use std::collections::{hash_map::DefaultHasher, BTreeMap, HashMap, HashSet};
 use std::fs;
+use std::hash::{Hash, Hasher};
+use std::time::Duration;
 
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
@@ -7,7 +9,6 @@ use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use prettytable::{cell, format, Row, Table};
 use serde::Serialize;
 use serde_json::{Map, Number, Value as Json};
-use std::hash::{Hash, Hasher};
 use tau_engine::{Document, Value as Tau};
 use uuid::Uuid;
 
@@ -39,12 +40,13 @@ pub fn init_progress_bar(size: u64, msg: String) -> indicatif::ProgressBar {
     pb.set_style(
         ProgressStyle::default_bar()
             .template("[+] {msg}: [{bar:40}] {pos}/{len} {spinner}")
+            .expect("could not set template")
             .tick_chars(TICK_SETTINGS.0)
             .progress_chars("=>-"),
     );
 
     pb.set_message(msg);
-    pb.enable_steady_tick(TICK_SETTINGS.1);
+    pb.enable_steady_tick(Duration::from_millis(TICK_SETTINGS.1));
     pb
 }
 

@@ -157,7 +157,9 @@ macro_rules! cs_print_table {
     ($table:ident) => {
         unsafe {
             match $crate::WRITER.output.as_ref() {
-                Some(mut f) => $table.print(&mut f).expect("could not write table to file"),
+                Some(mut f) => {
+                    let _ = $table.print(&mut f).expect("could not write table to file");
+                }
                 None => $table.printstd(),
             }
         }
