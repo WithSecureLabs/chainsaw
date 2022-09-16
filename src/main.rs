@@ -21,13 +21,13 @@ use chainsaw::{
 #[derive(StructOpt)]
 #[structopt(
     name = "chainsaw",
-    about = "Rapidly Search and Hunt through windows event logs",
+    about = "Rapidly Search and Hunt through forensic artefacts",
     after_help = r"Examples:
-    
-    Hunt with Sigma and Chainsaw Rules: 
+
+    Hunt with Sigma and Chainsaw Rules:
         ./chainsaw hunt evtx_attack_samples/ -s sigma_rules/ --mapping mappings/sigma-event-logs.yml -r rules/
 
-    Hunt with Sigma rules and output in JSON: 
+    Hunt with Sigma rules and output in JSON:
         ./chainsaw hunt evtx_attack_samples/ -s sigma_rules/ --mapping mappings/sigma-event-logs.yml --json
 
     Search for the case-insensitive word 'mimikatz':
@@ -133,7 +133,7 @@ enum Command {
         tau: bool,
     },
 
-    /// Search through event logs for specific event IDs and/or keywords
+    /// Search through forensic artefacts for keywords
     Search {
         /// A string or regular expression pattern to search for.
         /// Not used when -e or -t is specified.
@@ -439,7 +439,7 @@ fn run() -> Result<()> {
             };
 
             cs_eprintln!(
-                "[+] Loading event logs from: {} (extensions: {})",
+                "[+] Loading forensic arefacts from: {} (extensions: {})",
                 path.iter()
                     .map(|p| p.display().to_string())
                     .collect::<Vec<_>>()
@@ -451,7 +451,6 @@ fn run() -> Result<()> {
             let mut size = ByteSize::mb(0);
             for path in &path {
                 let res = get_files(path, &exts, skip_errors)?;
-                println!("{:?}", res);
                 for i in &res {
                     size += i.metadata()?.len();
                 }
@@ -462,7 +461,7 @@ fn run() -> Result<()> {
                     "No compatible files were found in the provided paths",
                 ));
             } else {
-                cs_eprintln!("[+] Loaded {} EVTX files ({})", files.len(), size);
+                cs_eprintln!("[+] Loaded {} forensic artefacts ({})", files.len(), size);
             }
             let mut detections = vec![];
             let pb = cli::init_progress_bar(files.len() as u64, "Hunting".to_string());
@@ -611,7 +610,7 @@ fn run() -> Result<()> {
             }
             if let Some(ext) = &extension {
                 cs_eprintln!(
-                    "[+] Loading event logs from: {} (extensions: {})",
+                    "[+] Loading forensic artefacts from: {} (extensions: {})",
                     paths
                         .iter()
                         .map(|p| p.display().to_string())
@@ -624,7 +623,7 @@ fn run() -> Result<()> {
                 )
             } else {
                 cs_eprintln!(
-                    "[+] Loading event logs from: {}",
+                    "[+] Loading forensic artefacts from: {}",
                     paths
                         .iter()
                         .map(|p| p.display().to_string())
@@ -635,10 +634,10 @@ fn run() -> Result<()> {
 
             if files.is_empty() {
                 return Err(anyhow::anyhow!(
-                    "No event logs were found in the provided paths",
+                    "No forensic artefacts were found in the provided paths",
                 ));
             } else {
-                cs_eprintln!("[+] Loaded {} EVTX files ({})", files.len(), size);
+                cs_eprintln!("[+] Loaded {} forensic files ({})", files.len(), size);
             }
             let mut searcher = Searcher::builder()
                 .ignore_case(ignore_case)
@@ -666,7 +665,7 @@ fn run() -> Result<()> {
                 searcher = searcher.to(to);
             }
             let searcher = searcher.build()?;
-            cs_eprintln!("[+] Searching event logs...");
+            cs_eprintln!("[+] Searching forensic artefacts...");
             if json {
                 cs_print!("[");
             }
@@ -696,7 +695,7 @@ fn run() -> Result<()> {
             if json {
                 cs_println!("]");
             }
-            cs_println!("[+] Found {} matching log entries", hits);
+            cs_println!("[+] Found {} hits", hits);
         }
     }
     Ok(())

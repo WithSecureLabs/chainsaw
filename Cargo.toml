@@ -17,8 +17,8 @@ chrono = "0.4"
 chrono-tz = { version = "0.6", features = ["serde"] }
 colour = "0.6"
 evtx = "0.7"
-mft = "0.6.0"
 indicatif = "0.16"
+mft = "0.6"
 once_cell = "1.0"
 prettytable-rs = "0.8"
 quick-xml = { version = "0.23", features = ["serialize"] }

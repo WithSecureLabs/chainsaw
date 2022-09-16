@@ -2,7 +2,8 @@
 name: Chainsaw's groupless Sigma mappings for Master File Tables
 kind: mft
 rules: sigma
-# WIP
+
+# TODO: Flesh this out...
 groups:
   - name: Sigma
     timestamp: FileNameCreated

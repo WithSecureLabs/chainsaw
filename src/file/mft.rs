@@ -44,26 +44,3 @@ impl Parser {
         json.into_iter()
     }
 }
-
-pub struct Wrapper<'a>(pub &'a Json);
-impl<'a> Document for Wrapper<'a> {
-    fn find(&self, key: &str) -> Option<Tau<'_>> {
-        // As event logs can store values in a key or complex objects we do some aliasing here for
-        // convenience...
-        match key {
-            // "Event.System.TimeCreated" => self
-            //     .0
-            //     .find("Event.System.TimeCreated_attributes.SystemTime"),
-            _ => self.0.find(key),
-        }
-    }
-}
-
-// impl Searchable for MftEntry {
-//     fn matches(&self, regex: &RegexSet) -> bool {
-//         match serde_json::to_string(self) {
-//             Ok(s) => regex.is_match(&s),
-//             Err(_) => false,
-//         }
-//     }
-// }
