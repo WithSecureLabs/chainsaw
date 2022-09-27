@@ -695,7 +695,7 @@ fn run() -> Result<()> {
             if json {
                 cs_println!("]");
             }
-            cs_println!("[+] Found {} hits", hits);
+            cs_eprintln!("[+] Found {} hits", hits);
         }
     }
     Ok(())
