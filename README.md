@@ -20,7 +20,7 @@ Chainsaw provides a powerful ‘first-response’ capability to quickly identify
  - :bookmark_tabs: Output results in a variety of formats, such as ASCII table format, CSV format, and JSON format
  - :computer: Can be run on MacOS, Linux and Windows
 ---
-  $ ./chainsaw hunt rules/ evtx_attack_samples -s sigma/rules --mapping mappings/sigma-event-logs-all.yml --level critical
+  $ ./chainsaw hunt -r rules/ evtx_attack_samples -s sigma/rules --mapping mappings/sigma-event-logs-all.yml --level critical
 
    ██████╗██╗  ██╗ █████╗ ██╗███╗   ██╗███████╗ █████╗ ██╗    ██╗
   ██╔════╝██║  ██║██╔══██╗██║████╗  ██║██╔════╝██╔══██╗██║    ██║
@@ -277,7 +277,7 @@ A massive thank you to  [@AlexKornitzer](https://twitter.com/AlexKornitzer?lang=
 ### Hunting
 
   USAGE:
-      chainsaw hunt [FLAGS] [OPTIONS] <rules> [--] [path]...
+      chainsaw hunt [FLAGS] [OPTIONS] [--] [path]...
 
   FLAGS:
           --csv             Print the output in csv format

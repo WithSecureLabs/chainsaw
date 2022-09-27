@@ -50,7 +50,7 @@ enum Command {
     /// Hunt through event logs using detection rules for threat detection
     Hunt {
         /// The path to a collection of rules to use for hunting.
-        rules: PathBuf,
+        rules: Option<PathBuf>,
 
         /// The paths containing files to load and hunt through.
         path: Vec<PathBuf>,
@@ -300,9 +300,13 @@ fn run() -> Result<()> {
                 print_title();
             }
             let mut rs = vec![];
-            if path.is_empty() {
-                path = vec![rules];
-            } else {
+            if rule.is_some() || sigma.is_some() {
+                if let Some(rules) = rules {
+                    let mut paths = vec![rules];
+                    paths.extend(path);
+                    path = paths;
+                }
+            } else if let Some(rules) = rules {
                 rs = vec![rules];
             }
             let mut rules = rs;
