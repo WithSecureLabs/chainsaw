@@ -183,14 +183,17 @@ pub fn print_log(
         let mut values = vec![];
         for field in hunt.mapper.fields() {
             if field.visible {
+                let data: Json;
                 let wrapper;
                 let mapped = match &document.kind {
                     FileKind::Evtx => {
-                        wrapper = crate::evtx::Wrapper(&document.data);
+                        data = serde_json::from_str(&document.data)?;
+                        wrapper = crate::evtx::Wrapper(&data);
                         hunt.mapper.mapped(&wrapper)
                     }
                     FileKind::Json | FileKind::Jsonl | FileKind::Mft | FileKind::Xml => {
-                        hunt.mapper.mapped(&document.data)
+                        data = serde_json::from_str(&document.data)?;
+                        hunt.mapper.mapped(&data)
                     }
                     FileKind::Unknown => continue,
                 };
@@ -359,14 +362,19 @@ pub fn print_detections(
                     // What we do here is hash each row since if the fields are the same but the values
                     // are not then we would lose data, so in this case we split the row
                     for hit in &grouping.hits {
+                        let data: Json;
                         let wrapper;
                         let mapped = match &document.kind {
                             FileKind::Evtx => {
-                                wrapper = crate::evtx::Wrapper(&document.data);
+                                data = serde_json::from_str(&document.data)
+                                    .expect("could not deserialise");
+                                wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
                             FileKind::Json | FileKind::Jsonl | FileKind::Mft | FileKind::Xml => {
-                                hit.hunt.mapper.mapped(&document.data)
+                                data = serde_json::from_str(&document.data)
+                                    .expect("could not deserialise");
+                                hit.hunt.mapper.mapped(&data)
                             }
                             FileKind::Unknown => continue,
                         };
@@ -602,14 +610,17 @@ pub fn print_csv(
                     // What we do here is hash each row since if the fields are the same but the values
                     // are not then we would lose data, so in this case we split the row
                     for hit in &grouping.hits {
+                        let data: Json;
                         let wrapper;
                         let mapped = match &document.kind {
                             FileKind::Evtx => {
-                                wrapper = crate::evtx::Wrapper(&document.data);
+                                data = serde_json::from_str(&document.data)?;
+                                wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
                             FileKind::Json | FileKind::Jsonl | FileKind::Mft | FileKind::Xml => {
-                                hit.hunt.mapper.mapped(&document.data)
+                                data = serde_json::from_str(&document.data)?;
+                                hit.hunt.mapper.mapped(&data)
                             }
                             FileKind::Unknown => continue,
                         };

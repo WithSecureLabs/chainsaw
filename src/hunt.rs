@@ -10,7 +10,10 @@ use chrono_tz::Tz;
 // https://github.com/rust-lang/rust/issues/74465
 use once_cell::unsync::OnceCell;
 use rayon::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::{
+    ser::{SerializeStruct, Serializer},
+    Deserialize, Serialize,
+};
 use serde_json::Value as Json;
 use tau_engine::{
     core::parser::{Expression, ModSym, Pattern},
@@ -56,10 +59,29 @@ pub struct Detections {
     pub kind: Kind,
 }
 
-#[derive(Debug, Serialize)]
+//#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct Document {
     pub kind: FileKind,
-    pub data: Json,
+    // TODO: Should be something like Vec<u8> (i.e. bincode but this requires creating an
+    // intermediate structure...)
+    //pub data: Json,
+    pub data: String,
+}
+
+impl Serialize for Document {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // 3 is the number of fields in the struct.
+        let mut state = serializer.serialize_struct("Document", 2)?;
+        state.serialize_field("kind", &self.kind)?;
+        let raw = serde_json::value::RawValue::from_string(self.data.clone())
+            .expect("could not serialise data");
+        state.serialize_field("data", &raw)?;
+        state.end()
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -602,7 +624,7 @@ impl Hunter {
                     kind: Kind::Individual {
                         document: Document {
                             kind: kind.clone(),
-                            data,
+                            data: serde_json::to_string(&data)?,
                         },
                     },
                 });
@@ -631,7 +653,7 @@ impl Hunter {
                         };
                         documents.push(Document {
                             kind: kind.clone(),
-                            data,
+                            data: serde_json::to_string(&data)?,
                         });
                         timestamps.push(*timestamp);
                     }
