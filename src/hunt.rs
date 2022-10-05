@@ -26,6 +26,7 @@ use crate::rule::{
     chainsaw::{Container, Field, Format},
     Aggregate, Filter, Kind as RuleKind, Rule,
 };
+use crate::value::Value;
 
 #[derive(Clone, Deserialize)]
 pub struct Group {
@@ -63,10 +64,8 @@ pub struct Detections {
 #[derive(Debug)]
 pub struct Document {
     pub kind: FileKind,
-    // TODO: Should be something like Vec<u8> (i.e. bincode but this requires creating an
-    // intermediate structure...)
-    //pub data: Json,
-    pub data: String,
+    // NOTE: Serialised Value using bincode.
+    pub data: Vec<u8>,
 }
 
 impl Serialize for Document {
@@ -77,9 +76,9 @@ impl Serialize for Document {
         // 3 is the number of fields in the struct.
         let mut state = serializer.serialize_struct("Document", 2)?;
         state.serialize_field("kind", &self.kind)?;
-        let raw = serde_json::value::RawValue::from_string(self.data.clone())
-            .expect("could not serialise data");
-        state.serialize_field("data", &raw)?;
+        let value: Value = bincode::deserialize(&self.data).expect("could not decompress");
+        let json = Json::from(value);
+        state.serialize_field("data", &json)?;
         state.end()
     }
 }
@@ -624,7 +623,7 @@ impl Hunter {
                     kind: Kind::Individual {
                         document: Document {
                             kind: kind.clone(),
-                            data: serde_json::to_string(&data)?,
+                            data: bincode::serialize(&Value::from(data))?,
                         },
                     },
                 });
@@ -653,7 +652,7 @@ impl Hunter {
                         };
                         documents.push(Document {
                             kind: kind.clone(),
-                            data: serde_json::to_string(&data)?,
+                            data: bincode::serialize(&Value::from(data))?,
                         });
                         timestamps.push(*timestamp);
                     }

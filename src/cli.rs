@@ -15,6 +15,7 @@ use uuid::Uuid;
 use crate::file::Kind as FileKind;
 use crate::hunt::{Detections, Hunt, Kind};
 use crate::rule::{Kind as RuleKind, Level, Rule, Status};
+use crate::value::Value;
 use crate::write::WRITER;
 
 #[cfg(not(windows))]
@@ -187,12 +188,12 @@ pub fn print_log(
                 let wrapper;
                 let mapped = match &document.kind {
                     FileKind::Evtx => {
-                        data = serde_json::from_str(&document.data)?;
+                        data = Json::from(bincode::deserialize::<Value>(&document.data)?);
                         wrapper = crate::evtx::Wrapper(&data);
                         hunt.mapper.mapped(&wrapper)
                     }
                     FileKind::Json | FileKind::Jsonl | FileKind::Mft | FileKind::Xml => {
-                        data = serde_json::from_str(&document.data)?;
+                        data = Json::from(bincode::deserialize::<Value>(&document.data)?);
                         hunt.mapper.mapped(&data)
                     }
                     FileKind::Unknown => continue,
@@ -366,14 +367,18 @@ pub fn print_detections(
                         let wrapper;
                         let mapped = match &document.kind {
                             FileKind::Evtx => {
-                                data = serde_json::from_str(&document.data)
-                                    .expect("could not deserialise");
+                                data = Json::from(
+                                    bincode::deserialize::<Value>(&document.data)
+                                        .expect("could not decompress"),
+                                );
                                 wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
                             FileKind::Json | FileKind::Jsonl | FileKind::Mft | FileKind::Xml => {
-                                data = serde_json::from_str(&document.data)
-                                    .expect("could not deserialise");
+                                data = Json::from(
+                                    bincode::deserialize::<Value>(&document.data)
+                                        .expect("could not decompress"),
+                                );
                                 hit.hunt.mapper.mapped(&data)
                             }
                             FileKind::Unknown => continue,
@@ -614,12 +619,12 @@ pub fn print_csv(
                         let wrapper;
                         let mapped = match &document.kind {
                             FileKind::Evtx => {
-                                data = serde_json::from_str(&document.data)?;
+                                data = Json::from(bincode::deserialize::<Value>(&document.data)?);
                                 wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
                             FileKind::Json | FileKind::Jsonl | FileKind::Mft | FileKind::Xml => {
-                                data = serde_json::from_str(&document.data)?;
+                                data = Json::from(bincode::deserialize::<Value>(&document.data)?);
                                 hit.hunt.mapper.mapped(&data)
                             }
                             FileKind::Unknown => continue,
