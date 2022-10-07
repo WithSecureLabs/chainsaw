@@ -78,7 +78,7 @@ enum Command {
         #[structopt(long = "full", conflicts_with = "json")]
         full: bool,
         /// Print the output in json format.
-        #[structopt(group = "format", long = "json")]
+        #[structopt(group = "format", short = "j", long = "json")]
         json: bool,
         /// Restrict loaded rules to specified kinds.
         #[structopt(long = "kind", number_of_values = 1)]
@@ -162,7 +162,7 @@ enum Command {
         #[structopt(short = "i", long = "ignore-case")]
         ignore_case: bool,
         /// Print the output in json format.
-        #[structopt(long = "json")]
+        #[structopt(short = "j", long = "json")]
         json: bool,
         /// Allow chainsaw to try and load files it cannot identify.
         #[structopt(long = "load-unknown")]
