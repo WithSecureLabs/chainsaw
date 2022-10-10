@@ -2,7 +2,7 @@
 name = "chainsaw"
 version = "2.1.1"
 repository = "https://github.com/countercept/chainsaw"
-description = "Rapidly Search and Hunt Through Windows Event Logs"
+description = "Rapidly Search and Hunt Through Windows Forensic Artefacts"
 authors = ["James Dorgan <james@dorgan.io>","Alex Kornitzer <alex.kornitzer@withsecure.com>"]
 readme = "README.md"
 license = "GPL3"
