@@ -21,14 +21,14 @@ use chainsaw::{
 #[derive(StructOpt)]
 #[structopt(
     name = "chainsaw",
-    about = "Rapidly Search and Hunt through forensic artefacts",
+    about = "Rapidly Search and Hunt through Windows Forensic Artefacts",
     after_help = r"Examples:
 
     Hunt with Sigma and Chainsaw Rules:
-        ./chainsaw hunt evtx_attack_samples/ -s sigma_rules/ --mapping mappings/sigma-event-logs.yml -r rules/
+        ./chainsaw hunt evtx_attack_samples/ -s sigma/ --mapping mappings/sigma-event-logs-all.yml -r rules/
 
     Hunt with Sigma rules and output in JSON:
-        ./chainsaw hunt evtx_attack_samples/ -s sigma_rules/ --mapping mappings/sigma-event-logs.yml --json
+        ./chainsaw hunt evtx_attack_samples/ -s sigma/ --mapping mappings/sigma-event-logs-all.yml --json
 
     Search for the case-insensitive word 'mimikatz':
         ./chainsaw search mimikatz -i evtx_attack_samples/
@@ -488,7 +488,14 @@ fn run() -> Result<()> {
                 if output.is_some() {
                     cs_eprintln!("[+] Writing results to output file...");
                 }
-                cli::print_json(&detections, hunter.hunts(), hunter.rules(), local, timezone, jsonl)?;
+                cli::print_json(
+                    &detections,
+                    hunter.hunts(),
+                    hunter.rules(),
+                    local,
+                    timezone,
+                    jsonl,
+                )?;
             } else if log {
                 cli::print_log(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
             } else {
