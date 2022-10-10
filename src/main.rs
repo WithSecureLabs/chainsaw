@@ -80,6 +80,9 @@ enum Command {
         /// Print the output in json format.
         #[structopt(group = "format", short = "j", long = "json")]
         json: bool,
+        /// Print the output in jsonl format.
+        #[structopt(group = "format", long = "jsonl")]
+        jsonl: bool,
         /// Restrict loaded rules to specified kinds.
         #[structopt(long = "kind", number_of_values = 1)]
         kind: Vec<RuleKind>,
@@ -164,6 +167,9 @@ enum Command {
         /// Print the output in json format.
         #[structopt(short = "j", long = "json")]
         json: bool,
+        /// Print the output in jsonl format.
+        #[structopt(group = "format", long = "jsonl")]
+        jsonl: bool,
         /// Allow chainsaw to try and load files it cannot identify.
         #[structopt(long = "load-unknown")]
         load_unknown: bool,
@@ -279,6 +285,7 @@ fn run() -> Result<()> {
             from,
             full,
             json,
+            jsonl,
             kind,
             level,
             local,
@@ -477,11 +484,11 @@ fn run() -> Result<()> {
             pb.finish();
             if csv {
                 cli::print_csv(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
-            } else if json {
+            } else if json || jsonl {
                 if output.is_some() {
                     cs_eprintln!("[+] Writing results to output file...");
                 }
-                cli::print_json(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
+                cli::print_json(&detections, hunter.hunts(), hunter.rules(), local, timezone, jsonl)?;
             } else if log {
                 cli::print_log(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
             } else {
@@ -572,6 +579,7 @@ fn run() -> Result<()> {
             from,
             ignore_case,
             json,
+            jsonl,
             load_unknown,
             local,
             output,
@@ -690,6 +698,9 @@ fn run() -> Result<()> {
                             cs_print!(",");
                         }
                         cs_print_json!(&hit)?;
+                    } else if jsonl {
+                        cs_print_json!(&hit)?;
+                        println!();
                     } else {
                         cs_print_yaml!(&hit)?;
                     }
