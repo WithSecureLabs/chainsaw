@@ -727,6 +727,7 @@ pub fn print_json(
     rules: &BTreeMap<Uuid, Rule>,
     local: bool,
     timezone: Option<Tz>,
+    jsonl: bool,
 ) -> crate::Result<()> {
     let hunts: HashMap<_, _> = hunts.iter().map(|h| (&h.id, h)).collect();
     let mut detections = detections
@@ -790,7 +791,14 @@ pub fn print_json(
         })
         .collect::<Vec<Detection>>();
     detections.sort_by(|x, y| x.timestamp.cmp(&y.timestamp));
-    cs_print_json!(&detections)?;
+    if jsonl {
+        for det in &detections {
+            cs_print_json!(det)?;
+            println!();
+        }
+    } else {
+        cs_print_json!(&detections)?;
+    }
     Ok(())
 }
 
