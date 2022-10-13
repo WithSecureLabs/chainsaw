@@ -1,0 +1,34 @@
+---
+title: Any Logon
+group: Lateral Movement
+description: Catch any logon for testing.
+authors:
+  - 5661c6f72
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: User
+    to: Event.EventData.TargetUserName
+  - name: Logon Type
+    to: Event.EventData.LogonType
+  - name: IP Address
+    to: Event.EventData.IpAddress
+
+
+filter:
+  condition: any_4624
+
+  any_4624:
+    Event.System.EventID: 4624
