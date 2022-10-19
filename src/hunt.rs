@@ -29,6 +29,20 @@ use crate::rule::{
 use crate::value::Value;
 
 #[derive(Clone, Deserialize)]
+pub struct Precondition {
+    #[serde(rename = "for")]
+    for_: HashMap<String, String>,
+    #[serde(deserialize_with = "crate::ext::tau::deserialize_expression")]
+    pub filter: Expression,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct Extensions {
+    #[serde(default)]
+    preconditions: Option<Vec<Precondition>>,
+}
+
+#[derive(Clone, Deserialize)]
 pub struct Group {
     #[serde(skip, default = "Uuid::new_v4")]
     pub id: Uuid,
@@ -43,6 +57,8 @@ pub struct Group {
 pub struct Mapping {
     #[serde(default)]
     pub exclusions: HashSet<String>,
+    #[serde(default)]
+    pub extensions: Option<Extensions>,
     pub groups: Vec<Group>,
     pub kind: FileKind,
     pub name: String,
@@ -154,6 +170,40 @@ impl HunterBuilder {
                 if let RuleKind::Chainsaw = mapping.rules {
                     anyhow::bail!("Chainsaw rules do not support mappings");
                 }
+                let mut preconds = HashMap::new();
+                if let Some(extensions) = &mapping.extensions {
+                    if let Some(preconditions) = &extensions.preconditions {
+                        for precondition in preconditions {
+                            for (rid, rule) in &rules {
+                                if let Rule::Sigma(sigma) = rule {
+                                    // FIXME: How do we handle multiple matches, for now we just take
+                                    // the latest, we chould probably just combine them into an AND?
+                                    if precondition.for_.is_empty() {
+                                        continue;
+                                    }
+                                    let mut matched = true;
+                                    for (f, v) in &precondition.for_ {
+                                        match sigma.find(&f) {
+                                            Some(value) => {
+                                                if value.as_str() != Some(v.as_str()) {
+                                                    matched = false;
+                                                    break;
+                                                }
+                                            }
+                                            None => {
+                                                matched = false;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if matched {
+                                        preconds.insert(*rid, precondition.filter.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 mapping.groups.sort_by(|x, y| x.name.cmp(&y.name));
                 for group in mapping.groups {
                     let mapper = Mapper::from(group.fields);
@@ -165,6 +215,7 @@ impl HunterBuilder {
                             exclusions: mapping.exclusions.clone(),
                             filter: group.filter,
                             kind: mapping.rules.clone(),
+                            preconditions: preconds.clone(),
                         },
                         timestamp: group.timestamp,
 
@@ -240,6 +291,7 @@ pub enum HuntKind {
         exclusions: HashSet<String>,
         filter: Expression,
         kind: RuleKind,
+        preconditions: HashMap<Uuid, Expression>,
     },
     Rule {
         aggregate: Option<Aggregate>,
@@ -503,6 +555,7 @@ impl Hunter {
                         exclusions,
                         filter,
                         kind,
+                        preconditions,
                     } => {
                         if tau_engine::core::solve(filter, &mapped) {
                             let matches = &self
@@ -527,6 +580,11 @@ impl Hunter {
                                     }
                                     if exclusions.contains(rule.name()) {
                                         return None;
+                                    }
+                                    if let Some(filter) = preconditions.get(rid) {
+                                        if !tau_engine::core::solve(filter, &mapped) {
+                                            return None;
+                                        }
                                     }
                                     if rule.solve(&mapped) {
                                         Some((*rid, rule))

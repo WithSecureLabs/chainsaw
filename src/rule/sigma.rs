@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::prelude::*;
@@ -7,7 +8,7 @@ use anyhow::Result;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_yaml::{Mapping, Sequence, Value as Yaml};
-use tau_engine::Rule as Tau;
+use tau_engine::{Document, Rule as Tau};
 
 use super::{Level, Status};
 
@@ -37,6 +38,37 @@ pub struct Rule {
     pub references: Option<Vec<String>>,
     #[serde(default)]
     pub tags: Option<Vec<String>>,
+}
+
+impl Document for Rule {
+    fn find(&self, key: &str) -> Option<tau_engine::Value> {
+        use tau_engine::Value as Tau;
+        // NOTE: We have not implemented all fields here...
+        match key {
+            "title" => Some(Tau::String(Cow::Borrowed(&self.name))),
+            "level" => Some(Tau::String(Cow::Owned(self.level.to_string()))),
+            "status" => Some(Tau::String(Cow::Owned(self.status.to_string()))),
+            "id" => self.id.as_ref().map(|id| Tau::String(Cow::Borrowed(&id))),
+            "logsource.category" => self
+                .logsource
+                .as_ref()
+                .and_then(|ls| ls.category.as_ref().map(|c| Tau::String(Cow::Borrowed(&c)))),
+            "logsource.definition" => self.logsource.as_ref().and_then(|ls| {
+                ls.definition
+                    .as_ref()
+                    .map(|c| Tau::String(Cow::Borrowed(&c)))
+            }),
+            "logsource.product" => self
+                .logsource
+                .as_ref()
+                .and_then(|ls| ls.product.as_ref().map(|c| Tau::String(Cow::Borrowed(&c)))),
+            "logsource.service" => self
+                .logsource
+                .as_ref()
+                .and_then(|ls| ls.service.as_ref().map(|c| Tau::String(Cow::Borrowed(&c)))),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
