@@ -66,10 +66,13 @@ pub fn format_field_length(data: &str, full_output: bool, col_width: u32) -> Str
         .collect::<Vec<String>>()
         .join("\n");
 
-    let truncate_len = 500;
+    let truncate_len = 496;
 
     if !full_output && scratch.len() > truncate_len {
-        scratch.truncate(truncate_len);
+        scratch = match scratch.char_indices().nth(truncate_len) {
+            None => scratch,
+            Some((i, _)) => scratch[..i].to_owned(),
+        };
         scratch.push_str("...\n(use --full to show all content)");
     }
 
