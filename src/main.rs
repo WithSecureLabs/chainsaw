@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use bytesize::ByteSize;
 use chrono::NaiveDateTime;
 use chrono_tz::Tz;
@@ -482,7 +482,9 @@ fn run() -> Result<()> {
             let pb = cli::init_progress_bar(files.len() as u64, "Hunting".to_string());
             for file in &files {
                 pb.tick();
-                detections.extend(hunter.hunt(file)?);
+                detections.extend(hunter.hunt(file).with_context(|| {
+                    format!("Failed to hunt through file '{}'", file.to_string_lossy())
+                })?);
                 pb.inc(1);
             }
             pb.finish();
@@ -729,7 +731,11 @@ fn run() -> Result<()> {
 
 fn main() {
     if let Err(e) = run() {
-        cs_eredln!("[x] {}", e);
+        if let Some(cause) = e.chain().skip(1).next() {
+            cs_eredln!("[x] {} - {}", e, cause);
+        } else {
+            cs_eredln!("[x] {}", e);
+        }
         std::process::exit(1);
     }
 }
