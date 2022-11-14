@@ -104,7 +104,7 @@ fn format_time(event_time: String) -> String {
 
 pub struct Grouping<'a> {
     hits: Vec<Hit<'a>>,
-    kind: &'a Kind,
+    kind: &'a Kind<'a>,
     timestamp: &'a NaiveDateTime,
 }
 
@@ -697,7 +697,7 @@ pub fn print_csv(
 pub struct Detection<'a> {
     pub group: &'a String,
     #[serde(flatten)]
-    pub kind: &'a Kind,
+    pub kind: &'a Kind<'a>,
     pub name: &'a String,
     pub timestamp: String,
 

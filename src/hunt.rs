@@ -71,27 +71,29 @@ pub struct Hit {
     pub timestamp: NaiveDateTime,
 }
 
-pub struct Detections {
+pub struct Detections<'a> {
     pub hits: Vec<Hit>,
-    pub kind: Kind,
+    pub kind: Kind<'a>,
 }
 
 //#[derive(Debug, Serialize)]
 #[derive(Debug)]
-pub struct Document {
+pub struct Document<'a> {
     pub kind: FileKind,
+    pub path: &'a Path,
     // NOTE: Serialised Value using bincode.
     pub data: Vec<u8>,
 }
 
-impl Serialize for Document {
+impl<'a> Serialize for Document<'a> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         // 3 is the number of fields in the struct.
-        let mut state = serializer.serialize_struct("Document", 2)?;
+        let mut state = serializer.serialize_struct("Document", 3)?;
         state.serialize_field("kind", &self.kind)?;
+        state.serialize_field("path", &self.path)?;
         let value: Value = bincode::deserialize(&self.data).expect("could not decompress");
         let json = Json::from(value);
         state.serialize_field("data", &json)?;
@@ -101,9 +103,9 @@ impl Serialize for Document {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "snake_case", tag = "kind")]
-pub enum Kind {
-    Aggregate { documents: Vec<Document> },
-    Individual { document: Document },
+pub enum Kind<'a> {
+    Aggregate { documents: Vec<Document<'a>> },
+    Individual { document: Document<'a> },
 }
 
 #[derive(Default)]
@@ -476,7 +478,7 @@ impl Hunter {
         HunterBuilder::new()
     }
 
-    pub fn hunt(&self, file: &Path) -> crate::Result<Vec<Detections>> {
+    pub fn hunt<'a>(&'a self, file: &'a Path) -> crate::Result<Vec<Detections>> {
         let mut reader = Reader::load(file, self.inner.load_unknown, self.inner.skip_errors)?;
         let kind = reader.kind();
         // This can be optimised better ;)
@@ -681,6 +683,7 @@ impl Hunter {
                     kind: Kind::Individual {
                         document: Document {
                             kind: kind.clone(),
+                            path: &file,
                             data: bincode::serialize(&Value::from(data))?,
                         },
                     },
@@ -710,6 +713,7 @@ impl Hunter {
                         };
                         documents.push(Document {
                             kind: kind.clone(),
+                            path: &file,
                             data: bincode::serialize(&Value::from(data))?,
                         });
                         timestamps.push(*timestamp);
