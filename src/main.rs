@@ -140,7 +140,7 @@ enum Command {
     Search {
         /// A string or regular expression pattern to search for.
         /// Not used when -e or -t is specified.
-        #[arg(required_unless_present_any=&["regexp", "tau"])]
+        #[arg(required_unless_present_any=&["additional_pattern", "tau"])]
         pattern: Option<String>,
 
         /// The paths containing files to load and hunt through.
@@ -159,7 +159,7 @@ enum Command {
         #[arg(long = "extension", number_of_values = 1)]
         extension: Option<Vec<String>>,
         /// The timestamp to search from. Drops any documents older than the value provided.
-        #[arg(long = "from")]
+        #[arg(long = "from", requires = "timestamp")]
         from: Option<NaiveDateTime>,
         /// Ignore the case when searching patterns
         #[arg(short = 'i', long = "ignore-case")]
@@ -189,13 +189,13 @@ enum Command {
         #[arg(short = 't', long = "tau", number_of_values = 1)]
         tau: Option<Vec<String>>,
         /// The field that contains the timestamp.
-        #[arg(long = "timestamp", requires_if("from", "to"))]
+        #[arg(long = "timestamp")]
         timestamp: Option<String>,
         /// Output the timestamp using the timezone provided.
         #[arg(long = "timezone", group = "tz")]
         timezone: Option<Tz>,
         /// The timestamp to search up to. Drops any documents newer than the value provided.
-        #[arg(long = "to")]
+        #[arg(long = "to", requires = "timestamp")]
         to: Option<NaiveDateTime>,
     },
 }
