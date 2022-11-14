@@ -11,15 +11,15 @@ use bytesize::ByteSize;
 use chrono::NaiveDateTime;
 use chrono_tz::Tz;
 
-use structopt::StructOpt;
+use clap::{Parser, Subcommand};
 
 use chainsaw::{
     cli, get_files, lint as lint_rule, load as load_rule, set_writer, Filter, Format, Hunter,
     RuleKind, RuleLevel, RuleStatus, Searcher, Writer,
 };
 
-#[derive(StructOpt)]
-#[structopt(
+#[derive(Parser)]
+#[clap(
     name = "chainsaw",
     about = "Rapidly Search and Hunt through Windows Forensic Artefacts",
     after_help = r"Examples:
@@ -37,15 +37,15 @@ use chainsaw::{
         ./chainsaw search -t 'Event.System.EventID: =4104' evtx_attack_samples/
     "
 )]
-struct Opts {
+struct Args {
     /// Hide Chainsaw's banner.
-    #[structopt(long)]
+    #[arg(long)]
     no_banner: bool,
-    #[structopt(subcommand)]
+    #[command(subcommand)]
     cmd: Command,
 }
 
-#[derive(StructOpt)]
+#[derive(Subcommand)]
 enum Command {
     /// Hunt through event logs using detection rules for threat detection
     Hunt {
@@ -56,71 +56,71 @@ enum Command {
         path: Vec<PathBuf>,
 
         /// A mapping file to tell Chainsaw how to use third-party rules.
-        #[structopt(short = "m", long = "mapping", number_of_values = 1)]
+        #[arg(short = 'm', long = "mapping", number_of_values = 1)]
         mapping: Option<Vec<PathBuf>>,
         /// A path containing additional rules to hunt with.
-        #[structopt(short = "r", long = "rule", number_of_values = 1)]
+        #[arg(short = 'r', long = "rule", number_of_values = 1)]
         rule: Option<Vec<PathBuf>>,
 
         /// Set the column width for the tabular output.
-        #[structopt(long = "column-width", conflicts_with = "json")]
+        #[arg(long = "column-width", conflicts_with = "json")]
         column_width: Option<u32>,
         /// Print the output in csv format.
-        #[structopt(group = "format", long = "csv", requires("output"))]
+        #[arg(group = "format", long = "csv", requires("output"))]
         csv: bool,
         /// Only hunt through files with the provided extension.
-        #[structopt(long = "extension", number_of_values = 1)]
+        #[arg(long = "extension", number_of_values = 1)]
         extension: Option<Vec<String>>,
         /// The timestamp to hunt from. Drops any documents older than the value provided.
-        #[structopt(long = "from")]
+        #[arg(long = "from")]
         from: Option<NaiveDateTime>,
         /// Print the full values for the tabular output.
-        #[structopt(long = "full", conflicts_with = "json")]
+        #[arg(long = "full", conflicts_with = "json")]
         full: bool,
         /// Print the output in json format.
-        #[structopt(group = "format", short = "j", long = "json")]
+        #[arg(group = "format", short = 'j', long = "json")]
         json: bool,
         /// Print the output in jsonl format.
-        #[structopt(group = "format", long = "jsonl")]
+        #[arg(group = "format", long = "jsonl")]
         jsonl: bool,
         /// Restrict loaded rules to specified kinds.
-        #[structopt(long = "kind", number_of_values = 1)]
+        #[arg(long = "kind", number_of_values = 1)]
         kind: Vec<RuleKind>,
         /// Restrict loaded rules to specified levels.
-        #[structopt(long = "level", number_of_values = 1)]
+        #[arg(long = "level", number_of_values = 1)]
         level: Vec<RuleLevel>,
         /// Allow chainsaw to try and load files it cannot identify.
-        #[structopt(long = "load-unknown")]
+        #[arg(long = "load-unknown")]
         load_unknown: bool,
         /// Output the timestamp using the local machine's timestamp.
-        #[structopt(long = "local", group = "tz")]
+        #[arg(long = "local", group = "tz")]
         local: bool,
         /// Display additional metadata in the tablar output.
-        #[structopt(long = "metadata", conflicts_with = "json")]
+        #[arg(long = "metadata", conflicts_with = "json")]
         metadata: bool,
         /// A path to output results to.
-        #[structopt(short = "o", long = "output")]
+        #[arg(short = 'o', long = "output")]
         output: Option<PathBuf>,
         /// Print the output in log like format.
-        #[structopt(group = "format", long = "log")]
+        #[arg(group = "format", long = "log")]
         log: bool,
         /// Supress informational output.
-        #[structopt(short = "q")]
+        #[arg(short = 'q')]
         quiet: bool,
         /// A path containing Sigma rules to hunt with.
-        #[structopt(short = "s", long = "sigma", number_of_values = 1, requires("mapping"))]
+        #[arg(short = 's', long = "sigma", number_of_values = 1, requires("mapping"))]
         sigma: Option<Vec<PathBuf>>,
         /// Continue to hunt when an error is encountered.
-        #[structopt(long = "skip-errors")]
+        #[arg(long = "skip-errors")]
         skip_errors: bool,
         /// Restrict loaded rules to specified statuses.
-        #[structopt(long = "status", number_of_values = 1)]
+        #[arg(long = "status", number_of_values = 1)]
         status: Vec<RuleStatus>,
         /// Output the timestamp using the timezone provided.
-        #[structopt(long = "timezone", group = "tz")]
+        #[arg(long = "timezone", group = "tz")]
         timezone: Option<Tz>,
         /// The timestamp to hunt up to. Drops any documents newer than the value provided.
-        #[structopt(long = "to")]
+        #[arg(long = "to")]
         to: Option<NaiveDateTime>,
     },
 
@@ -129,10 +129,10 @@ enum Command {
         /// The path to a collection of rules.
         path: PathBuf,
         /// The kind of rule to lint: chainsaw, sigma or stalker
-        #[structopt(long = "kind")]
+        #[arg(long = "kind")]
         kind: RuleKind,
         /// Output tau logic.
-        #[structopt(short = "t", long = "tau")]
+        #[arg(short = 't', long = "tau")]
         tau: bool,
     },
 
@@ -140,15 +140,15 @@ enum Command {
     Search {
         /// A string or regular expression pattern to search for.
         /// Not used when -e or -t is specified.
-        #[structopt(required_unless_one=&["regexp", "tau"])]
+        #[arg(required_unless_present_any=&["regexp", "tau"])]
         pattern: Option<String>,
 
         /// The paths containing files to load and hunt through.
         path: Vec<PathBuf>,
 
         /// A string or regular expression pattern to search for.
-        #[structopt(
-            short = "e",
+        #[arg(
+            short = 'e',
             long = "regex",
             value_name = "pattern",
             number_of_values = 1
@@ -156,46 +156,46 @@ enum Command {
         additional_pattern: Option<Vec<String>>,
 
         /// Only search through files with the provided extension.
-        #[structopt(long = "extension", number_of_values = 1)]
+        #[arg(long = "extension", number_of_values = 1)]
         extension: Option<Vec<String>>,
         /// The timestamp to search from. Drops any documents older than the value provided.
-        #[structopt(long = "from")]
+        #[arg(long = "from")]
         from: Option<NaiveDateTime>,
         /// Ignore the case when searching patterns
-        #[structopt(short = "i", long = "ignore-case")]
+        #[arg(short = 'i', long = "ignore-case")]
         ignore_case: bool,
         /// Print the output in json format.
-        #[structopt(short = "j", long = "json")]
+        #[arg(short = 'j', long = "json")]
         json: bool,
         /// Print the output in jsonl format.
-        #[structopt(group = "format", long = "jsonl")]
+        #[arg(group = "format", long = "jsonl")]
         jsonl: bool,
         /// Allow chainsaw to try and load files it cannot identify.
-        #[structopt(long = "load-unknown")]
+        #[arg(long = "load-unknown")]
         load_unknown: bool,
         /// Output the timestamp using the local machine's timestamp.
-        #[structopt(long = "local", group = "tz")]
+        #[arg(long = "local", group = "tz")]
         local: bool,
         /// The path to output results to.
-        #[structopt(short = "o", long = "output")]
+        #[arg(short = 'o', long = "output")]
         output: Option<PathBuf>,
         /// Supress informational output.
-        #[structopt(short = "q")]
+        #[arg(short = 'q')]
         quiet: bool,
         /// Continue to search when an error is encountered.
-        #[structopt(long = "skip-errors")]
+        #[arg(long = "skip-errors")]
         skip_errors: bool,
         /// Tau expressions to search with. e.g. 'Event.System.EventID: =4104'
-        #[structopt(short = "t", long = "tau", number_of_values = 1)]
+        #[arg(short = 't', long = "tau", number_of_values = 1)]
         tau: Option<Vec<String>>,
         /// The field that contains the timestamp.
-        #[structopt(long = "timestamp", requires_if("from", "to"))]
+        #[arg(long = "timestamp", requires_if("from", "to"))]
         timestamp: Option<String>,
         /// Output the timestamp using the timezone provided.
-        #[structopt(long = "timezone", group = "tz")]
+        #[arg(long = "timezone", group = "tz")]
         timezone: Option<Tz>,
         /// The timestamp to search up to. Drops any documents newer than the value provided.
-        #[structopt(long = "to")]
+        #[arg(long = "to")]
         to: Option<NaiveDateTime>,
     },
 }
@@ -269,8 +269,8 @@ fn init_writer(output: Option<PathBuf>, csv: bool, json: bool, quiet: bool) -> c
 }
 
 fn run() -> Result<()> {
-    let opts = Opts::from_args();
-    match opts.cmd {
+    let args = Args::parse();
+    match args.cmd {
         Command::Hunt {
             rules,
             mut path,
@@ -303,7 +303,7 @@ fn run() -> Result<()> {
                 column_width = resolve_col_width();
             }
             init_writer(output.clone(), csv, json, quiet)?;
-            if !opts.no_banner {
+            if !args.no_banner {
                 print_title();
             }
             let mut rs = vec![];
@@ -518,7 +518,7 @@ fn run() -> Result<()> {
         }
         Command::Lint { path, kind, tau } => {
             init_writer(None, false, false, false)?;
-            if !opts.no_banner {
+            if !args.no_banner {
                 print_title();
             }
             cs_eprintln!("[+] Validating as {} for supplied detection rules...", kind);
@@ -598,7 +598,7 @@ fn run() -> Result<()> {
             to,
         } => {
             init_writer(output, false, json, quiet)?;
-            if !opts.no_banner {
+            if !args.no_banner {
                 print_title();
             }
             let mut paths = if additional_pattern.is_some() || tau.is_some() {
