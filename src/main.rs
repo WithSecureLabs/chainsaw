@@ -72,6 +72,7 @@ enum Command {
         #[arg(long = "extension", number_of_values = 1)]
         extension: Option<Vec<String>>,
         /// The timestamp to hunt from. Drops any documents older than the value provided.
+        /// (YYYY-MM-ddTHH:mm:SS)
         #[arg(long = "from")]
         from: Option<NaiveDateTime>,
         /// Print the full values for the tabular output.
@@ -120,6 +121,7 @@ enum Command {
         #[arg(long = "timezone", group = "tz")]
         timezone: Option<Tz>,
         /// The timestamp to hunt up to. Drops any documents newer than the value provided.
+        /// (YYYY-MM-ddTHH:mm:SS)
         #[arg(long = "to")]
         to: Option<NaiveDateTime>,
     },
@@ -159,6 +161,7 @@ enum Command {
         #[arg(long = "extension", number_of_values = 1)]
         extension: Option<Vec<String>>,
         /// The timestamp to search from. Drops any documents older than the value provided.
+        /// (YYYY-MM-ddTHH:mm:SS)
         #[arg(long = "from", requires = "timestamp")]
         from: Option<NaiveDateTime>,
         /// Ignore the case when searching patterns
@@ -195,6 +198,7 @@ enum Command {
         #[arg(long = "timezone", group = "tz")]
         timezone: Option<Tz>,
         /// The timestamp to search up to. Drops any documents newer than the value provided.
+        /// (YYYY-MM-ddTHH:mm:SS)
         #[arg(long = "to", requires = "timestamp")]
         to: Option<NaiveDateTime>,
     },
