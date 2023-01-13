@@ -2,9 +2,11 @@
 title: collection
 description: A collection rule for testing
 status: experimental
+id: collection
 references: []
 authors:
   - Alex Kornitzer
+level: info
 detection:
   base:
     Image:
@@ -19,9 +21,11 @@ true_positives: []
 title: collection
 description: A collection rule for testing
 status: experimental
+id: collection
 references: []
 authors:
   - Alex Kornitzer
+level: info
 detection:
   base:
     Image:

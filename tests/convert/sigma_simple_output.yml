@@ -2,12 +2,14 @@
 title: simple
 description: A simple rule for testing
 status: experimental
+id: simple
 references: []
-authors: 
+authors:
   - Alex Kornitzer
+level: info
 detection:
   search:
-    CommandLine: 
+    CommandLine:
       - i* -Nop *
   condition: search
 true_negatives: []
