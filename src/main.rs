@@ -35,7 +35,8 @@ use chainsaw::{
 
     Search for Powershell Script Block Events (EventID 4014):
         ./chainsaw search -t 'Event.System.EventID: =4104' evtx_attack_samples/
-    "
+    ",
+    version
 )]
 struct Args {
     /// Hide Chainsaw's banner.
