@@ -8,11 +8,13 @@ use self::evtx::{Evtx, Parser as EvtxParser};
 use self::json::{lines::Parser as JsonlParser, Json, Parser as JsonParser};
 use self::mft::{Mft, Parser as MftParser};
 use self::xml::{Parser as XmlParser, Xml};
+use self::hve::{Parser as HveParser, Hve};
 
 pub mod evtx;
 pub mod json;
 pub mod mft;
 pub mod xml;
+pub mod hve;
 
 #[derive(Clone)]
 pub enum Document {
@@ -20,6 +22,7 @@ pub enum Document {
     Mft(Mft),
     Json(Json),
     Xml(Xml),
+    Hve(Hve),
 }
 
 pub struct Documents<'a> {
@@ -34,6 +37,7 @@ pub enum Kind {
     Jsonl,
     Mft,
     Xml,
+    Hve,
     Unknown,
 }
 
@@ -45,6 +49,7 @@ impl Kind {
             Kind::Jsonl => Some(vec!["jsonl".to_string()]),
             Kind::Mft => Some(vec!["mft".to_string(), "bin".to_string()]),
             Kind::Xml => Some(vec!["xml".to_string()]),
+            Kind::Hve => Some(vec!["hve".to_string()]),
             Kind::Unknown => None,
         }
     }
@@ -73,6 +78,7 @@ pub enum Parser {
     Jsonl(JsonlParser),
     Mft(MftParser),
     Xml(XmlParser),
+    Hve(HveParser),
     Unknown,
 }
 
@@ -293,6 +299,8 @@ impl Reader {
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
             Parser::Xml(parser) => Box::new(parser.parse().map(|r| r.map(Document::Xml)))
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
+            Parser::Hve(parser) => Box::new(parser.parse().map(|r| r.map(Document::Hve)))
+                as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
             Parser::Unknown => {
                 Box::new(Unknown) as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>
             }
@@ -307,6 +315,7 @@ impl Reader {
             Parser::Jsonl(_) => Kind::Jsonl,
             Parser::Mft(_) => Kind::Mft,
             Parser::Xml(_) => Kind::Xml,
+            Parser::Hve(_) => Kind::Hve,
             Parser::Unknown => Kind::Unknown,
         }
     }

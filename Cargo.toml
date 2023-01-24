@@ -32,6 +32,7 @@ serde_yaml = "0.9"
 tau-engine = { version = "1.0", features = ["core", "json"] }
 term_size = "0.3"
 uuid = { version = "1.1", features = ["serde", "v4"] }
+notatin = { git = "https://github.com/strozfriedberg/notatin", rev = "9783169f4649c8df92f94b8c20421df8f4aa070a" }
 
 
 [dev-dependencies]
