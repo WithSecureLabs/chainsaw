@@ -282,6 +282,10 @@ impl Reader {
                         return Ok(Self {
                             parser: Parser::Xml(parser),
                         });
+                    } else if let Ok(parser) = HveParser::load(file) {
+                        return Ok(Self {
+                            parser: Parser::Hve(parser),
+                        });
                     }
                     // NOTE: We don't support the JSONL parser as it is too generic, maybe we are
                     // happy to use it as the fallback...?

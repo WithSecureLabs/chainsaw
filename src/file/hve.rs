@@ -21,8 +21,6 @@ impl Parser {
         };
         let parser: HveParser = ParserBuilder::from_path(String::from(path))
             .recover_deleted(false)
-            // .with_transaction_log(log1_path)
-            // .with_transaction_log(log2_path)
             .build()?;
         
         Ok(Self {inner: parser})
