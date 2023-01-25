@@ -517,6 +517,7 @@ impl Hunter {
                     File::Json(json) => hunt.mapper.mapped(json),
                     File::Mft(mft) => hunt.mapper.mapped(mft),
                     File::Xml(xml) => hunt.mapper.mapped(xml),
+                    File::Hve(hve) => hunt.mapper.mapped(hve),
                 };
 
                 let timestamp = match mapped.find(&hunt.timestamp) {
@@ -575,6 +576,7 @@ impl Hunter {
                                         File::Mft(mft) => hunt.mapper.mapped(mft),
                                         File::Json(json) => hunt.mapper.mapped(json),
                                         File::Xml(xml) => hunt.mapper.mapped(xml),
+                                        File::Hve(hve) => hunt.mapper.mapped(hve),
                                     };
 
                                     if !rule.is_kind(kind) {
@@ -677,6 +679,7 @@ impl Hunter {
                     File::Mft(mft) => mft.clone(),
                     File::Json(json) => json.clone(),
                     File::Xml(xml) => xml.clone(),
+                    File::Hve(hve) => hve.clone(),
                 };
                 detections.push(Detections {
                     hits,
@@ -710,6 +713,7 @@ impl Hunter {
                             File::Mft(mft) => mft.clone(),
                             File::Json(json) => json.clone(),
                             File::Xml(xml) => xml.clone(),
+                            File::Hve(hve) => hve.clone(),
                         };
                         documents.push(Document {
                             kind: kind.clone(),

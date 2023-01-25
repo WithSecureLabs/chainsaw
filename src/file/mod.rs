@@ -202,6 +202,28 @@ impl Reader {
                         parser: Parser::Xml(parser),
                     })
                 }
+                "hve" => {
+                    let parser = match HveParser::load(file) {
+                        Ok(parser) => parser,
+                        Err(e) => {
+                            if skip_errors {
+                                cs_eyellowln!(
+                                    "[!] failed to load file '{}' - {}\n",
+                                    file.display(),
+                                    e
+                                );
+                                return Ok(Self {
+                                    parser: Parser::Unknown,
+                                });
+                            } else {
+                                anyhow::bail!(e);
+                            }
+                        }
+                    };
+                    Ok(Self {
+                        parser: Parser::Hve(parser),
+                    })
+                }
                 _ => {
                     if load_unknown {
                         if let Ok(parser) = EvtxParser::load(file) {
