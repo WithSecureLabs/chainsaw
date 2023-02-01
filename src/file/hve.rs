@@ -1,5 +1,5 @@
-use anyhow::Error;
-use chrono::{NaiveDateTime, DateTime, Utc, Datelike};
+use anyhow::{Error, Result, bail, anyhow};
+use chrono::{NaiveDateTime, DateTime, Utc};
 use notatin::{
     cell_key_node::CellKeyNode,
     parser::{Parser as HveParser, ParserIterator},
@@ -38,15 +38,15 @@ pub struct ProgramArtifact {
 }
 
 pub struct ShimCacheEntry {
-    signature: String,
-    path_size: usize,
-    path: String,
-    last_modified_time: Option<DateTime<Utc>>,
-    data_size: usize,
-    data: Vec<u8>,
-    executed: Option<bool>,
+    pub signature: String,
+    pub path_size: usize,
+    pub path: String,
+    pub last_modified_time: Option<DateTime<Utc>>,
+    pub data_size: usize,
+    pub data: Vec<u8>,
+    pub executed: Option<bool>,
     // controlset:
-    cache_entry_position: u32,
+    pub cache_entry_position: u32,
 }
 
 
@@ -74,11 +74,66 @@ pub struct AmcacheArtifact {
     pub programs: HashMap<String, ProgramArtifact>,
 }
 
+pub struct AmcacheFileIterator<'a> {
+    artifact: &'a AmcacheArtifact,
+    program_iterator: std::collections::hash_map::Iter<'a, String, ProgramArtifact>,
+    file_iterator: Option<std::slice::Iter<'a, InventoryApplicationFileArtifact>>,
+}
+
+impl<'a> AmcacheFileIterator<'a> {
+    fn new(amcache_artifact: &'a AmcacheArtifact) -> Self {
+        let mut program_iterator = amcache_artifact.programs.iter();
+        let first_program = program_iterator.next();
+        let file_iterator = match first_program {
+            Some((_program_id, program)) => Some(program.files.iter()),
+            None => None,
+        };
+        Self {program_iterator, file_iterator, artifact: amcache_artifact}
+    }
+}
+
+impl<'a> Iterator for AmcacheFileIterator<'a> {
+    type Item = &'a InventoryApplicationFileArtifact;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let next_file = match &mut self.file_iterator {
+            Some(iterator) => iterator.next(),
+            None => None,
+        };
+        match next_file {
+            Some(file) => Some(file),
+            None => {
+                loop {
+                    let next_program = self.program_iterator.next();
+                    match next_program {
+                        None => break None,
+                        Some((_program_id, program)) => {
+                            let mut file_iterator = program.files.iter();
+                            let next_file = file_iterator.next();
+                            self.file_iterator = Some(file_iterator);
+                            match next_file {
+                                None => continue,
+                                Some(file) => break Some(file),
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl AmcacheArtifact {
+    pub fn iter_files(&self) -> AmcacheFileIterator {
+        AmcacheFileIterator::new(self)
+    }
+}
+
 impl Parser {
     pub fn load(file: &Path) -> crate::Result<Self> {
         let path = match file.to_str() {
             Some(path) => path,
-            None => anyhow::bail!("Could not convert path to string!"),
+            None => bail!("Could not convert path to string!"),
         };
         let parser: HveParser = ParserBuilder::from_path(String::from(path))
             .recover_deleted(false)
@@ -87,7 +142,7 @@ impl Parser {
         Ok(Self { inner: parser })
     }
 
-    pub fn parse(&mut self) -> impl Iterator<Item = Result<Json, Error>> + '_ {
+    pub fn parse(&mut self) -> impl Iterator<Item = Result<Json>> + '_ {
         ParserIterator::new(&self.inner)
             .iter()
             .map(|c| match serde_json::to_value(c) {
@@ -98,7 +153,7 @@ impl Parser {
 
     //TODO: parsing of different versions of Amcache
     pub fn parse_amcache(&mut self) -> anyhow::Result<AmcacheArtifact> {
-        fn string_value_from_key(key: &CellKeyNode, value_name: &str) -> Result<String, Error> {
+        fn string_value_from_key(key: &CellKeyNode, value_name: &str) -> Result<String> {
             let Some(key_value) = key.get_value(value_name) else {
                 return Err(anyhow::anyhow!(
                     "Could not extract value \"{}\" from key \"{}\"",
@@ -115,7 +170,7 @@ impl Parser {
             .inner
             .get_key("Root\\InventoryApplication", false)?;
         let Some(mut node_inventory_application) = key_inventory_application_file else {
-            return Err(anyhow::anyhow!("Could not find InventoryApplication key!"));
+            return Err(anyhow!("Could not find InventoryApplication key!"));
         };
         let subkeys = node_inventory_application.read_sub_keys(&mut self.inner);
         for key in subkeys {
@@ -147,7 +202,7 @@ impl Parser {
             .inner
             .get_key("Root\\InventoryApplicationFile", false)?;
         let Some(mut node_inventory_application_file) = key_inventory_application_file else {
-            return Err(anyhow::anyhow!("Could not find InventoryApplicationFile key!"));
+            return Err(anyhow!("Could not find InventoryApplicationFile key!"));
         };
         let subkeys = node_inventory_application_file.read_sub_keys(&mut self.inner);
         for key in subkeys {
@@ -163,8 +218,8 @@ impl Parser {
 
             let sha1_hash = String::from(&file_id[4..]);
 
-            let last_modified_ts = win32_ts_to_datetime(key.detail.last_key_written_date_and_time())
-                .ok_or(anyhow::anyhow!("Could not parse timestamp!"))?;
+            let last_modified_ts = win32_ts_to_datetime(
+                key.detail.last_key_written_date_and_time())?;
             let file_artifact = InventoryApplicationFileArtifact {
                 program_id,
                 file_id,
@@ -188,17 +243,17 @@ impl Parser {
         Ok(AmcacheArtifact { programs })
     }
 
-    pub fn parse_shimcache (&mut self) -> anyhow::Result<Vec<ShimCacheEntry>> {
+    pub fn parse_shimcache (&mut self) -> Result<Vec<ShimCacheEntry>> {
         let shimcache_key = self
             .inner
             //TODO: get control set dynamically instead of hardcoded
             .get_key("ControlSet001\\Control\\Session Manager\\AppCompatCache", false)?.unwrap();
 
         let shimcache_cell_value = shimcache_key.get_value("AppCompatCache")
-            .ok_or(anyhow::anyhow!("AppCompatCache key not found!"))?.get_content().0;
+            .ok_or(anyhow!("AppCompatCache key not found!"))?.get_content().0;
         let shimcache_bytes = match shimcache_cell_value {
             notatin::cell_value::CellValue::Binary(bytes) => bytes,
-            _ => anyhow::bail!("Shimcache value was not of type Binary!"),
+            _ => bail!("Shimcache value was not of type Binary!"),
         };
 
         let mut shimcache_entries: Vec<ShimCacheEntry> = Vec::new();
@@ -211,19 +266,19 @@ impl Parser {
         if sig_num == 0xdeadbeef // win xp
         || sig_num == 0xbadc0ffe // win vista
         {
-            anyhow::bail!("Unsupported windows shimcache version!")
+            bail!("Unsupported windows shimcache version!")
         }
         // Windows 7 shimcache
         else if sig_num == 0xbadc0fee {
-            anyhow::bail!("Windows 7 shimcache parsing not yet implemented!")
+            bail!("Windows 7 shimcache parsing not yet implemented!")
         }
         // Windows 8 shimcache
         else if cache_signature == "00ts" {
-            anyhow::bail!("Windows 8 shimcache parsing not yet implemented!")
+            bail!("Windows 8 shimcache parsing not yet implemented!")
         }
         // Windows 8.1 shimcache
         else if cache_signature == "10ts" {
-            anyhow::bail!("Windows 8.1 shimcache parsing not yet implemented!")
+            bail!("Windows 8.1 shimcache parsing not yet implemented!")
         }
         else {
             // windows 10 check
@@ -255,8 +310,7 @@ impl Parser {
                     index += data_size;
 
                     let last_modified_time = if last_modified_time_utc_win32 != 0 {
-                        let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)
-                            .ok_or(anyhow::anyhow!("Could not parse shimcache entry timestamp!"))?;
+                        let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;
                         let last_modified_date_time = DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
                         Some(last_modified_date_time)
                     } else {
@@ -284,12 +338,12 @@ impl Parser {
     }
 }
 
-fn win32_ts_to_datetime(ts_win32: u64) -> Option<NaiveDateTime> {
-    let ts_unix = ((ts_win32 / 10_000) as i64 - 11644473600000);
-    chrono::prelude::NaiveDateTime::from_timestamp_millis(ts_unix)
+fn win32_ts_to_datetime(ts_win32: u64) -> Result<NaiveDateTime> {
+    let ts_unix = (ts_win32 / 10_000) as i64 - 11644473600000;
+    NaiveDateTime::from_timestamp_millis(ts_unix).ok_or(anyhow!("Timestamp out of range!"))
 }
 
-fn win_reg_str_ts_to_date_time(ts_str: &str) -> anyhow::Result<NaiveDateTime> {
+fn win_reg_str_ts_to_date_time(ts_str: &str) -> Result<NaiveDateTime> {
     Ok(NaiveDateTime::parse_from_str(ts_str, "%m/%d/%Y %H:%M:%S")?)
 }
 
@@ -298,9 +352,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn amcache_parsing_works() -> Result<(), Error> {
+    fn amcache_parsing_works_win10() -> Result<(), Error> {
         let mut parser = Parser::load(&Path::new(
-            "/mnt/hgfs/vm_shared/Module 5 - Disk/cache/amcache/Amcache.hve",
+            "/mnt/hgfs/vm_shared/win10_vm_hives/am/Amcache.hve",
         ))?;
         let artifact_map = parser.parse_amcache()?;
         println!("{:#?}", artifact_map);
@@ -312,7 +366,7 @@ mod tests {
         let mut parser = Parser::load(&Path::new(
             "/mnt/hgfs/vm_shared/Module 5 - Disk/cache/shimcache/SYSTEM",
         ))?;
-        let shimcache_entries = parser.parse_shimcache()?;
+        let _shimcache_entries = parser.parse_shimcache()?;
         Ok(())
     }
 
