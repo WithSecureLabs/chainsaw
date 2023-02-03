@@ -20,15 +20,15 @@ enum TimeLineTimestamp {
 }
 
 #[derive(Debug)]
-struct TimelineEntity<'a> {
-    shimcache_entry: &'a ShimCacheEntry,
-    amcache_entry: Option<&'a FileArtifact>,
+struct TimelineEntity {
+    shimcache_entry: ShimCacheEntry,
+    amcache_entry: Option<FileArtifact>,
     timestamp: Option<TimeLineTimestamp>,
     amcache_ts_match: bool,
 }
 
-impl<'a> TimelineEntity<'a> {
-    fn new(shimcache_entry: &'a ShimCacheEntry) -> Self {
+impl TimelineEntity {
+    fn new(shimcache_entry: ShimCacheEntry) -> Self {
         Self {
             shimcache_entry,
             amcache_entry: None,
@@ -38,7 +38,10 @@ impl<'a> TimelineEntity<'a> {
     }
 }
 
-fn amcache_shimcache_timeline(amcache_path: &str, shimcache_path: &str) -> Result<Option<()>> {
+fn amcache_shimcache_timeline(
+    amcache_path: &str,
+    shimcache_path: &str
+) -> Result<Option<Vec<TimelineEntity>>> {
     let mut amcache_parser = HveParser::load(&Path::new(amcache_path))?;
     let mut shimcache_parser = HveParser::load(&Path::new(shimcache_path))?;
 
@@ -52,8 +55,9 @@ fn amcache_shimcache_timeline(amcache_path: &str, shimcache_path: &str) -> Resul
     let regexes = config_patterns.map(|p| Regex::new(p).unwrap());
 
     // Create timeline entities from shimcache entities
-    let mut timeline_entities: Vec<Box<TimelineEntity>> = shimcache.iter().map(
-        |e| Box::new(TimelineEntity::new(&e))).collect();
+    let mut timeline_entities: Vec<TimelineEntity> = shimcache.into_iter().map(
+        |e| TimelineEntity::new(e)
+    ).collect();
 
     // Check for matches with config patterns and set timestamp
     let mut match_indices: Vec<usize> = Vec::new();
@@ -73,6 +77,7 @@ fn amcache_shimcache_timeline(amcache_path: &str, shimcache_path: &str) -> Resul
         }
     }
     if match_indices.is_empty() {
+        // If there were no matches, no additional timeline data can be inferred
         return Ok(None);
     }
 
@@ -117,7 +122,7 @@ fn amcache_shimcache_timeline(amcache_path: &str, shimcache_path: &str) -> Resul
             match &entity.shimcache_entry.program {
                 ProgramType::Executable { path } => {
                     if file.path == path.to_lowercase() {
-                        entity.amcache_entry = Some(file);
+                        entity.amcache_entry = Some(file.clone());
                         if let Some(TimeLineTimestamp::Range(from, to)) = entity.timestamp {
                             let amcache_ts = file.last_modified_ts;
                             if from < amcache_ts && amcache_ts < to {
@@ -133,11 +138,9 @@ fn amcache_shimcache_timeline(amcache_path: &str, shimcache_path: &str) -> Resul
         }
     }
 
-    for entity in timeline_entities {
-        println!("{};{:?};{:?};{:?}", entity.shimcache_entry.cache_entry_position, entity.amcache_ts_match, entity.timestamp, entity.shimcache_entry.program);
-    }
+    //TODO: refine timestamp ranges further by using amcache matched exact timestamps
 
-    Ok(Some(()))
+    Ok(Some(timeline_entities))
 }
 
 #[cfg(test)]
@@ -146,10 +149,13 @@ mod tests {
 
     #[test]
     fn combine_shimcache_amcache() -> Result<()> {
-        amcache_shimcache_timeline(
+        let timeline = amcache_shimcache_timeline(
             "/mnt/hgfs/vm_shared/win10_vm_hives/am/Amcache.hve",
             "/mnt/hgfs/vm_shared/win10_vm_hives/shim/SYSTEM"
-        )?;
+        )?.unwrap();
+        for entity in timeline {
+            println!("{};{:?};{:?};{:?}", entity.shimcache_entry.cache_entry_position, entity.amcache_ts_match, entity.timestamp, entity.shimcache_entry.program);
+        }
         Ok(())
     }
 }

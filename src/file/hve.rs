@@ -15,7 +15,7 @@ pub struct Parser {
     pub inner: HveParser,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InventoryApplicationFileArtifact {
     pub program_id: String,
     pub file_id: String,
