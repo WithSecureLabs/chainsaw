@@ -5,6 +5,7 @@ use notatin::{
     parser::{Parser as HveParser, ParserIterator},
     parser_builder::ParserBuilder,
 };
+use regex::Regex;
 use serde_json::Value as Json;
 use std::{path::Path, collections::HashMap, fmt::Display};
 
@@ -21,7 +22,7 @@ pub struct InventoryApplicationFileArtifact {
     pub path: String,
     pub sha1_hash: String,
     pub link_date: Option<NaiveDateTime>,
-    pub last_modified_ts: NaiveDateTime,
+    pub last_modified_ts: DateTime<Utc>,
 }
 
 #[derive(Debug)]
@@ -29,6 +30,7 @@ pub struct InventoryApplicationArtifact {
     pub program_id: String,
     pub program_name: String,
     pub install_date: Option<NaiveDateTime>,
+    pub last_modified_ts: DateTime<Utc>,
 }
 #[derive(Debug)]
 pub struct ProgramArtifact {
@@ -37,11 +39,23 @@ pub struct ProgramArtifact {
     pub files: Vec<InventoryApplicationFileArtifact>,
 }
 
+#[derive(Debug)]
+pub enum ProgramType {
+    Program {
+        program_name: String,
+        full_string: String,
+    },
+    Executable {
+        path: String
+    }
+}
+
+#[derive(Debug)]
 pub struct ShimCacheEntry {
     pub signature: String,
     pub path_size: usize,
-    pub path: String,
-    pub last_modified_time: Option<DateTime<Utc>>,
+    pub program: ProgramType,
+    pub last_modified_ts: Option<DateTime<Utc>>,
     pub data_size: usize,
     pub data: Vec<u8>,
     pub executed: Option<bool>,
@@ -52,9 +66,13 @@ pub struct ShimCacheEntry {
 
 impl Display for ShimCacheEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.last_modified_time {
-            Some(ts) => write!(f, "{}:\t{:?}, {}", self.cache_entry_position, ts, self.path),
-            None => write!(f, "{}:\t {}", self.cache_entry_position, self.path),
+        let path_or_name = match &self.program {
+            ProgramType::Program { program_name, .. } => program_name,
+            ProgramType::Executable { path } => path,
+        };
+        match self.last_modified_ts {
+            Some(ts) => write!(f, "{}:\t{:?}, {}", self.cache_entry_position, ts, path_or_name),
+            None => write!(f, "{}:\t {}", self.cache_entry_position, path_or_name),
         }
     }
 }
@@ -155,7 +173,7 @@ impl Parser {
     pub fn parse_amcache(&mut self) -> anyhow::Result<AmcacheArtifact> {
         fn string_value_from_key(key: &CellKeyNode, value_name: &str) -> Result<String> {
             let Some(key_value) = key.get_value(value_name) else {
-                return Err(anyhow::anyhow!(
+                return Err(anyhow!(
                     "Could not extract value \"{}\" from key \"{}\"",
                     value_name, key.get_pretty_path()
                 ));
@@ -174,6 +192,7 @@ impl Parser {
         };
         let subkeys = node_inventory_application.read_sub_keys(&mut self.inner);
         for key in subkeys {
+            let last_modified_ts = key.last_key_written_date_and_time();
             let program_id = key.key_name.clone();
             let program_name = string_value_from_key(&key, "Name")?;
             let install_date = string_value_from_key(&key, "InstallDate")?;
@@ -187,6 +206,7 @@ impl Parser {
             let mut program_artifact = ProgramArtifact::new(&program_id);
 
             let app_artifact = InventoryApplicationArtifact {
+                last_modified_ts,
                 program_id,
                 program_name,
                 install_date,
@@ -218,8 +238,7 @@ impl Parser {
 
             let sha1_hash = String::from(&file_id[4..]);
 
-            let last_modified_ts = win32_ts_to_datetime(
-                key.detail.last_key_written_date_and_time())?;
+            let last_modified_ts = key.last_key_written_date_and_time();
             let file_artifact = InventoryApplicationFileArtifact {
                 program_id,
                 file_id,
@@ -261,7 +280,6 @@ impl Parser {
         
         let sig_num = u32::from_le_bytes(shimcache_bytes[0..4].try_into()?);
         let cache_signature = std::str::from_utf8(&shimcache_bytes[128..132])?;
-        println!("Signature: {cache_signature}, Signature number: {:#x}", sig_num);
 
         if sig_num == 0xdeadbeef // win xp
         || sig_num == 0xbadc0ffe // win vista
@@ -281,10 +299,11 @@ impl Parser {
             bail!("Windows 8.1 shimcache parsing not yet implemented!")
         }
         else {
-            // windows 10 check
             let offset_to_records = sig_num.clone() as usize;
             let cache_signature = std::str::from_utf8(&shimcache_bytes[offset_to_records..offset_to_records+4])?;
+            // Windows 10 shimcache
             if cache_signature == "10ts" {
+                let re = Regex::new(r"^([0-9a-f]{8})\s+([0-9a-f]{16})\s+([0-9a-f]{16})\s+([\w]{4})\s+([\w.]+)\s+(\w+)\s*(\w*)$").unwrap();
                 let mut index = offset_to_records.clone();
                 let mut cache_entry_position = 0;
                 let len = shimcache_bytes.len();
@@ -300,7 +319,14 @@ impl Parser {
                     index += 4;
                     let path_size = u16::from_le_bytes(shimcache_bytes[index..index+2].try_into()?) as usize;
                     index += 2;
-                    let path = std::str::from_utf8(&shimcache_bytes[index..index+path_size])?.to_string();
+                    let path = utf16_to_string(&shimcache_bytes[index..index+path_size])?;
+                    let program: ProgramType;
+                    if re.is_match(&path) {
+                        let program_name = re.captures(&path).unwrap().get(5).unwrap().as_str().to_string();
+                        program = ProgramType::Program { program_name, full_string: path };
+                    } else {
+                        program = ProgramType::Executable { path };
+                    }
                     index += path_size;
                     let last_modified_time_utc_win32 = u64::from_le_bytes(shimcache_bytes[index..index+8].try_into()?);
                     index += 8;
@@ -309,7 +335,7 @@ impl Parser {
                     let data = shimcache_bytes[index..index+data_size].to_vec();
                     index += data_size;
 
-                    let last_modified_time = if last_modified_time_utc_win32 != 0 {
+                    let last_modified_ts = if last_modified_time_utc_win32 != 0 {
                         let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;
                         let last_modified_date_time = DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
                         Some(last_modified_date_time)
@@ -322,8 +348,8 @@ impl Parser {
                         data,
                         data_size,
                         executed: None,
-                        last_modified_time,
-                        path,
+                        last_modified_ts,
+                        program,
                         path_size,
                         signature,
                     };
@@ -336,6 +362,21 @@ impl Parser {
 
         Ok(shimcache_entries)
     }
+}
+
+fn utf16_to_string(bytes: &[u8]) -> Result<String> {
+    let bytes_vec = Vec::from_iter(bytes);
+    let chunk_iterator = bytes_vec
+        .chunks_exact(2)
+        .into_iter();
+    if chunk_iterator.remainder().len() > 0 {
+        bail!("Bytes did not align to 16 bits!");
+    }
+    let word_vector: Vec<u16> = chunk_iterator
+        .map(|a| u16::from_ne_bytes([*a[0], *a[1]]))
+        .collect();
+    let title = word_vector.as_slice();
+    Ok(String::from_utf16(title)?)
 }
 
 fn win32_ts_to_datetime(ts_win32: u64) -> Result<NaiveDateTime> {
