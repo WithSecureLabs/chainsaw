@@ -1,7 +1,7 @@
-use std::{path::Path, time};
+use std::{path::Path};
 
 use anyhow::{Result};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, SecondsFormat};
 use regex::Regex;
 
 use crate::file::hve::{
@@ -22,7 +22,7 @@ enum TimelineTimestamp {
 #[derive(Debug)]
 struct TimelineEntity {
     shimcache_entry: ShimCacheEntry,
-    amcache_entry: Option<FileArtifact>,
+    amcache_file: Option<FileArtifact>,
     timestamp: Option<TimelineTimestamp>,
     amcache_ts_match: bool,
 }
@@ -31,7 +31,7 @@ impl TimelineEntity {
     fn new(shimcache_entry: ShimCacheEntry) -> Self {
         Self {
             shimcache_entry,
-            amcache_entry: None,
+            amcache_file: None,
             timestamp: None,
             amcache_ts_match: false,
         }
@@ -134,7 +134,7 @@ fn amcache_shimcache_timeline(
             match &entity.shimcache_entry.program {
                 ProgramType::Executable { path } => {
                     if file.path == path.to_lowercase() {
-                        entity.amcache_entry = Some(file.clone());
+                        entity.amcache_file = Some(file.clone());
                         if let Some(TimelineTimestamp::Range(from, to)) = entity.timestamp {
                             let amcache_ts = file.last_modified_ts;
                             if from < amcache_ts && amcache_ts < to {
@@ -144,8 +144,28 @@ fn amcache_shimcache_timeline(
                         }
                     }
                 },
-                //TODO: parse also ProgramType::Program type
                 ProgramType::Program { .. } => (),
+            }
+        }
+    }
+    for (_program_id, program) in amcache.programs {
+        if let Some(application) = program.application_artifact {
+            for mut entity in &mut timeline_entities {
+                match &entity.shimcache_entry.program {
+                    ProgramType::Executable { .. } => (),
+                    ProgramType::Program { program_name, .. } => {
+                        if program_name == &application.program_name {
+                            //TODO: link amcache program to timeline entity
+                            if let Some(TimelineTimestamp::Range(from, to)) = entity.timestamp {
+                                let amcache_ts = application.last_modified_ts;
+                                if from < amcache_ts && amcache_ts < to {
+                                    entity.amcache_ts_match = true;
+                                    entity.timestamp = Some(TimelineTimestamp::Exact(amcache_ts));
+                                }
+                            }
+                        }
+                    },
+                }
             }
         }
     }
@@ -162,6 +182,54 @@ fn amcache_shimcache_timeline(
     Ok(Some(timeline_entities))
 }
 
+fn output_timeline_csv(timeline: &Vec<TimelineEntity>) {
+    println!("timestamp;timestamp description;evidence type;shimcache entry position;shimcache timestamp;amcache timestamp;entry details");
+    for entity in timeline {
+        let timestamp: String;
+        let ts_description: &str;
+        let entry_details: String;
+        let shimcache_entry_pos: u32;
+        let shimcache_timestamp: String;
+        let amcache_timestamp: String;
+
+        timestamp = match entity.timestamp {
+            Some(TimelineTimestamp::Exact(ts)) => ts.to_rfc3339_opts(SecondsFormat::AutoSi, true),
+            _ => String::new(),
+        };
+        ts_description = if entity.amcache_ts_match {
+            "Execution timestamp match with amcache"
+        } else if let Some(TimelineTimestamp::Exact(_ts)) = entity.timestamp {
+            "Shimcache compile timestamp"
+        } else { "" };
+        shimcache_entry_pos = entity.shimcache_entry.cache_entry_position;
+        shimcache_timestamp = if let Some(ts) = entity.shimcache_entry.last_modified_ts {
+            ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
+        } else { String::new() };
+        amcache_timestamp = if let Some(file) = &entity.amcache_file {
+            file.last_modified_ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
+        } else { String::new() };
+
+        entry_details = if !entity.amcache_file.is_none() {
+            format!("{:?}", &entity.amcache_file.as_ref().unwrap())
+        } else {
+            format!("{:?}", entity.shimcache_entry.program)
+        };
+
+        println!("{};{};shimcache;{};{};{};{}",
+            timestamp,
+            ts_description,
+            shimcache_entry_pos,
+            shimcache_timestamp,
+            amcache_timestamp,
+            entry_details,
+        );
+
+        if entity.amcache_ts_match {
+            println!("{timestamp};amcache timestamp;amcache;;;{timestamp};");
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,10 +240,11 @@ mod tests {
             "/mnt/hgfs/vm_shared/win10_vm_hives/am/Amcache.hve",
             "/mnt/hgfs/vm_shared/win10_vm_hives/shim/SYSTEM"
         )?.unwrap();
-        println!("shimcache_position;amcache_timestamp_match;timeline_ts;program");
-        for entity in timeline {
-            println!("{};{:?};{:?};{:?}", entity.shimcache_entry.cache_entry_position, entity.amcache_ts_match, entity.timestamp, entity.shimcache_entry.program);
-        }
+        // println!("shimcache_position;amcache_timestamp_match;timeline_ts;program");
+        // for entity in timeline {
+        //     println!("{};{:?};{:?};{:?}", entity.shimcache_entry.cache_entry_position, entity.amcache_ts_match, entity.timestamp, entity.shimcache_entry.program);
+        // }
+        output_timeline_csv(&timeline);
         Ok(())
     }
 }
