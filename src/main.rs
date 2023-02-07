@@ -15,7 +15,7 @@ use clap::{Parser, Subcommand};
 
 use chainsaw::{
     cli, get_files, lint as lint_rule, load as load_rule, set_writer, Filter, Format, Hunter,
-    RuleKind, RuleLevel, RuleStatus, Searcher, Writer,
+    RuleKind, RuleLevel, RuleStatus, Searcher, Writer, Timeliner,
 };
 
 #[derive(Parser)]
@@ -202,6 +202,22 @@ enum Command {
         /// (YYYY-MM-ddTHH:mm:SS)
         #[arg(long = "to", requires = "timestamp")]
         to: Option<NaiveDateTime>,
+    },
+
+    /// Create an execution timeline by combining entries from shimcache and amcache
+    Timeline {
+        /// The path to the amcache artifact
+        #[arg(short = 'a', long = "amcache")]
+        amcache: Option<PathBuf>,
+        /// The path to the shimcache artifact
+        #[arg(short = 's', long = "shimcache")]
+        shimcache: Option<PathBuf>,
+        /// The path to the config file containing regex patterns to match
+        #[arg(short = 'c', long = "config")]
+        config: Option<PathBuf>,
+        /// A path to output results to.
+        #[arg(short = 'o', long = "output")]
+        output: Option<PathBuf>,
     },
 }
 
@@ -725,6 +741,27 @@ fn run() -> Result<()> {
                 cs_println!("]");
             }
             cs_eprintln!("[+] Found {} hits", hits);
+        }
+        Command::Timeline {
+            amcache,
+            shimcache,
+            config,
+            output,
+        } => {
+            if !args.no_banner {
+                print_title();
+            }
+            let shimcache_path = shimcache.ok_or(anyhow::anyhow!("Shimcache file path not provided"))?;
+            let amcache_path = amcache.ok_or(anyhow::anyhow!("Amcache file path not provided"))?;
+            let config_path = config.ok_or(anyhow::anyhow!("Config file path not provided"))?;
+            init_writer(output.clone(), false, false, false)?;
+
+
+            let timeliner = Timeliner::new(amcache_path, shimcache_path);
+            let timeline = timeliner.amcache_shimcache_timeline(&config_path)?;
+            if let Some(entities) = timeline {
+                Timeliner::output_timeline_csv(&entities);
+            }
         }
     }
     Ok(())

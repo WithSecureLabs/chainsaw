@@ -1,4 +1,4 @@
-use anyhow::{Error, Result, bail, anyhow};
+use anyhow::{Result, bail, anyhow};
 use chrono::{NaiveDateTime, DateTime, Utc};
 use notatin::{
     cell_key_node::CellKeyNode,
@@ -93,7 +93,6 @@ pub struct AmcacheArtifact {
 }
 
 pub struct AmcacheFileIterator<'a> {
-    artifact: &'a AmcacheArtifact,
     program_iterator: std::collections::hash_map::Iter<'a, String, ProgramArtifact>,
     file_iterator: Option<std::slice::Iter<'a, InventoryApplicationFileArtifact>>,
 }
@@ -106,7 +105,7 @@ impl<'a> AmcacheFileIterator<'a> {
             Some((_program_id, program)) => Some(program.files.iter()),
             None => None,
         };
-        Self {program_iterator, file_iterator, artifact: amcache_artifact}
+        Self {program_iterator, file_iterator}
     }
 }
 
@@ -188,7 +187,7 @@ impl Parser {
             .inner
             .get_key("Root\\InventoryApplication", false)?;
         let Some(mut node_inventory_application) = key_inventory_application_file else {
-            return Err(anyhow!("Could not find InventoryApplication key!"));
+            bail!("Could not find InventoryApplication key!");
         };
         let subkeys = node_inventory_application.read_sub_keys(&mut self.inner);
         for key in subkeys {
@@ -222,7 +221,7 @@ impl Parser {
             .inner
             .get_key("Root\\InventoryApplicationFile", false)?;
         let Some(mut node_inventory_application_file) = key_inventory_application_file else {
-            return Err(anyhow!("Could not find InventoryApplicationFile key!"));
+            bail!("Could not find InventoryApplicationFile key!");
         };
         let subkeys = node_inventory_application_file.read_sub_keys(&mut self.inner);
         for key in subkeys {
@@ -393,7 +392,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn amcache_parsing_works_win10() -> Result<(), Error> {
+    fn amcache_parsing_works_win10() -> Result<()> {
         let mut parser = Parser::load(&Path::new(
             "/mnt/hgfs/vm_shared/win10_vm_hives/am/Amcache.hve",
         ))?;
@@ -403,7 +402,7 @@ mod tests {
     }
 
     #[test]
-    fn shimcache_parsing_works_win7() -> Result<(), Error> {
+    fn shimcache_parsing_works_win7() -> Result<()> {
         let mut parser = Parser::load(&Path::new(
             "/mnt/hgfs/vm_shared/Module 5 - Disk/cache/shimcache/SYSTEM",
         ))?;
@@ -412,7 +411,7 @@ mod tests {
     }
 
     #[test]
-    fn shimcache_parsing_works_win10() -> Result<(), Error> {
+    fn shimcache_parsing_works_win10() -> Result<()> {
         let mut parser = Parser::load(&Path::new(
             "/mnt/hgfs/vm_shared/win10_vm_hives/shim/SYSTEM",
         ))?;
