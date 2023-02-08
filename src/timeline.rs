@@ -174,7 +174,7 @@ impl Timeliner {
                         ProgramType::Executable { .. } => (),
                         ProgramType::Program { program_name, .. } => {
                             if program_name == &application.program_name {
-                                //TODO: link amcache program to timeline entity
+                                // TODO: link amcache program to timeline entity
                                 if let Some(TimelineTimestamp::Range(from, to)) = entity.timestamp {
                                     let amcache_ts = application.last_modified_ts;
                                     if from < amcache_ts && amcache_ts < to {
@@ -204,7 +204,8 @@ impl Timeliner {
     }
 
     pub fn output_timeline_csv(timeline: &Vec<TimelineEntity>) {
-        cs_println!("timestamp;timestamp description;evidence type;shimcache entry position;shimcache timestamp;amcache timestamp;entry details");
+        cs_println!("timestamp;timestamp description;evidence type;shimcache entry position;shimcache timestamp;amcache timestamp;entry details;timeline entry number");
+        let mut timeline_entry_nr = 0;
         for entity in timeline {
             let timestamp: String;
             let ts_description: &str;
@@ -212,7 +213,7 @@ impl Timeliner {
             let shimcache_entry_pos: u32;
             let shimcache_timestamp: String;
             let amcache_timestamp: String;
-    
+
             timestamp = match entity.timestamp {
                 Some(TimelineTimestamp::Exact(ts)) => ts.to_rfc3339_opts(SecondsFormat::AutoSi, true),
                 _ => String::new(),
@@ -236,17 +237,20 @@ impl Timeliner {
                 format!("{:?}", entity.shimcache_entry.program)
             };
     
-            cs_println!("{};{};shimcache;{};{};{};{}",
+            cs_println!("{};{};shimcache;{};{};{};{};{}",
                 timestamp,
                 ts_description,
                 shimcache_entry_pos,
                 shimcache_timestamp,
                 amcache_timestamp,
                 entry_details,
+                timeline_entry_nr,
             );
+            timeline_entry_nr += 1;
     
             if entity.amcache_ts_match {
-                cs_println!("{timestamp};amcache timestamp;amcache;;;{timestamp};");
+                cs_println!("{timestamp};amcache timestamp;amcache;;;{timestamp};;{timeline_entry_nr}");
+                timeline_entry_nr += 1;
             }
         }
     }

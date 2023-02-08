@@ -1,3 +1,5 @@
+use std::{path::{PathBuf, Path}, collections::HashMap, fmt::Display};
+
 use anyhow::{Result, bail, anyhow};
 use chrono::{NaiveDateTime, DateTime, Utc};
 use notatin::{
@@ -7,7 +9,6 @@ use notatin::{
 };
 use regex::Regex;
 use serde_json::Value as Json;
-use std::{path::{PathBuf, Path}, collections::HashMap, fmt::Display};
 
 pub type Hve = Json;
 
@@ -20,7 +21,7 @@ pub struct InventoryApplicationFileArtifact {
     pub program_id: String,
     pub file_id: String,
     pub path: String,
-    pub sha1_hash: String,
+    pub sha1_hash: Option<String>,
     pub link_date: Option<NaiveDateTime>,
     pub last_modified_ts: DateTime<Utc>,
 }
@@ -113,28 +114,19 @@ impl<'a> Iterator for AmcacheFileIterator<'a> {
     type Item = &'a InventoryApplicationFileArtifact;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let next_file = match &mut self.file_iterator {
-            Some(iterator) => iterator.next(),
-            None => None,
-        };
+        let next_file = self.file_iterator.as_mut().map(|i| i.next()).flatten();
         match next_file {
             Some(file) => Some(file),
             None => {
-                loop {
-                    let next_program = self.program_iterator.next();
-                    match next_program {
-                        None => break None,
-                        Some((_program_id, program)) => {
-                            let mut file_iterator = program.files.iter();
-                            let next_file = file_iterator.next();
-                            self.file_iterator = Some(file_iterator);
-                            match next_file {
-                                None => continue,
-                                Some(file) => break Some(file),
-                            }
-                        }
+                while let Some((_program_id, program)) = self.program_iterator.next() {
+                    let mut file_iterator = program.files.iter();
+                    let next_file = file_iterator.next();
+                    self.file_iterator = Some(file_iterator);
+                    if next_file.is_some() {
+                        return next_file;
                     }
                 }
+                None
             }
         }
     }
@@ -164,14 +156,14 @@ impl Parser {
             })
     }
 
-    //TODO: parsing of different versions of Amcache
+    // TODO: parsing of different versions of Amcache
     pub fn parse_amcache(&mut self) -> anyhow::Result<AmcacheArtifact> {
         fn string_value_from_key(key: &CellKeyNode, value_name: &str) -> Result<String> {
             let Some(key_value) = key.get_value(value_name) else {
-                return Err(anyhow!(
+                bail!(
                     "Could not extract value \"{}\" from key \"{}\"",
                     value_name, key.get_pretty_path()
-                ));
+                );
             };
             Ok(key_value.get_content().0.to_string())
         }
@@ -231,7 +223,13 @@ impl Parser {
                 None
             };
 
-            let sha1_hash = String::from(&file_id[4..]);
+            // FileId is the SHA-1 hash of the file with "0000" prepended. Discard prefix
+            let sha1_hash = if file_id.len() == 44 && &file_id[..4] == "0000" {
+                Some(String::from(&file_id[4..]))
+            } else {
+                // In case unexpected value
+                None
+            };
 
             let last_modified_ts = key.last_key_written_date_and_time();
             let file_artifact = InventoryApplicationFileArtifact {
@@ -260,7 +258,7 @@ impl Parser {
     pub fn parse_shimcache (&mut self) -> Result<Vec<ShimCacheEntry>> {
         let shimcache_key = self
             .inner
-            //TODO: get control set dynamically instead of hardcoded
+            // TODO: get control set dynamically instead of hardcoded
             .get_key("ControlSet001\\Control\\Session Manager\\AppCompatCache", false)?.unwrap();
 
         let shimcache_cell_value = shimcache_key.get_value("AppCompatCache")

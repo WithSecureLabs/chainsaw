@@ -195,8 +195,8 @@ pub fn print_log(
                         wrapper = crate::evtx::Wrapper(&data);
                         hunt.mapper.mapped(&wrapper)
                     }
-                    FileKind::Json | FileKind::Jsonl | FileKind::Mft
-                    | FileKind::Xml | FileKind::Hve => {
+                    FileKind::Hve | FileKind::Json | FileKind::Jsonl | FileKind::Mft
+                    | FileKind::Xml => {
                         data = Json::from(bincode::deserialize::<Value>(&document.data)?);
                         hunt.mapper.mapped(&data)
                     }
@@ -378,8 +378,8 @@ pub fn print_detections(
                                 wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
-                            FileKind::Json | FileKind::Jsonl | FileKind::Mft
-                            | FileKind::Xml | FileKind::Hve => {
+                            FileKind::Hve | FileKind::Json | FileKind::Jsonl | FileKind::Mft
+                            | FileKind::Xml => {
                                 data = Json::from(
                                     bincode::deserialize::<Value>(&document.data)
                                         .expect("could not decompress"),
@@ -628,8 +628,8 @@ pub fn print_csv(
                                 wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
-                            FileKind::Json | FileKind::Jsonl | FileKind::Mft
-                            | FileKind::Xml | FileKind::Hve => {
+                            FileKind::Hve | FileKind::Json | FileKind::Jsonl | FileKind::Mft
+                            | FileKind::Xml => {
                                 data = Json::from(bincode::deserialize::<Value>(&document.data)?);
                                 hit.hunt.mapper.mapped(&data)
                             }
