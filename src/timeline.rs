@@ -54,17 +54,21 @@ impl Timeliner {
 
     pub fn amcache_shimcache_timeline(&self, config_path: &PathBuf) -> Result<Option<Vec<TimelineEntity>>> {
         let mut amcache_parser = HveParser::load(&self.amcache_path)?;
+        let amcache = amcache_parser.parse_amcache()?;
         cs_eprintln!("[+] Amcache hive file loaded from {:?}", fs::canonicalize(&self.amcache_path).unwrap());
+
         let mut shimcache_parser = HveParser::load(&self.shimcache_path)?;
+        let shimcache = shimcache_parser.parse_shimcache()?;
         cs_eprintln!("[+] Shimcache hive file loaded from {:?}", fs::canonicalize(&self.shimcache_path).unwrap());
+
         let config_patterns = BufReader::new(File::open(config_path)?)
             .lines().collect::<Result<Vec<_>, _>>()?;
-    
-        let amcache = amcache_parser.parse_amcache()?;
-        let shimcache = shimcache_parser.parse_shimcache()?;
-    
-        let regexes: Vec<Regex> = config_patterns.iter().map(|p| Regex::new(p).unwrap()).collect();
-        cs_eprintln!("[+] Config file with {} pattern(s) loaded from {:?}", regexes.len(), fs::canonicalize(&config_path).unwrap());
+        let regexes: Vec<Regex> = config_patterns.iter()
+            .map(|p| Regex::new(p)).collect::<Result<Vec<_>,_>>()?;
+        cs_eprintln!("[+] Config file with {} pattern(s) loaded from {:?}", 
+            regexes.len(),
+            fs::canonicalize(&config_path).unwrap()
+        );
     
         // Create timeline entities from shimcache entities
         let mut timeline_entities: Vec<TimelineEntity> = shimcache.into_iter().map(
@@ -81,7 +85,7 @@ impl Timeliner {
                 };
                 if pattern_matches {
                     if let Some(ts) = entity.shimcache_entry.last_modified_ts {
-                        entity.timestamp = Some(TimelineTimestamp::Exact(ts.clone()));
+                        entity.timestamp = Some(TimelineTimestamp::Exact(ts));
                         match_indices.push(i);
                     }
                     break;
@@ -92,6 +96,7 @@ impl Timeliner {
             // If there were no matches, no additional timeline data can be inferred
             return Ok(None);
         }
+        cs_eprintln!("[+] {} matching entries found from shimcache", match_indices.len());
     
         fn extract_ts_from_entity(entity: &TimelineEntity) -> DateTime<Utc> {
             match entity.timestamp {
@@ -141,6 +146,7 @@ impl Timeliner {
     
         // Match shimcache and amcache entries and 
         // check if amcache timestamp matches timeline timestamp range
+        let mut ts_match_count = 0;
         for file in amcache.iter_files() {
             for mut entity in &mut timeline_entities {
                 match &entity.shimcache_entry.program {
@@ -152,6 +158,7 @@ impl Timeliner {
                                 if from < amcache_ts && amcache_ts < to {
                                     entity.amcache_ts_match = true;
                                     entity.timestamp = Some(TimelineTimestamp::Exact(amcache_ts));
+                                    ts_match_count += 1;
                                 }
                             }
                         }
@@ -173,6 +180,7 @@ impl Timeliner {
                                     if from < amcache_ts && amcache_ts < to {
                                         entity.amcache_ts_match = true;
                                         entity.timestamp = Some(TimelineTimestamp::Exact(amcache_ts));
+                                        ts_match_count += 1;
                                     }
                                 }
                             }
@@ -181,6 +189,7 @@ impl Timeliner {
                 }
             }
         }
+        cs_eprintln!("[+] {} timestamp range matches found from amcache", ts_match_count);
     
         // Refine timestamp ranges based on amcache matches
         for (i, entity) in timeline_entities.iter_mut().enumerate() {

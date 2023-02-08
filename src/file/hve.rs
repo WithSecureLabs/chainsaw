@@ -7,7 +7,7 @@ use notatin::{
 };
 use regex::Regex;
 use serde_json::Value as Json;
-use std::{path::Path, collections::HashMap, fmt::Display};
+use std::{path::{PathBuf, Path}, collections::HashMap, fmt::Display};
 
 pub type Hve = Json;
 
@@ -147,12 +147,8 @@ impl AmcacheArtifact {
 }
 
 impl Parser {
-    pub fn load(file: &Path) -> crate::Result<Self> {
-        let path = match file.to_str() {
-            Some(path) => path,
-            None => bail!("Could not convert path to string!"),
-        };
-        let parser: HveParser = ParserBuilder::from_path(String::from(path))
+    pub fn load(path: &Path) -> crate::Result<Self> {
+        let parser: HveParser = ParserBuilder::from_path(PathBuf::from(path))
             .recover_deleted(false)
             .build()?;
 
@@ -164,7 +160,7 @@ impl Parser {
             .iter()
             .map(|c| match serde_json::to_value(c) {
                 Ok(json) => Ok(json),
-                Err(e) => anyhow::bail!(e),
+                Err(e) => bail!(e),
             })
     }
 
@@ -393,7 +389,7 @@ mod tests {
 
     #[test]
     fn amcache_parsing_works_win10() -> Result<()> {
-        let mut parser = Parser::load(&Path::new(
+        let mut parser = Parser::load(&PathBuf::from(
             "/mnt/hgfs/vm_shared/win10_vm_hives/am/Amcache.hve",
         ))?;
         let artifact_map = parser.parse_amcache()?;
@@ -403,7 +399,7 @@ mod tests {
 
     #[test]
     fn shimcache_parsing_works_win7() -> Result<()> {
-        let mut parser = Parser::load(&Path::new(
+        let mut parser = Parser::load(&PathBuf::from(
             "/mnt/hgfs/vm_shared/Module 5 - Disk/cache/shimcache/SYSTEM",
         ))?;
         let _shimcache_entries = parser.parse_shimcache()?;
@@ -412,7 +408,7 @@ mod tests {
 
     #[test]
     fn shimcache_parsing_works_win10() -> Result<()> {
-        let mut parser = Parser::load(&Path::new(
+        let mut parser = Parser::load(&PathBuf::from(
             "/mnt/hgfs/vm_shared/win10_vm_hives/shim/SYSTEM",
         ))?;
         let shimcache_entries = parser.parse_shimcache()?;

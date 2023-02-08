@@ -207,13 +207,13 @@ enum Command {
     /// Create an execution timeline by combining entries from shimcache and amcache
     Timeline {
         /// The path to the amcache artifact
-        #[arg(short = 'a', long = "amcache")]
+        #[arg(short = 'a', long = "amcache", required = true)]
         amcache: Option<PathBuf>,
         /// The path to the shimcache artifact
-        #[arg(short = 's', long = "shimcache")]
+        #[arg(short = 's', long = "shimcache", required = true)]
         shimcache: Option<PathBuf>,
         /// The path to the config file containing regex patterns to match
-        #[arg(short = 'c', long = "config")]
+        #[arg(short = 'c', long = "config", required = true)]
         config: Option<PathBuf>,
         /// A path to output results to.
         #[arg(short = 'o', long = "output")]
@@ -751,16 +751,17 @@ fn run() -> Result<()> {
             if !args.no_banner {
                 print_title();
             }
-            let shimcache_path = shimcache.ok_or(anyhow::anyhow!("Shimcache file path not provided"))?;
-            let amcache_path = amcache.ok_or(anyhow::anyhow!("Amcache file path not provided"))?;
-            let config_path = config.ok_or(anyhow::anyhow!("Config file path not provided"))?;
             init_writer(output.clone(), false, false, false)?;
 
-
-            let timeliner = Timeliner::new(amcache_path, shimcache_path);
-            let timeline = timeliner.amcache_shimcache_timeline(&config_path)?;
+            let timeliner = Timeliner::new(amcache.unwrap(), shimcache.unwrap());
+            let timeline = timeliner.amcache_shimcache_timeline(&config.unwrap())?;
             if let Some(entities) = timeline {
                 Timeliner::output_timeline_csv(&entities);
+                if let Some(output_path) = output {
+                    cs_eprintln!("[+] Saved output to {:?}", std::fs::canonicalize(output_path).unwrap());
+                }
+            } else {
+                cs_eyellowln!("[!] No matching entries found from shimcache, nothing to output")
             }
         }
     }
