@@ -69,11 +69,11 @@ impl ShimcacheAnalyzer {
                 .expect("cloud not get absolute path"));
         }
 
-        let config_patterns = BufReader::new(File::open(regex_path)?)
+        let regex_patterns = BufReader::new(File::open(regex_path)?)
             .lines().collect::<Result<Vec<_>, _>>()?;
-        let regexes: Vec<Regex> = config_patterns.iter()
+        let regexes: Vec<Regex> = regex_patterns.iter()
             .map(|p| Regex::new(p)).collect::<Result<Vec<_>,_>>()?;
-        cs_eprintln!("[+] Config file with {} pattern(s) loaded from {:?}", 
+        cs_eprintln!("[+] Regex file with {} pattern(s) loaded from {:?}", 
             regexes.len(),
             fs::canonicalize(&regex_path).expect("cloud not get absolute path")
         );

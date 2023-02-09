@@ -257,13 +257,28 @@ impl Parser {
     }
 
     pub fn parse_shimcache (&mut self) -> Result<Vec<ShimCacheEntry>> {
+        // Find current ControlSet
+        let current_controlset_key = self.inner.get_key("Select", false)?
+            .ok_or(anyhow!("Key \"Select\" not found in shimcache!"))?;
+        let current_controlset_value = current_controlset_key.get_value("Current")
+            .ok_or(anyhow!("Value \"Current\" not found under key \"Select\" in shimcache!"))?.get_content().0;
+        let controlset_number = match current_controlset_value {
+            notatin::cell_value::CellValue::U32(num) => num,
+            _ => bail!("Value \"Current\" under key \"Select\" was not of type U32 in shimcache!")
+        };
+
+        // Load shimcache binary data
+        let shimcache_key_path = format!(
+            "ControlSet{}\\Control\\Session Manager\\AppCompatCache",
+            format!("{:0>3}", controlset_number)
+        );
         let shimcache_key = self
             .inner
-            // TODO: get control set dynamically instead of hardcoded
-            .get_key("ControlSet001\\Control\\Session Manager\\AppCompatCache", false)?.unwrap();
-
+            .get_key(&shimcache_key_path, false)?
+            .ok_or(anyhow!("Could not find AppCompatCache with path {}!", shimcache_key_path))?;
         let shimcache_cell_value = shimcache_key.get_value("AppCompatCache")
-            .ok_or(anyhow!("AppCompatCache key not found!"))?.get_content().0;
+            .ok_or(anyhow!("Value \"AppCompatCache\" not found under key \"{}\"!", shimcache_key_path))?
+            .get_content().0;
         let shimcache_bytes = match shimcache_cell_value {
             notatin::cell_value::CellValue::Binary(bytes) => bytes,
             _ => bail!("Shimcache value was not of type Binary!"),
@@ -273,7 +288,7 @@ impl Parser {
         let mut shimcache_entries: Vec<ShimCacheEntry> = Vec::new();
 
         if shimcache_len < 132 {
-            bail!("Shimcache binary value shorter than expected");
+            bail!("Shimcache binary value shorter than expected!");
         }
         // Shimcache version signature is at a different index depending on version
         let signature_number = u32::from_le_bytes(shimcache_bytes[0..4].try_into()?);
@@ -302,8 +317,9 @@ impl Parser {
             // Windows 10 shimcache
             if cache_signature == "10ts" {
                 lazy_static! {
-                    static ref RE: Regex = Regex::new(r"^([0-9a-f]{8})\s+([0-9a-f]{16})\s+([0-9a-f]{16})\s+([\w]{4})\s+([\w.]+)\s+(\w+)\s*(\w*)$")
-                        .expect("invalid regex");
+                    static ref RE: Regex = Regex::new(
+                        r"^([0-9a-f]{8})\s+([0-9a-f]{16})\s+([0-9a-f]{16})\s+([\w]{4})\s+([\w.]+)\s+(\w+)\s*(\w*)$"
+                    ).expect("invalid regex");
                 }
                 let mut index = offset_to_records.clone();
                 let mut cache_entry_position = 0;
