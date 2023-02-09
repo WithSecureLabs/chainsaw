@@ -5,24 +5,24 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use self::evtx::{Evtx, Parser as EvtxParser};
+use self::hve::{Parser as HveParser, Hve};
 use self::json::{lines::Parser as JsonlParser, Json, Parser as JsonParser};
 use self::mft::{Mft, Parser as MftParser};
 use self::xml::{Parser as XmlParser, Xml};
-use self::hve::{Parser as HveParser, Hve};
 
 pub mod evtx;
+pub mod hve;
 pub mod json;
 pub mod mft;
 pub mod xml;
-pub mod hve;
 
 #[derive(Clone)]
 pub enum Document {
     Evtx(Evtx),
-    Mft(Mft),
-    Json(Json),
-    Xml(Xml),
     Hve(Hve),
+    Json(Json),
+    Mft(Mft),
+    Xml(Xml),
 }
 
 pub struct Documents<'a> {
@@ -33,11 +33,11 @@ pub struct Documents<'a> {
 #[serde(rename_all = "snake_case")]
 pub enum Kind {
     Evtx,
+    Hve,
     Json,
     Jsonl,
     Mft,
     Xml,
-    Hve,
     Unknown,
 }
 
@@ -45,11 +45,11 @@ impl Kind {
     pub fn extensions(&self) -> Option<Vec<String>> {
         match self {
             Kind::Evtx => Some(vec!["evt".to_string(), "evtx".to_string()]),
+            Kind::Hve => Some(vec!["hve".to_string()]),
             Kind::Json => Some(vec!["json".to_string()]),
             Kind::Jsonl => Some(vec!["jsonl".to_string()]),
             Kind::Mft => Some(vec!["mft".to_string(), "bin".to_string()]),
             Kind::Xml => Some(vec!["xml".to_string()]),
-            Kind::Hve => Some(vec!["hve".to_string()]),
             Kind::Unknown => None,
         }
     }
@@ -74,11 +74,11 @@ impl Iterator for Unknown {
 
 pub enum Parser {
     Evtx(EvtxParser),
+    Hve(HveParser),
     Json(JsonParser),
     Jsonl(JsonlParser),
     Mft(MftParser),
     Xml(XmlParser),
-    Hve(HveParser),
     Unknown,
 }
 
@@ -317,6 +317,8 @@ impl Reader {
                     .map(|r| r.map(Document::Evtx).map_err(|e| e.into())),
             )
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
+            Parser::Hve(parser) => Box::new(parser.parse().map(|r| r.map(Document::Hve)))
+                as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
             Parser::Json(parser) => Box::new(parser.parse().map(|r| r.map(Document::Json)))
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
             Parser::Jsonl(parser) => Box::new(parser.parse().map(|r| r.map(Document::Json)))
@@ -324,8 +326,6 @@ impl Reader {
             Parser::Mft(parser) => Box::new(parser.parse().map(|r| r.map(Document::Mft)))
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
             Parser::Xml(parser) => Box::new(parser.parse().map(|r| r.map(Document::Xml)))
-                as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
-            Parser::Hve(parser) => Box::new(parser.parse().map(|r| r.map(Document::Hve)))
                 as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
             Parser::Unknown => {
                 Box::new(Unknown) as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>
@@ -337,11 +337,11 @@ impl Reader {
     pub fn kind(&self) -> Kind {
         match self.parser {
             Parser::Evtx(_) => Kind::Evtx,
+            Parser::Hve(_) => Kind::Hve,
             Parser::Json(_) => Kind::Json,
             Parser::Jsonl(_) => Kind::Jsonl,
             Parser::Mft(_) => Kind::Mft,
             Parser::Xml(_) => Kind::Xml,
-            Parser::Hve(_) => Kind::Hve,
             Parser::Unknown => Kind::Unknown,
         }
     }

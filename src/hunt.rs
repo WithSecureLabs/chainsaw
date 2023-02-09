@@ -514,10 +514,10 @@ impl Hunter {
                         wrapper = crate::evtx::Wrapper(&evtx.data);
                         hunt.mapper.mapped(&wrapper)
                     }
+                    File::Hve(hve) => hunt.mapper.mapped(hve),
                     File::Json(json) => hunt.mapper.mapped(json),
                     File::Mft(mft) => hunt.mapper.mapped(mft),
                     File::Xml(xml) => hunt.mapper.mapped(xml),
-                    File::Hve(hve) => hunt.mapper.mapped(hve),
                 };
 
                 let timestamp = match mapped.find(&hunt.timestamp) {
@@ -573,10 +573,10 @@ impl Hunter {
                                             wrapper = crate::evtx::Wrapper(&evtx.data);
                                             hunt.mapper.mapped(&wrapper)
                                         }
+                                        File::Hve(hve) => hunt.mapper.mapped(hve),
                                         File::Mft(mft) => hunt.mapper.mapped(mft),
                                         File::Json(json) => hunt.mapper.mapped(json),
                                         File::Xml(xml) => hunt.mapper.mapped(xml),
-                                        File::Hve(hve) => hunt.mapper.mapped(hve),
                                     };
 
                                     if !rule.is_kind(kind) {
@@ -676,10 +676,10 @@ impl Hunter {
             if !hits.is_empty() {
                 let data = match &document {
                     File::Evtx(evtx) => evtx.data.clone(),
+                    File::Hve(hve) => hve.clone(),
                     File::Mft(mft) => mft.clone(),
                     File::Json(json) => json.clone(),
                     File::Xml(xml) => xml.clone(),
-                    File::Hve(hve) => hve.clone(),
                 };
                 detections.push(Detections {
                     hits,
@@ -710,10 +710,10 @@ impl Hunter {
                         let (document, timestamp) = files.get(id).expect("could not get document");
                         let data = match &document {
                             File::Evtx(evtx) => evtx.data.clone(),
+                            File::Hve(hve) => hve.clone(),
                             File::Mft(mft) => mft.clone(),
                             File::Json(json) => json.clone(),
                             File::Xml(xml) => xml.clone(),
-                            File::Hve(hve) => hve.clone(),
                         };
                         documents.push(Document {
                             kind: kind.clone(),

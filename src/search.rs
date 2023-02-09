@@ -64,8 +64,8 @@ impl<'a> Iterator for Iter<'a> {
                         },
                         None => continue,
                     },
-                    Document::Json(json) | Document::Xml(json)
-                    | Document::Mft(json) | Document::Hve(json) => match json
+                    Document::Hve(json) | Document::Json(json) | Document::Xml(json)
+                    | Document::Mft(json) => match json
                         .find(field)
                     {
                         Some(value) => match value.as_str() {
@@ -146,8 +146,8 @@ impl<'a> Iterator for Iter<'a> {
                         return Some(Ok(evtx.data));
                     }
                 }
-                Document::Json(json) | Document::Xml(json)
-                | Document::Mft(json) | Document::Hve(json) => {
+                Document::Hve(json) | Document::Json(json) | Document::Xml(json)
+                | Document::Mft(json) => {
                     if let Some(expression) = &self.searcher.tau {
                         if !tau_engine::core::solve(expression, &json) {
                             continue;

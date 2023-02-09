@@ -207,14 +207,14 @@ enum Command {
     /// Create an execution timeline by combining entries from shimcache and amcache
     Timeline {
         /// The path to the amcache artifact
-        #[arg(short = 'a', long = "amcache", required = true)]
-        amcache: Option<PathBuf>,
+        #[arg(short = 'a', long = "amcache")]
+        amcache: PathBuf,
         /// The path to the shimcache artifact
-        #[arg(short = 's', long = "shimcache", required = true)]
-        shimcache: Option<PathBuf>,
+        #[arg(short = 's', long = "shimcache")]
+        shimcache: PathBuf,
         /// The path to the config file containing regex patterns to match
-        #[arg(short = 'c', long = "config", required = true)]
-        config: Option<PathBuf>,
+        #[arg(short = 'c', long = "config")]
+        config: PathBuf,
         /// A path to output results to.
         #[arg(short = 'o', long = "output")]
         output: Option<PathBuf>,
@@ -753,8 +753,8 @@ fn run() -> Result<()> {
             }
             init_writer(output.clone(), false, false, false)?;
 
-            let timeliner = Timeliner::new(amcache.unwrap(), shimcache.unwrap());
-            let timeline = timeliner.amcache_shimcache_timeline(&config.unwrap())?;
+            let timeliner = Timeliner::new(amcache, shimcache);
+            let timeline = timeliner.amcache_shimcache_timeline(&config)?;
             if let Some(entities) = timeline {
                 Timeliner::output_timeline_csv(&entities);
                 if let Some(output_path) = output {

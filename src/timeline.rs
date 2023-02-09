@@ -14,7 +14,7 @@ use crate::file::hve::{
 #[derive(Debug, Clone)]
 enum TimelineTimestamp {
     Exact(DateTime<Utc>),
-    Range(DateTime<Utc>, DateTime<Utc>), // (from, to)
+    Range { from: DateTime<Utc>, to: DateTime<Utc> },
     RangeStart(DateTime<Utc>),
     RangeEnd(DateTime<Utc>),
 }
@@ -121,10 +121,10 @@ impl Timeliner {
                 let end_i = pair[1];
                 let start_entity = &timeline_entities[start_i];
                 let end_entity = &timeline_entities[end_i];
-                let ts = TimelineTimestamp::Range(
-                    extract_ts_from_entity(end_entity),
-                    extract_ts_from_entity(start_entity)
-                );
+                let ts = TimelineTimestamp::Range{
+                    from: extract_ts_from_entity(end_entity),
+                    to: extract_ts_from_entity(start_entity)
+                };
                 let range = start_i+1..end_i;
                 for i in range {
                     timeline_entities[i].timestamp = Some(ts.clone());
@@ -153,7 +153,7 @@ impl Timeliner {
                     ProgramType::Executable { path } => {
                         if file.path == path.to_lowercase() {
                             entity.amcache_file = Some(file.clone());
-                            if let Some(TimelineTimestamp::Range(from, to)) = entity.timestamp {
+                            if let Some(TimelineTimestamp::Range{from, to}) = entity.timestamp {
                                 let amcache_ts = file.last_modified_ts;
                                 if from < amcache_ts && amcache_ts < to {
                                     entity.amcache_ts_match = true;
@@ -175,7 +175,7 @@ impl Timeliner {
                         ProgramType::Program { program_name, .. } => {
                             if program_name == &application.program_name {
                                 // TODO: link amcache program to timeline entity
-                                if let Some(TimelineTimestamp::Range(from, to)) = entity.timestamp {
+                                if let Some(TimelineTimestamp::Range{from, to}) = entity.timestamp {
                                     let amcache_ts = application.last_modified_ts;
                                     if from < amcache_ts && amcache_ts < to {
                                         entity.amcache_ts_match = true;

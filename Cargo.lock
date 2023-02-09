@@ -207,6 +207,7 @@ dependencies = [
  "colour",
  "evtx",
  "indicatif",
+ "lazy_static",
  "mft",
  "notatin",
  "once_cell",

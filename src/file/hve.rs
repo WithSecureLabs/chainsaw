@@ -2,6 +2,7 @@ use std::{path::{PathBuf, Path}, collections::HashMap, fmt::Display};
 
 use anyhow::{Result, bail, anyhow};
 use chrono::{NaiveDateTime, DateTime, Utc};
+use lazy_static::lazy_static;
 use notatin::{
     cell_key_node::CellKeyNode,
     parser::{Parser as HveParser, ParserIterator},
@@ -267,20 +268,24 @@ impl Parser {
             notatin::cell_value::CellValue::Binary(bytes) => bytes,
             _ => bail!("Shimcache value was not of type Binary!"),
         };
+        let shimcache_len = shimcache_bytes.len();
 
         let mut shimcache_entries: Vec<ShimCacheEntry> = Vec::new();
 
-        
-        let sig_num = u32::from_le_bytes(shimcache_bytes[0..4].try_into()?);
+        if shimcache_len < 132 {
+            bail!("Shimcache binary value shorter than expected");
+        }
+        // Shimcache version signature is at a different index depending on version
+        let signature_number = u32::from_le_bytes(shimcache_bytes[0..4].try_into()?);
         let cache_signature = std::str::from_utf8(&shimcache_bytes[128..132])?;
 
-        if sig_num == 0xdeadbeef // win xp
-        || sig_num == 0xbadc0ffe // win vista
+        if signature_number == 0xdeadbeef // win xp
+        || signature_number == 0xbadc0ffe // win vista
         {
             bail!("Unsupported windows shimcache version!")
         }
         // Windows 7 shimcache
-        else if sig_num == 0xbadc0fee {
+        else if signature_number == 0xbadc0fee {
             bail!("Windows 7 shimcache parsing not yet implemented!")
         }
         // Windows 8 shimcache
@@ -292,15 +297,16 @@ impl Parser {
             bail!("Windows 8.1 shimcache parsing not yet implemented!")
         }
         else {
-            let offset_to_records = sig_num.clone() as usize;
+            let offset_to_records = signature_number.clone() as usize;
             let cache_signature = std::str::from_utf8(&shimcache_bytes[offset_to_records..offset_to_records+4])?;
             // Windows 10 shimcache
             if cache_signature == "10ts" {
-                let re = Regex::new(r"^([0-9a-f]{8})\s+([0-9a-f]{16})\s+([0-9a-f]{16})\s+([\w]{4})\s+([\w.]+)\s+(\w+)\s*(\w*)$").unwrap();
+                lazy_static! {
+                    static ref RE: Regex = Regex::new(r"^([0-9a-f]{8})\s+([0-9a-f]{16})\s+([0-9a-f]{16})\s+([\w]{4})\s+([\w.]+)\s+(\w+)\s*(\w*)$").unwrap();
+                }
                 let mut index = offset_to_records.clone();
                 let mut cache_entry_position = 0;
-                let len = shimcache_bytes.len();
-                while index < len {
+                while index < shimcache_len {
                     let signature = std::str::from_utf8(&shimcache_bytes[index..index+4])?.to_string();
                     if signature != "10ts" {
                         break;
@@ -314,8 +320,8 @@ impl Parser {
                     index += 2;
                     let path = utf16_to_string(&shimcache_bytes[index..index+path_size])?;
                     let program: ProgramType;
-                    if re.is_match(&path) {
-                        let program_name = re.captures(&path).unwrap().get(5).unwrap().as_str().to_string();
+                    if RE.is_match(&path) {
+                        let program_name = RE.captures(&path).unwrap().get(5).unwrap().as_str().to_string();
                         program = ProgramType::Program { program_name, full_string: path };
                     } else {
                         program = ProgramType::Executable { path };
