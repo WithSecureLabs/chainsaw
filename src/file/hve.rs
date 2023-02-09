@@ -302,7 +302,8 @@ impl Parser {
             // Windows 10 shimcache
             if cache_signature == "10ts" {
                 lazy_static! {
-                    static ref RE: Regex = Regex::new(r"^([0-9a-f]{8})\s+([0-9a-f]{16})\s+([0-9a-f]{16})\s+([\w]{4})\s+([\w.]+)\s+(\w+)\s*(\w*)$").unwrap();
+                    static ref RE: Regex = Regex::new(r"^([0-9a-f]{8})\s+([0-9a-f]{16})\s+([0-9a-f]{16})\s+([\w]{4})\s+([\w.]+)\s+(\w+)\s*(\w*)$")
+                        .expect("invalid regex");
                 }
                 let mut index = offset_to_records.clone();
                 let mut cache_entry_position = 0;
@@ -321,7 +322,9 @@ impl Parser {
                     let path = utf16_to_string(&shimcache_bytes[index..index+path_size])?;
                     let program: ProgramType;
                     if RE.is_match(&path) {
-                        let program_name = RE.captures(&path).unwrap().get(5).unwrap().as_str().to_string();
+                        let program_name = RE.captures(&path).expect("regex could not capture groups")
+                            .get(5).expect("could not get group 5 of regex")
+                            .as_str().to_string();
                         program = ProgramType::Program { program_name, full_string: path };
                     } else {
                         program = ProgramType::Executable { path };

@@ -15,7 +15,7 @@ use clap::{Parser, Subcommand};
 
 use chainsaw::{
     cli, get_files, lint as lint_rule, load as load_rule, set_writer, Filter, Format, Hunter,
-    RuleKind, RuleLevel, RuleStatus, Searcher, Writer, Timeliner,
+    RuleKind, RuleLevel, RuleStatus, Searcher, Writer, ShimcacheAnalyzer,
 };
 
 #[derive(Parser)]
@@ -204,21 +204,29 @@ enum Command {
         to: Option<NaiveDateTime>,
     },
 
-    /// Create an execution timeline by combining entries from shimcache and amcache
-    Timeline {
-        /// The path to the amcache artifact
-        #[arg(short = 'a', long = "amcache")]
-        amcache: PathBuf,
-        /// The path to the shimcache artifact
-        #[arg(short = 's', long = "shimcache")]
+    /// Perform various analyses on artifacts
+    Analyse {
+        #[command(subcommand)]
+        cmd: AnalyseCommand,
+    },
+}
+
+#[derive(Subcommand)]
+enum AnalyseCommand {
+    /// Create an execution timeline from the shimcache by detecting executables that are compiled before execution
+    Shimcache {
+        /// The path to the shimcache artifact (SYSTEM registry file)
         shimcache: PathBuf,
-        /// The path to the config file containing regex patterns to match
-        #[arg(short = 'c', long = "config")]
-        config: PathBuf,
-        /// A path to output results to.
+        /// The path to the newline delimited file containing regex patterns to match
+        #[arg(short = 'r', long = "regexfile")]
+        regex_file: PathBuf,
+        /// The path to the amcache artifact (Amcache.hve) for timeline enrichment
+        #[arg(short = 'a', long = "amcache")]
+        amcache: Option<PathBuf>,
+        /// A path to output the resulting csv file
         #[arg(short = 'o', long = "output")]
         output: Option<PathBuf>,
-    },
+    }
 }
 
 fn print_title() {
@@ -742,26 +750,33 @@ fn run() -> Result<()> {
             }
             cs_eprintln!("[+] Found {} hits", hits);
         }
-        Command::Timeline {
-            amcache,
-            shimcache,
-            config,
-            output,
+        Command::Analyse {
+            cmd,
         } => {
-            if !args.no_banner {
-                print_title();
-            }
-            init_writer(output.clone(), false, false, false)?;
-
-            let timeliner = Timeliner::new(amcache, shimcache);
-            let timeline = timeliner.amcache_shimcache_timeline(&config)?;
-            if let Some(entities) = timeline {
-                Timeliner::output_timeline_csv(&entities);
-                if let Some(output_path) = output {
-                    cs_eprintln!("[+] Saved output to {:?}", std::fs::canonicalize(output_path).unwrap());
+            match cmd {
+                AnalyseCommand::Shimcache {
+                    shimcache,
+                    amcache,
+                    regex_file,
+                    output,
+                } => {
+                    if !args.no_banner {
+                        print_title();
+                    }
+                    init_writer(output.clone(), false, false, false)?;
+        
+                    let timeliner = ShimcacheAnalyzer::new(shimcache, amcache);
+                    let timeline = timeliner.amcache_shimcache_timeline(&regex_file)?;
+                    if let Some(entities) = timeline {
+                        ShimcacheAnalyzer::output_timeline_csv(&entities);
+                        if let Some(output_path) = output {
+                            cs_eprintln!("[+] Saved output to {:?}", std::fs::canonicalize(output_path)
+                                .expect("could not get absolute path"));
+                        }
+                    } else {
+                        cs_eyellowln!("[!] No matching entries found from shimcache, nothing to output")
+                    }
                 }
-            } else {
-                cs_eyellowln!("[!] No matching entries found from shimcache, nothing to output")
             }
         }
     }

@@ -8,7 +8,7 @@ use crate::file::hve::{
     InventoryApplicationFileArtifact as FileArtifact,
     ShimCacheEntry,
     Parser as HveParser,
-    ProgramType
+    ProgramType, AmcacheArtifact
 };
 
 #[derive(Debug, Clone)]
@@ -38,36 +38,44 @@ impl TimelineEntity {
     }
 }
 
-pub struct Timeliner {
-    amcache_path: PathBuf,
+pub struct ShimcacheAnalyzer {
     shimcache_path: PathBuf,
+    amcache_path: Option<PathBuf>,
 }
 
-impl Timeliner {
+impl ShimcacheAnalyzer {
 
-    pub fn new(amcache_path: PathBuf, shimcache_path: PathBuf) -> Self {
+    pub fn new(shimcache_path: PathBuf, amcache_path: Option<PathBuf>) -> Self {
         Self {
-            amcache_path,
-            shimcache_path
+            shimcache_path,
+            amcache_path
         }
     }
 
-    pub fn amcache_shimcache_timeline(&self, config_path: &PathBuf) -> Result<Option<Vec<TimelineEntity>>> {
-        let mut amcache_parser = HveParser::load(&self.amcache_path)?;
-        let amcache = amcache_parser.parse_amcache()?;
-        cs_eprintln!("[+] Amcache hive file loaded from {:?}", fs::canonicalize(&self.amcache_path).unwrap());
-
+    pub fn amcache_shimcache_timeline(&self, regex_path: &PathBuf) -> Result<Option<Vec<TimelineEntity>>> {
         let mut shimcache_parser = HveParser::load(&self.shimcache_path)?;
         let shimcache = shimcache_parser.parse_shimcache()?;
-        cs_eprintln!("[+] Shimcache hive file loaded from {:?}", fs::canonicalize(&self.shimcache_path).unwrap());
+        cs_eprintln!("[+] Shimcache hive file loaded from {:?}", fs::canonicalize(&self.shimcache_path)
+            .expect("cloud not get absolute path"));
 
-        let config_patterns = BufReader::new(File::open(config_path)?)
+        let amcache: Option<AmcacheArtifact> = if let Some(amcache_path) = &self.amcache_path {
+            let mut amcache_parser = HveParser::load(&amcache_path)?;
+            Some(amcache_parser.parse_amcache()?)
+        } else {
+            None
+        };
+        if let Some(amcache_path) = &self.amcache_path {
+            cs_eprintln!("[+] Amcache hive file loaded from {:?}", fs::canonicalize(amcache_path)
+                .expect("cloud not get absolute path"));
+        }
+
+        let config_patterns = BufReader::new(File::open(regex_path)?)
             .lines().collect::<Result<Vec<_>, _>>()?;
         let regexes: Vec<Regex> = config_patterns.iter()
             .map(|p| Regex::new(p)).collect::<Result<Vec<_>,_>>()?;
         cs_eprintln!("[+] Config file with {} pattern(s) loaded from {:?}", 
             regexes.len(),
-            fs::canonicalize(&config_path).unwrap()
+            fs::canonicalize(&regex_path).expect("cloud not get absolute path")
         );
     
         // Create timeline entities from shimcache entities
@@ -107,7 +115,7 @@ impl Timeliner {
     
         fn set_timestamp_ranges(range_indices: &Vec<usize>, timeline_entities: &mut Vec<TimelineEntity>) {
             // Set timestamp ranges for timeline entities based on shimcache entry order
-            let first_index = *range_indices.first().unwrap();
+            let first_index = *range_indices.first().expect("empty range_indices provided");
             if first_index > 0 {
                 let entity = &timeline_entities[first_index];
                 let ts = TimelineTimestamp::RangeStart(extract_ts_from_entity(entity));
@@ -130,7 +138,7 @@ impl Timeliner {
                     timeline_entities[i].timestamp = Some(ts.clone());
                 }
             }
-            let last_index = *range_indices.last().unwrap();
+            let last_index = *range_indices.last().expect("could not get last vector element");
             if last_index+1 < timeline_entities.len() {
                 let entity = &timeline_entities[last_index];
                 let ts = TimelineTimestamp::RangeEnd(extract_ts_from_entity(entity));
@@ -144,39 +152,18 @@ impl Timeliner {
         // Set timestamp ranges for timeline entities based on shimcache entry order
         set_timestamp_ranges(&match_indices, &mut timeline_entities);
     
-        // Match shimcache and amcache entries and 
-        // check if amcache timestamp matches timeline timestamp range
-        let mut ts_match_count = 0;
-        for file in amcache.iter_files() {
-            for mut entity in &mut timeline_entities {
-                match &entity.shimcache_entry.program {
-                    ProgramType::Executable { path } => {
-                        if file.path == path.to_lowercase() {
-                            entity.amcache_file = Some(file.clone());
-                            if let Some(TimelineTimestamp::Range{from, to}) = entity.timestamp {
-                                let amcache_ts = file.last_modified_ts;
-                                if from < amcache_ts && amcache_ts < to {
-                                    entity.amcache_ts_match = true;
-                                    entity.timestamp = Some(TimelineTimestamp::Exact(amcache_ts));
-                                    ts_match_count += 1;
-                                }
-                            }
-                        }
-                    },
-                    ProgramType::Program { .. } => (),
-                }
-            }
-        }
-        for (_program_id, program) in amcache.programs {
-            if let Some(application) = program.application_artifact {
+        if let Some(amcache) = amcache {
+            // Match shimcache and amcache entries and 
+            // check if amcache timestamp matches timeline timestamp range
+            let mut ts_match_count = 0;
+            for file in amcache.iter_files() {
                 for mut entity in &mut timeline_entities {
                     match &entity.shimcache_entry.program {
-                        ProgramType::Executable { .. } => (),
-                        ProgramType::Program { program_name, .. } => {
-                            if program_name == &application.program_name {
-                                // TODO: link amcache program to timeline entity
+                        ProgramType::Executable { path } => {
+                            if file.path == path.to_lowercase() {
+                                entity.amcache_file = Some(file.clone());
                                 if let Some(TimelineTimestamp::Range{from, to}) = entity.timestamp {
-                                    let amcache_ts = application.last_modified_ts;
+                                    let amcache_ts = file.last_modified_ts;
                                     if from < amcache_ts && amcache_ts < to {
                                         entity.amcache_ts_match = true;
                                         entity.timestamp = Some(TimelineTimestamp::Exact(amcache_ts));
@@ -185,20 +172,43 @@ impl Timeliner {
                                 }
                             }
                         },
+                        ProgramType::Program { .. } => (),
                     }
                 }
             }
-        }
-        cs_eprintln!("[+] {} timestamp range matches found from amcache", ts_match_count);
-    
-        // Refine timestamp ranges based on amcache matches
-        for (i, entity) in timeline_entities.iter_mut().enumerate() {
-            if entity.amcache_ts_match {
-                match_indices.push(i);
+            for (_program_id, program) in amcache.programs {
+                if let Some(application) = program.application_artifact {
+                    for mut entity in &mut timeline_entities {
+                        match &entity.shimcache_entry.program {
+                            ProgramType::Executable { .. } => (),
+                            ProgramType::Program { program_name, .. } => {
+                                if program_name == &application.program_name {
+                                    // TODO: link amcache program to timeline entity
+                                    if let Some(TimelineTimestamp::Range{from, to}) = entity.timestamp {
+                                        let amcache_ts = application.last_modified_ts;
+                                        if from < amcache_ts && amcache_ts < to {
+                                            entity.amcache_ts_match = true;
+                                            entity.timestamp = Some(TimelineTimestamp::Exact(amcache_ts));
+                                            ts_match_count += 1;
+                                        }
+                                    }
+                                }
+                            },
+                        }
+                    }
+                }
             }
+            cs_eprintln!("[+] {} timestamp range matches found from amcache", ts_match_count);
+        
+            // Refine timestamp ranges based on amcache matches
+            for (i, entity) in timeline_entities.iter_mut().enumerate() {
+                if entity.amcache_ts_match {
+                    match_indices.push(i);
+                }
+            }
+            match_indices.sort();
+            set_timestamp_ranges(&match_indices, &mut timeline_entities);
         }
-        match_indices.sort();
-        set_timestamp_ranges(&match_indices, &mut timeline_entities);
     
         Ok(Some(timeline_entities))
     }
@@ -232,7 +242,8 @@ impl Timeliner {
             } else { String::new() };
     
             entry_details = if !entity.amcache_file.is_none() {
-                format!("{:?}", &entity.amcache_file.as_ref().unwrap())
+                format!("{:?}", &entity.amcache_file.as_ref()
+                    .expect("amcache_file was unexpectedly None"))
             } else {
                 format!("{:?}", entity.shimcache_entry.program)
             };
