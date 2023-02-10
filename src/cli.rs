@@ -499,12 +499,31 @@ pub fn print_detections(
 
 pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Result<()> {
     let path = unsafe {
-        WRITER
-            .path
-            .as_ref()
-            .expect("could not get output path")
+        &WRITER.path
     };
-    let mut csv = prettytable::csv::Writer::from_path(path)?;
+    let csv = if let Some(path) = path {
+        Some(prettytable::csv::Writer::from_path(path)?)
+    } else { None };
+    let format = format::FormatBuilder::new()
+        .column_separator('│')
+        .borders('│')
+        .separators(
+            &[format::LinePosition::Top],
+            format::LineSeparator::new('─', '┬', '┌', '┐'),
+        )
+        .separators(
+            &[format::LinePosition::Intern],
+            format::LineSeparator::new('─', '┼', '├', '┤'),
+        )
+        .separators(
+            &[format::LinePosition::Bottom],
+            format::LineSeparator::new('─', '┴', '└', '┘'),
+        )
+        .padding(1, 1)
+        .build();
+
+    let mut table = Table::new();
+    table.set_format(format);
     let headers = [
         "timestamp",
         "timestamp description",
@@ -515,7 +534,8 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
         "entry details",
         "timeline entry number",
     ];
-    csv.write_record(headers)?;
+    let header_cells = headers.map(|s| cell!(s)).to_vec();
+    table.add_row(Row::new(header_cells));
 
     let mut timeline_entry_nr = 0;
     for entity in timeline {
@@ -561,7 +581,8 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
             &entry_details,
             &timeline_entry_nr_string,
         ];
-        csv.write_record(shimcache_row)?;
+        let cells = shimcache_row.map(|s| cell!(s)).to_vec();
+        table.add_row(Row::new(cells));
         timeline_entry_nr += 1;
 
         if entity.amcache_ts_match {
@@ -575,11 +596,16 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
                 "",
                 &timeline_entry_nr_string,
             ];
-            csv.write_record(amcache_row)?;
+            let cells = amcache_row.map(|s| cell!(s)).to_vec();
+            table.add_row(Row::new(cells));
             timeline_entry_nr += 1;
         }
     }
-
+    if let Some(writer) = csv {
+        table.to_csv_writer(writer)?;
+    } else {
+        cs_print_table!(table);
+    }
 
     Ok(())
 }
