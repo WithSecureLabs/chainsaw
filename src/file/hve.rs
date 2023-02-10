@@ -54,14 +54,14 @@ pub enum ProgramType {
 
 #[derive(Debug)]
 pub struct ShimCacheEntry {
-    pub signature: String,
+    pub signature: Option<String>,
     pub path_size: usize,
     pub program: ProgramType,
     pub last_modified_ts: Option<DateTime<Utc>>,
-    pub data_size: usize,
-    pub data: Vec<u8>,
+    pub data_size: Option<usize>,
+    pub data: Option<Vec<u8>>,
     pub executed: Option<bool>,
-    // controlset:
+    pub controlset: u32,
     pub cache_entry_position: u32,
 }
 
@@ -87,6 +87,26 @@ impl ProgramArtifact {
             files: Vec::new(),
         }
     }
+}
+
+#[allow(dead_code)]
+enum InsertFlag {
+    Unknown1 = 0x00000001,
+    Executed = 0x00000002,
+    Unknown4 = 0x00000004,
+    Unknown8 = 0x00000008,
+    Unknown10 = 0x00000010,
+    Unknown20 = 0x00000020,
+    Unknown40 = 0x00000040,
+    Unknown80 = 0x00000080,
+    Unknown10000 = 0x00010000,
+    Unknown20000 = 0x00020000,
+    Unknown30000 = 0x00030000,
+    Unknown40000 = 0x00040000,
+    Unknown100000 = 0x00100000,
+    Unknown200000 = 0x00200000,
+    Unknown400000 = 0x00400000,
+    Unknown800000 = 0x00800000,
 }
 
 #[derive(Debug)]
@@ -262,16 +282,14 @@ impl Parser {
             .ok_or(anyhow!("Key \"Select\" not found in shimcache!"))?;
         let current_controlset_value = current_controlset_key.get_value("Current")
             .ok_or(anyhow!("Value \"Current\" not found under key \"Select\" in shimcache!"))?.get_content().0;
-        let controlset_number = match current_controlset_value {
+        let controlset = match current_controlset_value {
             notatin::cell_value::CellValue::U32(num) => num,
             _ => bail!("Value \"Current\" under key \"Select\" was not of type U32 in shimcache!")
         };
 
         // Load shimcache binary data
-        let shimcache_key_path = format!(
-            "ControlSet{}\\Control\\Session Manager\\AppCompatCache",
-            format!("{:0>3}", controlset_number)
-        );
+        let controlset_name = format!("ControlSet{:0>3}", controlset);
+        let shimcache_key_path = format!("{controlset_name}\\Control\\Session Manager\\AppCompatCache");
         let shimcache_key = self
             .inner
             .get_key(&shimcache_key_path, false)?
@@ -291,17 +309,91 @@ impl Parser {
             bail!("Shimcache binary value shorter than expected!");
         }
         // Shimcache version signature is at a different index depending on version
-        let signature_number = u32::from_le_bytes(shimcache_bytes[0..4].try_into()?);
-        let cache_signature = std::str::from_utf8(&shimcache_bytes[128..132])?;
+        let e = || anyhow!("Shimcache byte indexing error!");
+        let signature_number = u32::from_le_bytes(shimcache_bytes.get(0..4).ok_or_else(e)?.try_into()?);
+        let cache_signature = std::str::from_utf8(&shimcache_bytes.get(128..132).ok_or_else(e)?)?;
 
-        if signature_number == 0xdeadbeef // win xp
-        || signature_number == 0xbadc0ffe // win vista
+        // Windows XP shimcache
+        if signature_number == 0xdeadbeef {
+            bail!("Windows XP shimcache parsing not supported!");
+        }
+        // Windows Vista shimcache
+        else if signature_number == 0xbadc0ffe
         {
-            bail!("Unsupported windows shimcache version!")
+            bail!("Windows Vista shimcache parsing not supported!");
         }
         // Windows 7 shimcache
         else if signature_number == 0xbadc0fee {
-            bail!("Windows 7 shimcache parsing not yet implemented!")
+            // Check if system is 32-bit
+            let environment_key_path = format!("{controlset_name}\\Control\\Session Manager\\Environment");
+            let environment_key = self.inner.get_key(&environment_key_path, false)?
+                .ok_or(anyhow!("Key \"{environment_key_path}\" not found in shimcache!"))?;
+            let processor_architecture_value = environment_key.get_value("PROCESSOR_ARCHITECTURE")
+                .ok_or(anyhow!("Value \"PROCESSOR_ARCHITECTURE\" not found under key \"{environment_key_path}\" in shimcache!"))?.get_content().0;
+            let is_32bit = match processor_architecture_value {
+                notatin::cell_value::CellValue::String(s) => s == "x86",
+                _ => bail!("Value \"PROCESSOR_ARCHITECTURE\" under key \"{environment_key_path}\" was not of type String in shimcache!")
+            };
+
+            if is_32bit {
+                bail!("Windows 7 32-bit shimcache parsing not yet implemented!");
+            } else {
+                let mut index = 4;
+                let entry_count = u32::from_le_bytes(shimcache_bytes.get(index..index+4).expect("could not index shimcache bytes").try_into()?) as usize;
+                index = 128;
+                let mut cache_entry_position = 0;
+                while index < shimcache_len {
+                    let e = || anyhow!("Error parsing windows 7 shimcache entry. Position: {}", cache_entry_position);
+                    let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
+                    index += 2;
+                    let _max_path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
+                    index += 2;
+                    // skip 4 unknown (padding)
+                    index += 4;
+                    let path_offset = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?) as usize;
+                    index += 8;
+                    let last_modified_time_utc_win32 = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?);
+                    index += 8;
+                    let insert_flags = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?);
+                    index += 4;
+                    // skip 4 unknown (shim flags?)
+                    index += 4;
+                    let data_size = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?) as usize;
+                    index += 8;
+                    let data_offset = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?) as usize;
+                    index += 8;
+
+                    let path = utf16_to_string(&shimcache_bytes.get(path_offset..path_offset+path_size).ok_or_else(e)?)?;
+                    let data = Some(shimcache_bytes.get(data_offset..data_offset+data_size).ok_or_else(e)?.to_vec());
+                    let last_modified_ts = if last_modified_time_utc_win32 != 0 {
+                        let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;
+                        let last_modified_date_time = DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
+                        Some(last_modified_date_time)
+                    } else {
+                        None
+                    };
+                    let executed = Some(insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32);
+                    let program = ProgramType::Executable { path };
+    
+                    let cache_entry = ShimCacheEntry {
+                        cache_entry_position,
+                        data,
+                        data_size: Some(data_size),
+                        executed,
+                        last_modified_ts,
+                        program,
+                        path_size,
+                        signature: None,
+                        controlset,
+                    };
+    
+                    shimcache_entries.push(cache_entry);
+                    if shimcache_entries.len() >= entry_count {
+                        break;
+                    }
+                    cache_entry_position += 1;
+                }
+            }
         }
         // Windows 8 shimcache
         else if cache_signature == "00ts" {
@@ -313,7 +405,7 @@ impl Parser {
         }
         else {
             let offset_to_records = signature_number.clone() as usize;
-            let cache_signature = std::str::from_utf8(&shimcache_bytes[offset_to_records..offset_to_records+4])?;
+            let cache_signature = std::str::from_utf8(&shimcache_bytes.get(offset_to_records..offset_to_records+4).ok_or_else(e)?)?;
             // Windows 10 shimcache
             if cache_signature == "10ts" {
                 lazy_static! {
@@ -324,18 +416,19 @@ impl Parser {
                 let mut index = offset_to_records.clone();
                 let mut cache_entry_position = 0;
                 while index < shimcache_len {
-                    let signature = std::str::from_utf8(&shimcache_bytes[index..index+4])?.to_string();
+                    let e = || anyhow!("Error parsing windows 10 shimcache entry. Position: {}", cache_entry_position);
+                    let signature = std::str::from_utf8(&shimcache_bytes.get(index..index+4).ok_or_else(e)?)?.to_string();
                     if signature != "10ts" {
                         break;
                     }
                     index += 4;
                     // skip 4 unknown
                     index += 4;
-                    let _cache_entry_size = u32::from_le_bytes(shimcache_bytes[index..index+4].try_into()?);
+                    let _cache_entry_size = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?);
                     index += 4;
-                    let path_size = u16::from_le_bytes(shimcache_bytes[index..index+2].try_into()?) as usize;
+                    let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
                     index += 2;
-                    let path = utf16_to_string(&shimcache_bytes[index..index+path_size])?;
+                    let path = utf16_to_string(&shimcache_bytes.get(index..index+path_size).ok_or_else(e)?)?;
                     let program: ProgramType;
                     if RE.is_match(&path) {
                         let program_name = RE.captures(&path).expect("regex could not capture groups")
@@ -346,11 +439,11 @@ impl Parser {
                         program = ProgramType::Executable { path };
                     }
                     index += path_size;
-                    let last_modified_time_utc_win32 = u64::from_le_bytes(shimcache_bytes[index..index+8].try_into()?);
+                    let last_modified_time_utc_win32 = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?);
                     index += 8;
-                    let data_size = u32::from_le_bytes(shimcache_bytes[index..index+4].try_into()?) as usize;
+                    let data_size = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?) as usize;
                     index += 4;
-                    let data = shimcache_bytes[index..index+data_size].to_vec();
+                    let data = Some(shimcache_bytes.get(index..index+data_size).ok_or_else(e)?.to_vec());
                     index += data_size;
 
                     let last_modified_ts = if last_modified_time_utc_win32 != 0 {
@@ -364,12 +457,13 @@ impl Parser {
                     let cache_entry = ShimCacheEntry {
                         cache_entry_position,
                         data,
-                        data_size,
+                        data_size: Some(data_size),
                         executed: None,
                         last_modified_ts,
                         program,
                         path_size,
-                        signature,
+                        signature: Some(signature),
+                        controlset,
                     };
 
                     shimcache_entries.push(cache_entry);
