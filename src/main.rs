@@ -220,12 +220,12 @@ enum AnalyseCommand {
         /// The path to the newline delimited file containing regex patterns to match
         #[arg(short = 'r', long = "regexfile")]
         regex_file: PathBuf,
+        /// A path to output the resulting csv file
+        #[arg(short = 'o', long = "output")]
+        output: PathBuf,
         /// The path to the amcache artifact (Amcache.hve) for timeline enrichment
         #[arg(short = 'a', long = "amcache")]
         amcache: Option<PathBuf>,
-        /// A path to output the resulting csv file
-        #[arg(short = 'o', long = "output")]
-        output: Option<PathBuf>,
     }
 }
 
@@ -763,16 +763,14 @@ fn run() -> Result<()> {
                     if !args.no_banner {
                         print_title();
                     }
-                    init_writer(output.clone(), false, false, false)?;
+                    init_writer(Some(output.clone()), true, false, false)?;
         
                     let timeliner = ShimcacheAnalyzer::new(shimcache, amcache);
                     let timeline = timeliner.amcache_shimcache_timeline(&regex_file)?;
                     if let Some(entities) = timeline {
-                        ShimcacheAnalyzer::output_timeline_csv(&entities);
-                        if let Some(output_path) = output {
-                            cs_eprintln!("[+] Saved output to {:?}", std::fs::canonicalize(output_path)
-                                .expect("could not get absolute path"));
-                        }
+                        cli::print_shimcache_analysis_csv(&entities)?;
+                        cs_eprintln!("[+] Saved output to {:?}", std::fs::canonicalize(output)
+                            .expect("could not get absolute path"));
                     } else {
                         cs_eyellowln!("[!] No matching entries found from shimcache, nothing to output")
                     }

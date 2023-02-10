@@ -1,7 +1,7 @@
 use std::{path::{PathBuf}, fs::{File, self}, io::{BufReader, BufRead}};
 
 use anyhow::{Result};
-use chrono::{DateTime, Utc, SecondsFormat};
+use chrono::{DateTime, Utc};
 use regex::Regex;
 
 use crate::file::hve::{
@@ -12,7 +12,7 @@ use crate::file::hve::{
 };
 
 #[derive(Debug, Clone)]
-enum TimelineTimestamp {
+pub enum TimelineTimestamp {
     Exact(DateTime<Utc>),
     Range { from: DateTime<Utc>, to: DateTime<Utc> },
     RangeStart(DateTime<Utc>),
@@ -21,10 +21,10 @@ enum TimelineTimestamp {
 
 #[derive(Debug)]
 pub struct TimelineEntity {
-    shimcache_entry: ShimCacheEntry,
-    amcache_file: Option<FileArtifact>,
-    timestamp: Option<TimelineTimestamp>,
-    amcache_ts_match: bool,
+    pub shimcache_entry: ShimCacheEntry,
+    pub amcache_file: Option<FileArtifact>,
+    pub timestamp: Option<TimelineTimestamp>,
+    pub amcache_ts_match: bool,
 }
 
 impl TimelineEntity {
@@ -69,9 +69,9 @@ impl ShimcacheAnalyzer {
                 .expect("cloud not get absolute path"));
         }
 
-        let regex_patterns = BufReader::new(File::open(regex_path)?)
+        let config_patterns = BufReader::new(File::open(regex_path)?)
             .lines().collect::<Result<Vec<_>, _>>()?;
-        let regexes: Vec<Regex> = regex_patterns.iter()
+        let regexes: Vec<Regex> = config_patterns.iter()
             .map(|p| Regex::new(p)).collect::<Result<Vec<_>,_>>()?;
         cs_eprintln!("[+] Regex file with {} pattern(s) loaded from {:?}", 
             regexes.len(),
@@ -211,58 +211,5 @@ impl ShimcacheAnalyzer {
         }
     
         Ok(Some(timeline_entities))
-    }
-
-    pub fn output_timeline_csv(timeline: &Vec<TimelineEntity>) {
-        cs_println!("timestamp;timestamp description;evidence type;shimcache entry position;shimcache timestamp;amcache timestamp;entry details;timeline entry number");
-        let mut timeline_entry_nr = 0;
-        for entity in timeline {
-            let timestamp: String;
-            let ts_description: &str;
-            let entry_details: String;
-            let shimcache_entry_pos: u32;
-            let shimcache_timestamp: String;
-            let amcache_timestamp: String;
-
-            timestamp = match entity.timestamp {
-                Some(TimelineTimestamp::Exact(ts)) => ts.to_rfc3339_opts(SecondsFormat::AutoSi, true),
-                _ => String::new(),
-            };
-            ts_description = if entity.amcache_ts_match {
-                "Execution timestamp match with amcache"
-            } else if let Some(TimelineTimestamp::Exact(_ts)) = entity.timestamp {
-                "Shimcache compile timestamp"
-            } else { "" };
-            shimcache_entry_pos = entity.shimcache_entry.cache_entry_position;
-            shimcache_timestamp = if let Some(ts) = entity.shimcache_entry.last_modified_ts {
-                ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
-            } else { String::new() };
-            amcache_timestamp = if let Some(file) = &entity.amcache_file {
-                file.last_modified_ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
-            } else { String::new() };
-    
-            entry_details = if !entity.amcache_file.is_none() {
-                format!("{:?}", &entity.amcache_file.as_ref()
-                    .expect("amcache_file was unexpectedly None"))
-            } else {
-                format!("{:?}", entity.shimcache_entry.program)
-            };
-    
-            cs_println!("{};{};shimcache;{};{};{};{};{}",
-                timestamp,
-                ts_description,
-                shimcache_entry_pos,
-                shimcache_timestamp,
-                amcache_timestamp,
-                entry_details,
-                timeline_entry_nr,
-            );
-            timeline_entry_nr += 1;
-    
-            if entity.amcache_ts_match {
-                cs_println!("{timestamp};amcache timestamp;amcache;;;{timestamp};;{timeline_entry_nr}");
-                timeline_entry_nr += 1;
-            }
-        }
     }
 }

@@ -3,7 +3,7 @@ use std::fs;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
-use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, NaiveDateTime, TimeZone, Utc, SecondsFormat};
 use chrono_tz::Tz;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use prettytable::{cell, format, Row, Table};
@@ -12,6 +12,7 @@ use serde_json::{Map, Number, Value as Json};
 use tau_engine::{Document, Value as Tau};
 use uuid::Uuid;
 
+use crate::analyse::shimcache::{TimelineEntity, TimelineTimestamp};
 use crate::file::Kind as FileKind;
 use crate::hunt::{Detections, Hunt, Kind};
 use crate::rule::{Kind as RuleKind, Level, Rule, Status};
@@ -494,6 +495,93 @@ pub fn print_detections(
         cs_greenln!("\n[+] Group: {}", key);
         cs_print_table!(table);
     }
+}
+
+pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Result<()> {
+    let path = unsafe {
+        WRITER
+            .path
+            .as_ref()
+            .expect("could not get output path")
+    };
+    let mut csv = prettytable::csv::Writer::from_path(path)?;
+    let headers = [
+        "timestamp",
+        "timestamp description",
+        "evidence type",
+        "shimcache entry position",
+        "shimcache timestamp",
+        "amcache timstamp",
+        "entry details",
+        "timeline entry number",
+    ];
+    csv.write_record(headers)?;
+
+    let mut timeline_entry_nr = 0;
+    for entity in timeline {
+        let timestamp: String;
+        let ts_description: String;
+        let entry_details: String;
+        let shimcache_entry_pos: String;
+        let shimcache_timestamp: String;
+        let amcache_timestamp: String;
+
+        timestamp = match entity.timestamp {
+            Some(TimelineTimestamp::Exact(ts)) => ts.to_rfc3339_opts(SecondsFormat::AutoSi, true),
+            _ => String::new(),
+        };
+        ts_description = if entity.amcache_ts_match {
+            String::from("Execution timestamp match with amcache")
+        } else if let Some(TimelineTimestamp::Exact(_ts)) = entity.timestamp {
+            String::from("Shimcache compile timestamp")
+        } else { String::new() };
+        shimcache_entry_pos = entity.shimcache_entry.cache_entry_position.to_string();
+        shimcache_timestamp = if let Some(ts) = entity.shimcache_entry.last_modified_ts {
+            ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
+        } else { String::new() };
+        amcache_timestamp = if let Some(file) = &entity.amcache_file {
+            file.last_modified_ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
+        } else { String::new() };
+
+        entry_details = if !entity.amcache_file.is_none() {
+            format!("{:?}", &entity.amcache_file.as_ref()
+                .expect("amcache_file was unexpectedly None"))
+        } else {
+            format!("{:?}", entity.shimcache_entry.program)
+        };
+
+        let timeline_entry_nr_string = timeline_entry_nr.to_string();
+        let shimcache_row = [
+            &timestamp,
+            &ts_description,
+            "shimcache",
+            &shimcache_entry_pos,
+            &shimcache_timestamp,
+            &amcache_timestamp,
+            &entry_details,
+            &timeline_entry_nr_string,
+        ];
+        csv.write_record(shimcache_row)?;
+        timeline_entry_nr += 1;
+
+        if entity.amcache_ts_match {
+            let amcache_row = [
+                &timestamp,
+                "Amcache timestamp",
+                "amcache",
+                "",
+                "",
+                &timestamp,
+                "",
+                &timeline_entry_nr_string,
+            ];
+            csv.write_record(amcache_row)?;
+            timeline_entry_nr += 1;
+        }
+    }
+
+
+    Ok(())
 }
 
 pub fn print_csv(
