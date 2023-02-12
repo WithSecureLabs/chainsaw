@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
 // https://github.com/rust-lang/rust/issues/74465
-use once_cell::unsync::OnceCell;
+use once_cell::sync::OnceCell;
 use rayon::prelude::*;
 use serde::{
     ser::{SerializeStruct, Serializer},
@@ -565,18 +565,6 @@ impl Hunter {
                                 .rules
                                 .par_iter()
                                 .filter_map(|(rid, rule)| {
-                                    // NOTE: Needed as Document is not Sync
-                                    let wrapper;
-                                    let mapped = match &document {
-                                        File::Evtx(evtx) => {
-                                            wrapper = crate::evtx::Wrapper(&evtx.data);
-                                            hunt.mapper.mapped(&wrapper)
-                                        }
-                                        File::Mft(mft) => hunt.mapper.mapped(mft),
-                                        File::Json(json) => hunt.mapper.mapped(json),
-                                        File::Xml(xml) => hunt.mapper.mapped(xml),
-                                    };
-
                                     if !rule.is_kind(kind) {
                                         return None;
                                     }
