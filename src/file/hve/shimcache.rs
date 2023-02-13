@@ -118,14 +118,66 @@ impl super::Parser {
                 notatin::cell_value::CellValue::String(s) => s == "x86",
                 _ => bail!("Value \"PROCESSOR_ARCHITECTURE\" under key \"{environment_key_path}\" was not of type String in shimcache!")
             };
+            let mut index = 4;
+            let entry_count = u32::from_le_bytes(shimcache_bytes.get(index..index+4).expect("could not index shimcache bytes").try_into()?) as usize;
+            if entry_count == 0 {
+                return Ok(shimcache_entries);
+            }
+            index = 128;
+            let mut cache_entry_position = 0;
 
             if is_32bit {
-                bail!("Windows 7 32-bit shimcache parsing not yet implemented!");
+                // TODO: verify that 32-bit win7 parsing works properly
+                while index < shimcache_len {
+                    let e = || anyhow!("Error parsing windows 7 shimcache entry. Position: {}", cache_entry_position);
+                    let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
+                    index += 2;
+                    let _max_path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
+                    index += 2;
+                    let path_offset = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?) as usize;
+                    index += 4;
+                    let last_modified_time_utc_win32 = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?);
+                    index += 8;
+                    let insert_flags = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?);
+                    index += 4;
+                    // skip 4 (shim flags)
+                    index += 4;
+                    let data_size = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?) as usize;
+                    index += 4;
+                    let data_offset = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?) as usize;
+                    index += 4;
+
+                    let path = utf16_to_string(&shimcache_bytes.get(path_offset..path_offset+path_size).ok_or_else(e)?)?;
+                    let data = Some(shimcache_bytes.get(data_offset..data_offset+data_size).ok_or_else(e)?.to_vec());
+                    let last_modified_ts = if last_modified_time_utc_win32 != 0 {
+                        let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;
+                        let last_modified_date_time = DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
+                        Some(last_modified_date_time)
+                    } else {
+                        None
+                    };
+                    let executed = Some(insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32);
+                    let program = ProgramType::Executable { path };
+    
+                    let cache_entry = ShimCacheEntry {
+                        cache_entry_position,
+                        data,
+                        data_size: Some(data_size),
+                        executed,
+                        last_modified_ts,
+                        program,
+                        path_size,
+                        signature: None,
+                        controlset,
+                    };
+    
+                    shimcache_entries.push(cache_entry);
+                    if shimcache_entries.len() >= entry_count {
+                        break;
+                    }
+                    cache_entry_position += 1;
+                }
             } else {
-                let mut index = 4;
-                let entry_count = u32::from_le_bytes(shimcache_bytes.get(index..index+4).expect("could not index shimcache bytes").try_into()?) as usize;
-                index = 128;
-                let mut cache_entry_position = 0;
                 while index < shimcache_len {
                     let e = || anyhow!("Error parsing windows 7 shimcache entry. Position: {}", cache_entry_position);
                     let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
@@ -140,7 +192,7 @@ impl super::Parser {
                     index += 8;
                     let insert_flags = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?);
                     index += 4;
-                    // skip 4 unknown (shim flags?)
+                    // skip 4 (shim flags)
                     index += 4;
                     let data_size = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?) as usize;
                     index += 8;
