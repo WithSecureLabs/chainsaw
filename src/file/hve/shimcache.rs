@@ -147,7 +147,7 @@ impl super::Parser {
                     let data_offset = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?) as usize;
                     index += 4;
 
-                    let path = utf16_to_string(&shimcache_bytes.get(path_offset..path_offset+path_size).ok_or_else(e)?)?;
+                    let path = utf16_to_string(&shimcache_bytes.get(path_offset..path_offset+path_size).ok_or_else(e)?)?.replace(r"\??\", "");
                     let data = Some(shimcache_bytes.get(data_offset..data_offset+data_size).ok_or_else(e)?.to_vec());
                     let last_modified_ts = if last_modified_time_utc_win32 != 0 {
                         let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;
@@ -199,7 +199,7 @@ impl super::Parser {
                     let data_offset = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?) as usize;
                     index += 8;
 
-                    let path = utf16_to_string(&shimcache_bytes.get(path_offset..path_offset+path_size).ok_or_else(e)?)?;
+                    let path = utf16_to_string(&shimcache_bytes.get(path_offset..path_offset+path_size).ok_or_else(e)?)?.replace(r"\??\", "");
                     let data = Some(shimcache_bytes.get(data_offset..data_offset+data_size).ok_or_else(e)?.to_vec());
                     let last_modified_ts = if last_modified_time_utc_win32 != 0 {
                         let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;

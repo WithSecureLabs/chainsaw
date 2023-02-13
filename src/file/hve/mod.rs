@@ -1,4 +1,4 @@
-use std::{path::{PathBuf, Path}};
+use std::{path::{PathBuf, Path}, fs};
 
 use anyhow::{Result, bail};
 use notatin::{
@@ -18,9 +18,33 @@ pub struct Parser {
 
 impl Parser {
     pub fn load(path: &Path) -> crate::Result<Self> {
-        let parser: HveParser = ParserBuilder::from_path(PathBuf::from(path))
-            .recover_deleted(false)
-            .build()?;
+        // Find registry transaction logs from the same directory
+        let mut transaction_log_files: Vec<PathBuf> = Vec::new();
+        let parent_dir = path.parent().ok_or(anyhow!("Could not get registry hive parent directory!"))?;
+        let hive_file_name = path.file_name();
+        let parent_dir_files = fs::read_dir(parent_dir)?.into_iter().collect::<Result<Vec<_>,_>>()?;
+        for dir_entry in parent_dir_files {
+            let path = dir_entry.path();
+            if path.file_stem() == hive_file_name {
+                let file_extension = path.extension();
+                if let Some(extension) = file_extension {
+                    if extension == "LOG"
+                    || extension == "LOG1"
+                    || extension == "LOG2" {
+                        transaction_log_files.push(path);
+                    }
+                }
+            }
+        }
+
+        // Build parser
+        let mut parser_builder = ParserBuilder::from_path(PathBuf::from(path));
+        parser_builder.recover_deleted(true);
+        for log_file in transaction_log_files {
+            parser_builder.with_transaction_log(log_file);
+        }
+
+        let parser = parser_builder.build()?;
 
         Ok(Self { inner: parser })
     }
