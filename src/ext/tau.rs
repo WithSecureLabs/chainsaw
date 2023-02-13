@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use aho_corasick::AhoCorasickBuilder;
 use serde::de;
 use serde_yaml::Value as Yaml;
@@ -31,6 +33,50 @@ where
         _ => return Err(de::Error::custom("only numeric expressions are allowed")),
     }
     Ok(identifier.pattern)
+}
+
+pub fn extract_fields(expression: &Expression) -> HashSet<String> {
+    let mut set = HashSet::new();
+    match expression {
+        Expression::BooleanGroup(_, expressions) => {
+            for expression in expressions {
+                set.extend(extract_fields(expression));
+            }
+        }
+        Expression::BooleanExpression(left, _, right) => {
+            set.extend(extract_fields(left));
+            set.extend(extract_fields(right));
+        }
+        Expression::Cast(s, _) => {
+            set.insert(s.to_owned());
+        }
+        Expression::Field(f) => {
+            set.insert(f.to_owned());
+        }
+        Expression::Match(_, e) => {
+            set.extend(extract_fields(&**e));
+        }
+        Expression::Matrix(fields, _) => {
+            for field in fields {
+                set.insert(field.to_owned());
+            }
+        }
+        Expression::Negate(e) => {
+            set.extend(extract_fields(&**e));
+        }
+        Expression::Nested(field, _) => {
+            set.insert(field.to_owned());
+        }
+        Expression::Search(_, field, _) => {
+            set.insert(field.to_owned());
+        }
+        Expression::Boolean(_)
+        | Expression::Float(_)
+        | Expression::Identifier(_)
+        | Expression::Integer(_)
+        | Expression::Null => {}
+    }
+    set
 }
 
 pub fn parse_field(key: &str) -> Expression {

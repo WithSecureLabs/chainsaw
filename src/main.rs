@@ -42,6 +42,9 @@ struct Args {
     /// Hide Chainsaw's banner.
     #[arg(long)]
     no_banner: bool,
+    /// Limit the thread number (default: num of CPUs)
+    #[arg(long)]
+    num_threads: Option<usize>,
     #[command(subcommand)]
     cmd: Command,
 }
@@ -106,6 +109,9 @@ enum Command {
         /// Print the output in log like format.
         #[arg(group = "format", long = "log")]
         log: bool,
+        /// Enable preprocessing, which can result in increased performance.
+        #[arg(long = "preprocess")]
+        preprocess: bool,
         /// Supress informational output.
         #[arg(short = 'q')]
         quiet: bool,
@@ -275,6 +281,11 @@ fn init_writer(output: Option<PathBuf>, csv: bool, json: bool, quiet: bool) -> c
 
 fn run() -> Result<()> {
     let args = Args::parse();
+    if let Some(num_threads) = args.num_threads {
+        let _ = rayon::ThreadPoolBuilder::new()
+            .num_threads(num_threads)
+            .build_global()?;
+    }
     match args.cmd {
         Command::Hunt {
             rules,
@@ -297,6 +308,7 @@ fn run() -> Result<()> {
             metadata,
             output,
             log,
+            preprocess,
             quiet,
             sigma,
             skip_errors,
@@ -408,6 +420,7 @@ fn run() -> Result<()> {
                 .mappings(mapping.unwrap_or_default())
                 .load_unknown(load_unknown)
                 .local(local)
+                .preprocess(preprocess)
                 .skip_errors(skip_errors);
             if let Some(from) = from {
                 hunter = hunter.from(from);
