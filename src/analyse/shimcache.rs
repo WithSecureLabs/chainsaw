@@ -5,10 +5,15 @@ use chrono::{DateTime, Utc};
 use regex::Regex;
 
 use crate::file::hve::{
-    InventoryApplicationFileArtifact as FileArtifact,
-    ShimCacheEntry,
+    amcache::{
+        AmcacheArtifact,
+        InventoryApplicationFileArtifact as FileArtifact,
+    },
     Parser as HveParser,
-    ProgramType, AmcacheArtifact
+    shimcache::{
+        ProgramType,
+        ShimCacheEntry,
+    },
 };
 
 #[derive(Debug, Clone)]
