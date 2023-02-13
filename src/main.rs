@@ -2,8 +2,9 @@
 extern crate chainsaw;
 extern crate term_size;
 
-use std::collections::HashSet;
-use std::fs::File;
+use std::io::BufRead;
+use std::{collections::HashSet, io::BufReader};
+use std::fs::{File, self};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
@@ -11,7 +12,7 @@ use bytesize::ByteSize;
 use chrono::NaiveDateTime;
 use chrono_tz::Tz;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ArgGroup};
 
 use chainsaw::{
     cli, get_files, lint as lint_rule, load as load_rule, set_writer, Filter, Format, Hunter,
@@ -214,12 +215,26 @@ enum Command {
 #[derive(Subcommand)]
 enum AnalyseCommand {
     /// Create an execution timeline from the shimcache by detecting executables that are compiled before execution
+    #[clap(group(
+        ArgGroup::new("regex")
+            .multiple(true)
+            .required(true)
+            .args(&["additional_pattern", "regex_file"]),
+    ))]
     Shimcache {
         /// The path to the shimcache artifact (SYSTEM registry file)
         shimcache: PathBuf,
+        /// A string or regular expression pattern to search for
+        #[arg(
+            short = 'e',
+            long = "regex",
+            value_name = "pattern",
+            number_of_values = 1
+        )]
+        additional_pattern: Option<Vec<String>>,
         /// The path to the newline delimited file containing regex patterns to match
         #[arg(short = 'r', long = "regexfile")]
-        regex_file: PathBuf,
+        regex_file: Option<PathBuf>,
         /// A path to output the resulting csv file
         #[arg(short = 'o', long = "output")]
         output: Option<PathBuf>,
@@ -755,18 +770,35 @@ fn run() -> Result<()> {
         } => {
             match cmd {
                 AnalyseCommand::Shimcache {
-                    shimcache,
+                    additional_pattern,
                     amcache,
-                    regex_file,
                     output,
+                    regex_file,
+                    shimcache,
                 } => {
                     if !args.no_banner {
                         print_title();
                     }
                     init_writer(output.clone(), true, false, false)?;
-        
-                    let timeliner = ShimcacheAnalyzer::new(shimcache, amcache);
-                    let timeline = timeliner.amcache_shimcache_timeline(&regex_file)?;
+                    let shimcache_analyzer = ShimcacheAnalyzer::new(shimcache, amcache);
+
+                    // Load regex
+                    let mut regex_patterns: Vec<String> = Vec::new();
+                    if let Some(regex_file) = regex_file {
+                        let mut file_regex_patterns = BufReader::new(File::open(&regex_file)?)
+                            .lines().collect::<Result<Vec<_>, _>>()?;
+                        cs_eprintln!("[+] Regex file with {} pattern(s) loaded from {:?}", 
+                            file_regex_patterns.len(),
+                            fs::canonicalize(&regex_file).expect("cloud not get absolute path")
+                        );
+                        regex_patterns.append(&mut file_regex_patterns);
+                    }
+                    if let Some(mut additional_patterns) = additional_pattern {
+                        regex_patterns.append(&mut additional_patterns);
+                    }
+
+                    // Do analysis
+                    let timeline = shimcache_analyzer.amcache_shimcache_timeline(&regex_patterns)?;
                     if let Some(entities) = timeline {
                         cli::print_shimcache_analysis_csv(&entities)?;
                         if let Some(output_path) = output {

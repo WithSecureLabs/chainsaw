@@ -1,4 +1,4 @@
-use std::{path::{PathBuf}, fs::{File, self}, io::{BufReader, BufRead}};
+use std::{path::{PathBuf}, fs::{self}};
 
 use anyhow::{Result};
 use chrono::{DateTime, Utc};
@@ -49,7 +49,6 @@ pub struct ShimcacheAnalyzer {
 }
 
 impl ShimcacheAnalyzer {
-
     pub fn new(shimcache_path: PathBuf, amcache_path: Option<PathBuf>) -> Self {
         Self {
             shimcache_path,
@@ -57,7 +56,13 @@ impl ShimcacheAnalyzer {
         }
     }
 
-    pub fn amcache_shimcache_timeline(&self, regex_path: &PathBuf) -> Result<Option<Vec<TimelineEntity>>> {
+    pub fn amcache_shimcache_timeline(&self, regex_patterns: &Vec<String>) -> Result<Option<Vec<TimelineEntity>>> {
+        if regex_patterns.is_empty() {
+            bail!("No regex patterns defined!")
+        }
+        let regexes: Vec<Regex> = regex_patterns.iter()
+            .map(|p| Regex::new(p)).collect::<Result<Vec<_>,_>>()?;
+
         let mut shimcache_parser = HveParser::load(&self.shimcache_path)?;
         let shimcache = shimcache_parser.parse_shimcache()?;
         cs_eprintln!("[+] Shimcache hive file loaded from {:?}", fs::canonicalize(&self.shimcache_path)
@@ -74,15 +79,6 @@ impl ShimcacheAnalyzer {
                 .expect("cloud not get absolute path"));
         }
 
-        let config_patterns = BufReader::new(File::open(regex_path)?)
-            .lines().collect::<Result<Vec<_>, _>>()?;
-        let regexes: Vec<Regex> = config_patterns.iter()
-            .map(|p| Regex::new(p)).collect::<Result<Vec<_>,_>>()?;
-        cs_eprintln!("[+] Regex file with {} pattern(s) loaded from {:?}", 
-            regexes.len(),
-            fs::canonicalize(&regex_path).expect("cloud not get absolute path")
-        );
-    
         // Create timeline entities from shimcache entities
         let mut timeline_entities: Vec<TimelineEntity> = shimcache.into_iter().map(
             |e| TimelineEntity::new(e)
