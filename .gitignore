@@ -6,3 +6,8 @@ target
 
 # VSCode
 *.vscode*
+
+# Profiling
+flamegraph.svg
+perf.data
+perf.data.old

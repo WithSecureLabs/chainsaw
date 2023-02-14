@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
 // https://github.com/rust-lang/rust/issues/74465
-use once_cell::unsync::OnceCell;
+use once_cell::sync::OnceCell;
 use rayon::prelude::*;
 use serde::{
     ser::{SerializeStruct, Serializer},
@@ -115,6 +115,7 @@ pub struct HunterBuilder {
 
     load_unknown: Option<bool>,
     local: Option<bool>,
+    preprocess: Option<bool>,
     from: Option<NaiveDateTime>,
     skip_errors: Option<bool>,
     timezone: Option<Tz>,
@@ -128,6 +129,7 @@ impl HunterBuilder {
 
     pub fn build(self) -> crate::Result<Hunter> {
         let mut hunts = vec![];
+        let mut keys = HashSet::new();
         let rules = match self.rules {
             Some(mut rules) => {
                 rules.sort_by(|x, y| x.name().cmp(y.name()));
@@ -208,6 +210,8 @@ impl HunterBuilder {
                 }
                 mapping.groups.sort_by(|x, y| x.name.cmp(&y.name));
                 for group in mapping.groups {
+                    keys.extend(crate::ext::tau::extract_fields(&group.filter));
+                    keys.insert(group.timestamp.clone());
                     let mapper = Mapper::from(group.fields);
                     hunts.push(Hunt {
                         id: group.id,
@@ -228,18 +232,37 @@ impl HunterBuilder {
             }
         }
 
+        for rule in rules.values() {
+            match rule {
+                Rule::Chainsaw(c) => match &c.filter {
+                    Filter::Detection(d) => {
+                        keys.extend(crate::ext::tau::extract_fields(&d.expression));
+                    }
+                    Filter::Expression(e) => {
+                        keys.extend(crate::ext::tau::extract_fields(e));
+                    }
+                },
+                Rule::Sigma(s) => {
+                    keys.extend(crate::ext::tau::extract_fields(&s.tau.detection.expression));
+                }
+            }
+        }
+
         let load_unknown = self.load_unknown.unwrap_or_default();
         let local = self.local.unwrap_or_default();
+        let preprocess = self.preprocess.unwrap_or_default();
         let skip_errors = self.skip_errors.unwrap_or_default();
 
         Ok(Hunter {
             inner: HunterInner {
                 hunts,
+                keys,
                 rules,
 
                 from: self.from.map(|d| DateTime::from_utc(d, Utc)),
                 load_unknown,
                 local,
+                preprocess,
                 skip_errors,
                 timezone: self.timezone,
                 to: self.to.map(|d| DateTime::from_utc(d, Utc)),
@@ -259,6 +282,11 @@ impl HunterBuilder {
 
     pub fn local(mut self, local: bool) -> Self {
         self.local = Some(local);
+        self
+    }
+
+    pub fn preprocess(mut self, preprocess: bool) -> Self {
+        self.preprocess = Some(preprocess);
         self
     }
 
@@ -438,6 +466,21 @@ impl<'a> TauDocument for Mapped<'a> {
     }
 }
 
+struct Cache<'a> {
+    cache: Option<HashMap<&'a str, Tau<'a>>>,
+    mapped: &'a Mapped<'a>,
+}
+impl<'a> TauDocument for Cache<'a> {
+    #[inline(always)]
+    fn find(&self, key: &str) -> Option<Tau<'_>> {
+        if let Some(cache) = &self.cache {
+            cache.get(key).cloned()
+        } else {
+            self.mapped.find(key)
+        }
+    }
+}
+
 pub struct Hunt {
     pub id: Uuid,
     pub group: String,
@@ -459,10 +502,12 @@ impl Hunt {
 
 pub struct HunterInner {
     hunts: Vec<Hunt>,
+    keys: HashSet<String>,
     rules: BTreeMap<Uuid, Rule>,
 
     load_unknown: bool,
     local: bool,
+    preprocess: bool,
     from: Option<DateTime<Utc>>,
     skip_errors: bool,
     timezone: Option<Tz>,
@@ -519,6 +564,23 @@ impl Hunter {
                     File::Mft(mft) => hunt.mapper.mapped(mft),
                     File::Xml(xml) => hunt.mapper.mapped(xml),
                 };
+                let mapped = if self.inner.preprocess {
+                    let mut flat = HashMap::with_capacity(self.inner.keys.len());
+                    for key in &self.inner.keys {
+                        if let Some(value) = mapped.find(&key) {
+                            flat.insert(key.as_str(), value);
+                        }
+                    }
+                    Cache {
+                        cache: Some(flat),
+                        mapped: &mapped,
+                    }
+                } else {
+                    Cache {
+                        cache: None,
+                        mapped: &mapped,
+                    }
+                };
 
                 let timestamp = match mapped.find(&hunt.timestamp) {
                     Some(value) => match value.as_str() {
@@ -566,19 +628,6 @@ impl Hunter {
                                 .rules
                                 .par_iter()
                                 .filter_map(|(rid, rule)| {
-                                    // NOTE: Needed as Document is not Sync
-                                    let wrapper;
-                                    let mapped = match &document {
-                                        File::Evtx(evtx) => {
-                                            wrapper = crate::evtx::Wrapper(&evtx.data);
-                                            hunt.mapper.mapped(&wrapper)
-                                        }
-                                        File::Hve(hve) => hunt.mapper.mapped(hve),
-                                        File::Mft(mft) => hunt.mapper.mapped(mft),
-                                        File::Json(json) => hunt.mapper.mapped(json),
-                                        File::Xml(xml) => hunt.mapper.mapped(xml),
-                                    };
-
                                     if !rule.is_kind(kind) {
                                         return None;
                                     }
