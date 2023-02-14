@@ -567,7 +567,7 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
             format!("{:?}", &entity.amcache_file.as_ref()
                 .expect("amcache_file was unexpectedly None"))
         } else {
-            format!("{:?}", entity.shimcache_entry.program)
+            format!("{:?}", entity.shimcache_entry.entry_type)
         };
 
         let timeline_entry_nr_string = timeline_entry_nr.to_string();

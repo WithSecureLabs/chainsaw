@@ -27,33 +27,33 @@ enum InsertFlag {
 
 #[derive(Debug)]
 pub struct ShimCacheEntry {
-    pub signature: Option<String>,
-    pub path_size: usize,
-    pub program: ProgramType,
-    pub last_modified_ts: Option<DateTime<Utc>>,
+    pub cache_entry_position: u32,
+    pub controlset: u32,
     pub data_size: Option<usize>,
     pub data: Option<Vec<u8>>,
+    pub entry_type: EntryType,
     pub executed: Option<bool>,
-    pub controlset: u32,
-    pub cache_entry_position: u32,
+    pub last_modified_ts: Option<DateTime<Utc>>,
+    pub path_size: usize,
+    pub signature: Option<String>,
 }
 
 #[derive(Debug)]
-pub enum ProgramType {
-    Program {
-        program_name: String,
-        full_string: String,
-    },
-    Executable {
+pub enum EntryType {
+    File {
         path: String
-    }
+    },
+    Program {
+        full_string: String,
+        program_name: String,
+    },
 }
 
 impl Display for ShimCacheEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let path_or_name = match &self.program {
-            ProgramType::Program { program_name, .. } => program_name,
-            ProgramType::Executable { path } => path,
+        let path_or_name = match &self.entry_type {
+            EntryType::File { path } => path,
+            EntryType::Program { program_name, .. } => program_name,
         };
         match self.last_modified_ts {
             Some(ts) => write!(f, "{}:\t{:?}, {}", self.cache_entry_position, ts, path_or_name),
@@ -157,7 +157,7 @@ impl super::Parser {
                         None
                     };
                     let executed = Some(insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32);
-                    let program = ProgramType::Executable { path };
+                    let entry_type = EntryType::File { path };
     
                     let cache_entry = ShimCacheEntry {
                         cache_entry_position,
@@ -165,7 +165,7 @@ impl super::Parser {
                         data_size: Some(data_size),
                         executed,
                         last_modified_ts,
-                        program,
+                        entry_type,
                         path_size,
                         signature: None,
                         controlset,
@@ -209,7 +209,7 @@ impl super::Parser {
                         None
                     };
                     let executed = Some(insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32);
-                    let program = ProgramType::Executable { path };
+                    let entry_type = EntryType::File { path };
     
                     let cache_entry = ShimCacheEntry {
                         cache_entry_position,
@@ -217,7 +217,7 @@ impl super::Parser {
                         data_size: Some(data_size),
                         executed,
                         last_modified_ts,
-                        program,
+                        entry_type,
                         path_size,
                         signature: None,
                         controlset,
@@ -265,14 +265,14 @@ impl super::Parser {
                     let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
                     index += 2;
                     let path = utf16_to_string(&shimcache_bytes.get(index..index+path_size).ok_or_else(e)?)?;
-                    let program: ProgramType;
+                    let entry_type: EntryType;
                     if RE.is_match(&path) {
                         let program_name = RE.captures(&path).expect("regex could not capture groups")
                             .get(5).expect("could not get group 5 of regex")
                             .as_str().to_string();
-                        program = ProgramType::Program { program_name, full_string: path };
+                        entry_type = EntryType::Program { program_name, full_string: path };
                     } else {
-                        program = ProgramType::Executable { path };
+                        entry_type = EntryType::File { path };
                     }
                     index += path_size;
                     let last_modified_time_utc_win32 = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?);
@@ -296,7 +296,7 @@ impl super::Parser {
                         data_size: Some(data_size),
                         executed: None,
                         last_modified_ts,
-                        program,
+                        entry_type,
                         path_size,
                         signature: Some(signature),
                         controlset,
