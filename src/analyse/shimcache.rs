@@ -7,7 +7,7 @@ use regex::Regex;
 use crate::file::hve::{
     amcache::{
         AmcacheArtifact,
-        InventoryApplicationFileArtifact as FileArtifact,
+        FileEntry,
     },
     Parser as HveParser,
     shimcache::{
@@ -20,39 +20,39 @@ use crate::file::hve::{
 pub enum TimelineTimestamp {
     Exact(DateTime<Utc>),
     Range { from: DateTime<Utc>, to: DateTime<Utc> },
-    RangeStart(DateTime<Utc>),
     RangeEnd(DateTime<Utc>),
+    RangeStart(DateTime<Utc>),
 }
 
 #[derive(Debug)]
 pub struct TimelineEntity {
-    pub shimcache_entry: ShimCacheEntry,
-    pub amcache_file: Option<FileArtifact>,
-    pub timestamp: Option<TimelineTimestamp>,
+    pub amcache_file: Option<FileEntry>,
     pub amcache_ts_match: bool,
+    pub shimcache_entry: ShimCacheEntry,
+    pub timestamp: Option<TimelineTimestamp>,
 }
 
 impl TimelineEntity {
     fn new(shimcache_entry: ShimCacheEntry) -> Self {
         Self {
-            shimcache_entry,
             amcache_file: None,
-            timestamp: None,
             amcache_ts_match: false,
+            shimcache_entry,
+            timestamp: None,
         }
     }
 }
 
 pub struct ShimcacheAnalyzer {
-    shimcache_path: PathBuf,
     amcache_path: Option<PathBuf>,
+    shimcache_path: PathBuf,
 }
 
 impl ShimcacheAnalyzer {
     pub fn new(shimcache_path: PathBuf, amcache_path: Option<PathBuf>) -> Self {
         Self {
+            amcache_path,
             shimcache_path,
-            amcache_path
         }
     }
 
@@ -178,15 +178,15 @@ impl ShimcacheAnalyzer {
                 }
             }
             for (_program_id, program) in amcache.programs {
-                if let Some(application) = program.application_artifact {
+                if let Some(program_entry) = program.program_entry {
                     for mut entity in &mut timeline_entities {
                         match &entity.shimcache_entry.program {
                             ProgramType::Executable { .. } => (),
                             ProgramType::Program { program_name, .. } => {
-                                if program_name == &application.program_name {
+                                if program_name == &program_entry.program_name {
                                     // TODO: link amcache program to timeline entity
                                     if let Some(TimelineTimestamp::Range{from, to}) = entity.timestamp {
-                                        let amcache_ts = application.last_modified_ts;
+                                        let amcache_ts = program_entry.last_modified_ts;
                                         if from < amcache_ts && amcache_ts < to {
                                             entity.amcache_ts_match = true;
                                             entity.timestamp = Some(TimelineTimestamp::Exact(amcache_ts));
