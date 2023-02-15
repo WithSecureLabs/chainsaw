@@ -109,7 +109,7 @@ enum Command {
         /// Print the output in log like format.
         #[arg(group = "format", long = "log")]
         log: bool,
-        /// Enable preprocessing, which can result in increased performance.
+        /// (BETA) Enable preprocessing, which can result in increased performance.
         #[arg(long = "preprocess")]
         preprocess: bool,
         /// Supress informational output.

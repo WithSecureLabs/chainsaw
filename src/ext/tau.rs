@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use aho_corasick::AhoCorasickBuilder;
 use serde::de;
@@ -77,6 +77,54 @@ pub fn extract_fields(expression: &Expression) -> HashSet<String> {
         | Expression::Null => {}
     }
     set
+}
+
+pub fn update_fields(expression: Expression, lookup: &HashMap<String, String>) -> Expression {
+    match expression {
+        Expression::BooleanGroup(x, expressions) => {
+            let expressions = expressions
+                .into_iter()
+                .map(|e| update_fields(e, lookup))
+                .collect();
+            Expression::BooleanGroup(x, expressions)
+        }
+        Expression::BooleanExpression(left, x, right) => Expression::BooleanExpression(
+            Box::new(update_fields(*left, lookup)),
+            x,
+            Box::new(update_fields(*right, lookup)),
+        ),
+        Expression::Cast(field, x) => {
+            let field = lookup.get(&field).expect("could not get field");
+            Expression::Cast(field.to_owned(), x)
+        }
+        Expression::Field(field) => {
+            let field = lookup.get(&field).expect("could not get field");
+            Expression::Field(field.to_owned())
+        }
+        Expression::Match(x, e) => Expression::Match(x, Box::new(update_fields(*e, lookup))),
+        Expression::Matrix(fields, x) => {
+            let fields = fields
+                .into_iter()
+                .map(|f| lookup.get(&f).expect("could not get field"))
+                .cloned()
+                .collect();
+            Expression::Matrix(fields, x)
+        }
+        Expression::Negate(e) => Expression::Negate(Box::new(update_fields(*e, lookup))),
+        Expression::Nested(field, x) => {
+            let field = lookup.get(&field).expect("could not get field");
+            Expression::Nested(field.to_owned(), x)
+        }
+        Expression::Search(x, field, y) => {
+            let field = lookup.get(&field).expect("could not get field");
+            Expression::Search(x, field.to_owned(), y)
+        }
+        Expression::Boolean(_)
+        | Expression::Float(_)
+        | Expression::Identifier(_)
+        | Expression::Integer(_)
+        | Expression::Null => expression,
+    }
 }
 
 pub fn parse_field(key: &str) -> Expression {
