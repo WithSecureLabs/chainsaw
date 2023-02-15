@@ -208,6 +208,9 @@ impl HunterBuilder {
                         }
                     }
                 }
+                for precondition in preconds.values() {
+                    keys.extend(crate::ext::tau::extract_fields(&precondition));
+                }
                 mapping.groups.sort_by(|x, y| x.name.cmp(&y.name));
                 for group in mapping.groups {
                     keys.extend(crate::ext::tau::extract_fields(&group.filter));
@@ -234,15 +237,23 @@ impl HunterBuilder {
 
         for rule in rules.values() {
             match rule {
-                Rule::Chainsaw(c) => match &c.filter {
-                    Filter::Detection(d) => {
-                        keys.extend(crate::ext::tau::extract_fields(&d.expression));
+                Rule::Chainsaw(c) => {
+                    if let Some(a) = &c.aggregate {
+                        keys.extend(a.fields.iter().cloned());
                     }
-                    Filter::Expression(e) => {
-                        keys.extend(crate::ext::tau::extract_fields(e));
+                    match &c.filter {
+                        Filter::Detection(d) => {
+                            keys.extend(crate::ext::tau::extract_fields(&d.expression));
+                        }
+                        Filter::Expression(e) => {
+                            keys.extend(crate::ext::tau::extract_fields(e));
+                        }
                     }
-                },
+                }
                 Rule::Sigma(s) => {
+                    if let Some(a) = &s.aggregate {
+                        keys.extend(a.fields.iter().cloned());
+                    }
                     keys.extend(crate::ext::tau::extract_fields(&s.tau.detection.expression));
                 }
             }
