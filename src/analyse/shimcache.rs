@@ -110,8 +110,8 @@ impl ShimcacheAnalyzer {
             }
         }
     
+        /// Sets timestamp ranges for timeline entities based on shimcache entry order
         fn set_timestamp_ranges(range_indices: &Vec<usize>, timeline_entities: &mut Vec<TimelineEntity>) {
-            // Set timestamp ranges for timeline entities based on shimcache entry order
             let first_index = *range_indices.first().expect("empty range_indices provided");
             if first_index > 0 {
                 let entity = &timeline_entities[first_index];
@@ -146,7 +146,6 @@ impl ShimcacheAnalyzer {
             }
         }
     
-        // Set timestamp ranges for timeline entities based on shimcache entry order
         set_timestamp_ranges(&match_indices, &mut timeline_entities);
     
         if let Some(amcache) = amcache {

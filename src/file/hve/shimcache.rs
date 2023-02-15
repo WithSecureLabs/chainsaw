@@ -88,7 +88,7 @@ impl super::Parser {
             notatin::cell_value::CellValue::Binary(bytes) => bytes,
             _ => bail!("Shimcache value was not of type Binary!"),
         };
-        let shimcache_len = shimcache_bytes.len();
+        let shimcache_bytes_len = shimcache_bytes.len();
 
         let mut shimcache_entries: Vec<ShimCacheEntry> = Vec::new();
 
@@ -128,7 +128,7 @@ impl super::Parser {
 
             if is_32bit {
                 // TODO: verify that 32-bit win7 parsing works properly
-                while index < shimcache_len {
+                while index < shimcache_bytes_len {
                     let e = || anyhow!("Error parsing windows 7 shimcache entry. Position: {}", cache_entry_position);
                     let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
                     index += 2;
@@ -178,7 +178,7 @@ impl super::Parser {
                     cache_entry_position += 1;
                 }
             } else {
-                while index < shimcache_len {
+                while index < shimcache_bytes_len {
                     let e = || anyhow!("Error parsing windows 7 shimcache entry. Position: {}", cache_entry_position);
                     let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
                     index += 2;
@@ -231,13 +231,66 @@ impl super::Parser {
                 }
             }
         }
-        // Windows 8 shimcache
-        else if cache_signature == "00ts" {
-            bail!("Windows 8 shimcache parsing not yet implemented!")
-        }
-        // Windows 8.1 shimcache
-        else if cache_signature == "10ts" {
-            bail!("Windows 8.1 shimcache parsing not yet implemented!")
+        // Windows 8 or Windows 8.1 shimcache
+        else if cache_signature == "00ts" || cache_signature == "10ts" {
+            // TODO: verify behavior of win8 shimcache parsing with test data
+            let mut index = 128;
+            let mut cache_entry_position = 0;
+            while index < shimcache_bytes_len {
+                let signature = std::str::from_utf8(&shimcache_bytes.get(index..index+4).ok_or_else(e)?)?.to_string();
+                if signature != cache_signature {
+                    break;
+                }
+                index += 4;
+                // skip 4 unknown
+                index += 4;
+                let _ce_data_size = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?) as usize;
+                index += 4;
+                let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
+                index += 2;
+                let path = utf16_to_string(&shimcache_bytes.get(index..index+path_size).ok_or_else(e)?)?;
+                index += path_size;
+                let package_len = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
+                index += 2;
+                //skip package data
+                index += package_len;
+                let insert_flags = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?);
+                index += 4;
+                // skip 4 (shim flags)
+                index += 4;
+                let last_modified_time_utc_win32 = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?);
+                index += 8;
+                let data_size = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?) as usize;
+                index += 4;
+                let data = Some(shimcache_bytes.get(index..index+data_size).ok_or_else(e)?.to_vec());
+                index += data_size;
+
+                // TODO: check if a similar regex is needed for path parsing as in windows 10 shimcache
+                let entry_type = EntryType::File { path };
+                let executed = Some(insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32);
+                let last_modified_ts = if last_modified_time_utc_win32 != 0 {
+                    let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;
+                    let last_modified_date_time = DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
+                    Some(last_modified_date_time)
+                } else {
+                    None
+                };
+
+                let cache_entry = ShimCacheEntry {
+                    cache_entry_position,
+                    data,
+                    data_size: Some(data_size),
+                    executed,
+                    last_modified_ts,
+                    entry_type,
+                    path_size,
+                    signature: Some(signature),
+                    controlset,
+                };
+
+                shimcache_entries.push(cache_entry);
+                cache_entry_position += 1;
+            }
         }
         else {
             let offset_to_records = signature_number.clone() as usize;
@@ -251,7 +304,7 @@ impl super::Parser {
                 }
                 let mut index = offset_to_records.clone();
                 let mut cache_entry_position = 0;
-                while index < shimcache_len {
+                while index < shimcache_bytes_len {
                     let e = || anyhow!("Error parsing windows 10 shimcache entry. Position: {}", cache_entry_position);
                     let signature = std::str::from_utf8(&shimcache_bytes.get(index..index+4).ok_or_else(e)?)?.to_string();
                     if signature != "10ts" {
@@ -265,6 +318,14 @@ impl super::Parser {
                     let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
                     index += 2;
                     let path = utf16_to_string(&shimcache_bytes.get(index..index+path_size).ok_or_else(e)?)?;
+                    index += path_size;
+                    let last_modified_time_utc_win32 = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?);
+                    index += 8;
+                    let data_size = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?) as usize;
+                    index += 4;
+                    let data = Some(shimcache_bytes.get(index..index+data_size).ok_or_else(e)?.to_vec());
+                    index += data_size;
+
                     let entry_type: EntryType;
                     if RE.is_match(&path) {
                         let program_name = RE.captures(&path).expect("regex could not capture groups")
@@ -274,14 +335,6 @@ impl super::Parser {
                     } else {
                         entry_type = EntryType::File { path };
                     }
-                    index += path_size;
-                    let last_modified_time_utc_win32 = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?);
-                    index += 8;
-                    let data_size = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?) as usize;
-                    index += 4;
-                    let data = Some(shimcache_bytes.get(index..index+data_size).ok_or_else(e)?.to_vec());
-                    index += data_size;
-
                     let last_modified_ts = if last_modified_time_utc_win32 != 0 {
                         let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;
                         let last_modified_date_time = DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
