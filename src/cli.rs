@@ -797,7 +797,7 @@ pub fn print_json(
     if jsonl {
         for det in &detections {
             cs_print_json!(det)?;
-            println!();
+            cs_println!();
         }
     } else {
         cs_print_json!(&detections)?;
