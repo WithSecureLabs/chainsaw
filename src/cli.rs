@@ -541,9 +541,9 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
     for entity in timeline {
         let timestamp: String;
         let ts_description: String;
-        let entry_details: String;
-        let shimcache_entry_pos: String;
-        let shimcache_timestamp: String;
+        let mut entry_details = String::new();
+        let mut shimcache_entry_pos = String::new();
+        let mut shimcache_timestamp = String::new();
         let amcache_timestamp: String;
 
         timestamp = match entity.timestamp {
@@ -552,22 +552,26 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
         };
         ts_description = if entity.amcache_ts_match {
             String::from("Execution timestamp match with amcache")
-        } else if let Some(TimelineTimestamp::Exact(_ts)) = entity.timestamp {
+        } else if let (Some(TimelineTimestamp::Exact(_ts)), Some(_ent))
+            = (&entity.timestamp, &entity.shimcache_entry) {
             String::from("Shimcache compile timestamp")
         } else { String::new() };
-        shimcache_entry_pos = entity.shimcache_entry.cache_entry_position.to_string();
-        shimcache_timestamp = if let Some(ts) = entity.shimcache_entry.last_modified_ts {
-            ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
-        } else { String::new() };
+        if let Some(shimcache_entry) = &entity.shimcache_entry {
+            shimcache_entry_pos = shimcache_entry.cache_entry_position.to_string();
+            if let Some(ts) = shimcache_entry.last_modified_ts {
+                shimcache_timestamp = ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
+            }
+        }
         amcache_timestamp = if let Some(file) = &entity.amcache_file {
             file.last_modified_ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
         } else { String::new() };
 
-        entry_details = if !entity.amcache_file.is_none() {
-            format!("{:?}", &entity.amcache_file.as_ref()
+        if entity.amcache_file.is_some() {
+            entry_details = format!("{:?}", &entity.amcache_file.as_ref()
                 .expect("amcache_file was unexpectedly None"))
-        } else {
-            format!("{:?}", entity.shimcache_entry.entry_type)
+        } else if entity.shimcache_entry.is_some() {
+            entry_details = format!("{:?}", entity.shimcache_entry.as_ref()
+            .expect("shimcache_entry was unexpectedly None").entry_type)
         };
 
         let timeline_entry_nr_string = timeline_entry_nr.to_string();

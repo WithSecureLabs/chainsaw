@@ -87,8 +87,8 @@ mod tests {
         let mut parser = Parser::load(&PathBuf::from(
             "/mnt/hgfs/vm_shared/win10_vm_hives/shim/SYSTEM",
         ))?;
-        let shimcache_entries = parser.parse_shimcache()?;
-        for entry in shimcache_entries {
+        let shimcache= parser.parse_shimcache()?;
+        for entry in shimcache.entries {
             println!("{entry}");
         }
         Ok(())

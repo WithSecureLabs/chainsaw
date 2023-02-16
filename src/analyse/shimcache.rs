@@ -7,7 +7,7 @@ use regex::Regex;
 use crate::file::hve::{
     amcache::{AmcacheArtifact, FileEntry, ProgramEntry},
     Parser as HveParser,
-    shimcache::{EntryType, ShimCacheEntry},
+    shimcache::{EntryType, ShimcacheEntry},
 };
 
 #[derive(Debug, Clone)]
@@ -23,17 +23,17 @@ pub struct TimelineEntity {
     pub amcache_file: Option<FileEntry>,
     pub amcache_program: Option<ProgramEntry>,
     pub amcache_ts_match: bool,
-    pub shimcache_entry: ShimCacheEntry,
+    pub shimcache_entry: Option<ShimcacheEntry>,
     pub timestamp: Option<TimelineTimestamp>,
 }
 
 impl TimelineEntity {
-    fn new(shimcache_entry: ShimCacheEntry) -> Self {
+    fn with_shimcache_entry(shimcache_entry: ShimcacheEntry) -> Self {
         Self {
             amcache_file: None,
             amcache_program: None,
             amcache_ts_match: false,
-            shimcache_entry,
+            shimcache_entry: Some(shimcache_entry),
             timestamp: None,
         }
     }
@@ -76,20 +76,32 @@ impl ShimcacheAnalyzer {
         }
 
         // Create timeline entities from shimcache entities
-        let mut timeline_entities: Vec<TimelineEntity> = shimcache.into_iter().map(
-            |e| TimelineEntity::new(e)
+        let mut timeline_entities: Vec<TimelineEntity> = shimcache.entries.into_iter().map(
+            |e| TimelineEntity::with_shimcache_entry(e)
         ).collect();
-    
+        // Prepend the shimcache last update timestamp as the first timeline entity
+        timeline_entities.insert(0, TimelineEntity {
+            amcache_file: None,
+            amcache_program: None,
+            amcache_ts_match: false,
+            shimcache_entry: None,
+            timestamp: Some(TimelineTimestamp::Exact(shimcache.last_update_ts)),
+        });
+
+        // Consider the shimcache last update timestamp a match
+        let mut match_indices: Vec<usize> = vec![0];
         // Check for matches with config patterns and set timestamp
-        let mut match_indices: Vec<usize> = Vec::new();
         for (i, entity) in timeline_entities.iter_mut().enumerate() {
             for re in &regexes {
-                let pattern_matches = match &entity.shimcache_entry.entry_type {
+                let shimcache_entry = if let Some(entry) = &entity.shimcache_entry {
+                    entry
+                } else { continue; };
+                let pattern_matches = match &shimcache_entry.entry_type {
                     EntryType::File { path, .. } => re.is_match(&path),
                     EntryType::Program { program_name, ..} => re.is_match(&program_name),
                 };
                 if pattern_matches {
-                    if let Some(ts) = entity.shimcache_entry.last_modified_ts {
+                    if let Some(ts) = shimcache_entry.last_modified_ts {
                         entity.timestamp = Some(TimelineTimestamp::Exact(ts));
                         match_indices.push(i);
                     }
@@ -154,7 +166,10 @@ impl ShimcacheAnalyzer {
             let mut ts_match_count = 0;
             for file in amcache.iter_files() {
                 for mut entity in &mut timeline_entities {
-                    match &entity.shimcache_entry.entry_type {
+                    let shimcache_entry = if let Some(entry) = &entity.shimcache_entry {
+                        entry
+                    } else { continue; };
+                    match &shimcache_entry.entry_type {
                         EntryType::File { path } => {
                             if file.path == path.to_lowercase() {
                                 entity.amcache_file = Some(file.clone());
@@ -175,7 +190,10 @@ impl ShimcacheAnalyzer {
             for (_program_id, program) in amcache.programs {
                 if let Some(program_entry) = program.program_entry {
                     for mut entity in &mut timeline_entities {
-                        match &entity.shimcache_entry.entry_type {
+                        let shimcache_entry = if let Some(entry) = &entity.shimcache_entry {
+                            entry
+                        } else { continue; };
+                        match &shimcache_entry.entry_type {
                             EntryType::File { .. } => (),
                             EntryType::Program { program_name, .. } => {
                                 if program_name == &program_entry.program_name {

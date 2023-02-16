@@ -26,7 +26,7 @@ enum InsertFlag {
 }
 
 #[derive(Debug)]
-pub struct ShimCacheEntry {
+pub struct ShimcacheEntry {
     pub cache_entry_position: u32,
     pub controlset: u32,
     pub data_size: Option<usize>,
@@ -49,7 +49,12 @@ pub enum EntryType {
     },
 }
 
-impl Display for ShimCacheEntry {
+pub struct ShimcacheArtifact {
+    pub entries: Vec<ShimcacheEntry>,
+    pub last_update_ts: DateTime<Utc>,
+}
+
+impl Display for ShimcacheEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let path_or_name = match &self.entry_type {
             EntryType::File { path } => path,
@@ -63,7 +68,7 @@ impl Display for ShimCacheEntry {
 }
 
 impl super::Parser {
-    pub fn parse_shimcache (&mut self) -> Result<Vec<ShimCacheEntry>> {
+    pub fn parse_shimcache (&mut self) -> Result<ShimcacheArtifact> {
         // Find current ControlSet
         let current_controlset_key = self.inner.get_key("Select", false)?
             .ok_or(anyhow!("Key \"Select\" not found in shimcache!"))?;
@@ -81,6 +86,7 @@ impl super::Parser {
             .inner
             .get_key(&shimcache_key_path, false)?
             .ok_or(anyhow!("Could not find AppCompatCache with path {}!", shimcache_key_path))?;
+        let shimcache_last_update_ts = shimcache_key.last_key_written_date_and_time();
         let shimcache_cell_value = shimcache_key.get_value("AppCompatCache")
             .ok_or(anyhow!("Value \"AppCompatCache\" not found under key \"{}\"!", shimcache_key_path))?
             .get_content().0;
@@ -90,7 +96,11 @@ impl super::Parser {
         };
         let shimcache_bytes_len = shimcache_bytes.len();
 
-        let mut shimcache_entries: Vec<ShimCacheEntry> = Vec::new();
+        let mut shimcache = ShimcacheArtifact{
+            entries: Vec::new(),
+            last_update_ts: shimcache_last_update_ts
+        };
+        println!("{}", shimcache.last_update_ts);
 
         // Shimcache version signature is at a different index depending on version
         let e = || anyhow!("Shimcache byte indexing error!");
@@ -121,7 +131,7 @@ impl super::Parser {
             let mut index = 4;
             let entry_count = u32::from_le_bytes(shimcache_bytes.get(index..index+4).expect("could not index shimcache bytes").try_into()?) as usize;
             if entry_count == 0 {
-                return Ok(shimcache_entries);
+                return Ok(shimcache);
             }
             index = 128;
             let mut cache_entry_position = 0;
@@ -159,7 +169,7 @@ impl super::Parser {
                     let executed = Some(insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32);
                     let entry_type = EntryType::File { path };
     
-                    let cache_entry = ShimCacheEntry {
+                    let cache_entry = ShimcacheEntry {
                         cache_entry_position,
                         data,
                         data_size: Some(data_size),
@@ -171,8 +181,8 @@ impl super::Parser {
                         controlset,
                     };
     
-                    shimcache_entries.push(cache_entry);
-                    if shimcache_entries.len() >= entry_count {
+                    shimcache.entries.push(cache_entry);
+                    if shimcache.entries.len() >= entry_count {
                         break;
                     }
                     cache_entry_position += 1;
@@ -211,7 +221,7 @@ impl super::Parser {
                     let executed = Some(insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32);
                     let entry_type = EntryType::File { path };
     
-                    let cache_entry = ShimCacheEntry {
+                    let cache_entry = ShimcacheEntry {
                         cache_entry_position,
                         data,
                         data_size: Some(data_size),
@@ -223,8 +233,8 @@ impl super::Parser {
                         controlset,
                     };
     
-                    shimcache_entries.push(cache_entry);
-                    if shimcache_entries.len() >= entry_count {
+                    shimcache.entries.push(cache_entry);
+                    if shimcache.entries.len() >= entry_count {
                         break;
                     }
                     cache_entry_position += 1;
@@ -276,7 +286,7 @@ impl super::Parser {
                     None
                 };
 
-                let cache_entry = ShimCacheEntry {
+                let cache_entry = ShimcacheEntry {
                     cache_entry_position,
                     data,
                     data_size: Some(data_size),
@@ -288,7 +298,7 @@ impl super::Parser {
                     controlset,
                 };
 
-                shimcache_entries.push(cache_entry);
+                shimcache.entries.push(cache_entry);
                 cache_entry_position += 1;
             }
         }
@@ -343,7 +353,7 @@ impl super::Parser {
                         None
                     };
 
-                    let cache_entry = ShimCacheEntry {
+                    let cache_entry = ShimcacheEntry {
                         cache_entry_position,
                         data,
                         data_size: Some(data_size),
@@ -355,13 +365,13 @@ impl super::Parser {
                         controlset,
                     };
 
-                    shimcache_entries.push(cache_entry);
+                    shimcache.entries.push(cache_entry);
                     cache_entry_position += 1;
                 }
             }
         }
 
-        Ok(shimcache_entries)
+        Ok(shimcache)
     }
 }
 
