@@ -55,15 +55,18 @@ impl<'a> Iterator for Iter<'a> {
                     .expect("could not get timestamp");
                 // TODO: Default to RFC 3339
                 let result = match &document {
-                    Document::Evtx(evtx) => match crate::evtx::Wrapper(&evtx.data).find(field) {
-                        Some(value) => match value.as_str() {
-                            Some(timestamp) => {
-                                NaiveDateTime::parse_from_str(timestamp, "%Y-%m-%dT%H:%M:%S%.6fZ")
-                            }
+                    Document::Evtx(evtx) => {
+                        match crate::evtx::WrapperLegacy(&evtx.data).find(field) {
+                            Some(value) => match value.as_str() {
+                                Some(timestamp) => NaiveDateTime::parse_from_str(
+                                    timestamp,
+                                    "%Y-%m-%dT%H:%M:%S%.6fZ",
+                                ),
+                                None => continue,
+                            },
                             None => continue,
-                        },
-                        None => continue,
-                    },
+                        }
+                    }
                     Document::Json(json) | Document::Xml(json) | Document::Mft(json) => match json
                         .find(field)
                     {
@@ -132,7 +135,7 @@ impl<'a> Iterator for Iter<'a> {
             // TODO: Remove duplication...
             match document {
                 Document::Evtx(evtx) => {
-                    let wrapper = crate::evtx::Wrapper(&evtx.data);
+                    let wrapper = crate::evtx::WrapperLegacy(&evtx.data);
                     if let Some(expression) = &self.searcher.tau {
                         if !tau_engine::core::solve(expression, &wrapper) {
                             continue;

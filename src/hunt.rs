@@ -1,7 +1,7 @@
 use std::borrow::Cow;
-use std::collections::{hash_map::DefaultHasher, BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
-use std::hash::{Hash, Hasher};
+use std::hash::{BuildHasherDefault, Hash, Hasher};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
@@ -10,6 +10,7 @@ use chrono_tz::Tz;
 // https://github.com/rust-lang/rust/issues/74465
 use once_cell::sync::OnceCell;
 use rayon::prelude::*;
+use rustc_hash::{FxHashMap, FxHasher};
 use serde::{
     ser::{SerializeStruct, Serializer},
     Deserialize, Serialize,
@@ -173,7 +174,7 @@ impl HunterBuilder {
                 if let RuleKind::Chainsaw = mapping.rules {
                     anyhow::bail!("Chainsaw rules do not support mappings");
                 }
-                let mut preconds = HashMap::new();
+                let mut preconds = FxHashMap::default();
                 if let Some(extensions) = &mapping.extensions {
                     if let Some(preconditions) = &extensions.preconditions {
                         for precondition in preconditions {
@@ -209,13 +210,19 @@ impl HunterBuilder {
                 }
                 mapping.groups.sort_by(|x, y| x.name.cmp(&y.name));
                 for group in mapping.groups {
+                    let mut exclusions = HashSet::<Uuid, BuildHasherDefault<FxHasher>>::default();
+                    for (rid, rule) in &rules {
+                        if mapping.exclusions.contains(rule.name()) {
+                            exclusions.insert(*rid);
+                        }
+                    }
                     let mapper = Mapper::from(group.fields);
                     hunts.push(Hunt {
                         id: group.id,
 
                         group: group.name,
                         kind: HuntKind::Group {
-                            exclusions: mapping.exclusions.clone(),
+                            exclusions,
                             filter: group.filter,
                             kind: mapping.rules.clone(),
                             preconditions: preconds.clone(),
@@ -461,10 +468,10 @@ impl HunterBuilder {
 
 pub enum HuntKind {
     Group {
-        exclusions: HashSet<String>,
+        exclusions: HashSet<Uuid, BuildHasherDefault<FxHasher>>,
         filter: Expression,
         kind: RuleKind,
-        preconditions: HashMap<Uuid, Expression>,
+        preconditions: FxHashMap<Uuid, Expression>,
     },
     Rule {
         aggregate: Option<Aggregate>,
@@ -474,8 +481,8 @@ pub enum HuntKind {
 
 pub enum MapperKind {
     None,
-    Fast(HashMap<String, String>),
-    Full(HashMap<String, (String, Option<Container>, Option<ModSym>)>),
+    Fast(FxHashMap<String, String>),
+    Full(FxHashMap<String, (String, Option<Container>, Option<ModSym>)>),
 }
 
 pub struct Mapper {
@@ -497,7 +504,10 @@ impl Mapper {
             }
         }
         let kind = if full {
-            let mut map = HashMap::with_capacity(fields.len());
+            let mut map = FxHashMap::with_capacity_and_hasher(
+                fields.len(),
+                BuildHasherDefault::<FxHasher>::default(),
+            );
             for field in &fields {
                 map.insert(
                     field.from.clone(),
@@ -510,7 +520,10 @@ impl Mapper {
             }
             MapperKind::Full(map)
         } else if fast {
-            let mut map = HashMap::with_capacity(fields.len());
+            let mut map = FxHashMap::with_capacity_and_hasher(
+                fields.len(),
+                BuildHasherDefault::<FxHasher>::default(),
+            );
             for field in &fields {
                 map.insert(field.from.clone(), field.to.clone());
             }
@@ -538,7 +551,7 @@ impl Mapper {
 }
 
 pub struct Mapped<'a> {
-    cache: OnceCell<HashMap<String, Box<dyn TauDocument>>>,
+    cache: OnceCell<FxHashMap<String, Box<dyn TauDocument>>>,
     document: &'a dyn TauDocument,
     mapper: &'a Mapper,
 }
@@ -557,7 +570,7 @@ impl<'a> TauDocument for Mapped<'a> {
                     }
                     // Due to referencing and ownership, we parse all containers at once, which
                     // then allows us to use a OnceCell.
-                    let mut lookup = HashMap::new();
+                    let mut lookup = FxHashMap::default();
                     for field in &self.mapper.fields {
                         if let Some(container) = &field.container {
                             if !lookup.contains_key(&container.field) {
@@ -672,9 +685,9 @@ impl Hunter {
         let kind = reader.kind();
         // This can be optimised better ;)
         let mut detections = vec![];
-        let mut aggregates: HashMap<(Uuid, Uuid), (&Aggregate, HashMap<u64, Vec<Uuid>>)> =
-            HashMap::new();
-        let mut files: HashMap<Uuid, (File, NaiveDateTime)> = HashMap::new();
+        let mut aggregates: FxHashMap<(Uuid, Uuid), (&Aggregate, FxHashMap<u64, Vec<Uuid>>)> =
+            FxHashMap::default();
+        let mut files: FxHashMap<Uuid, (Value, NaiveDateTime)> = FxHashMap::default();
         for document in reader.documents() {
             let document_id = Uuid::new_v4();
             let document = match document {
@@ -691,6 +704,12 @@ impl Hunter {
                     return Err(anyhow!(format!("{} in {}", e, file.display())));
                 }
             };
+            let (kind, value): (FileKind, Value) = match document {
+                File::Evtx(evtx) => (FileKind::Evtx, evtx.data.into()),
+                File::Json(json) => (FileKind::Json, json.into()),
+                File::Mft(mft) => (FileKind::Mft, mft.into()),
+                File::Xml(xml) => (FileKind::Xml, xml.into()),
+            };
             let mut hits = vec![];
             for hunt in &self.inner.hunts {
                 if hunt.file != kind {
@@ -698,14 +717,12 @@ impl Hunter {
                 }
 
                 let wrapper;
-                let mapped = match &document {
-                    File::Evtx(evtx) => {
-                        wrapper = crate::evtx::Wrapper(&evtx.data);
+                let mapped = match &kind {
+                    FileKind::Evtx => {
+                        wrapper = crate::evtx::Wrapper(&value);
                         hunt.mapper.mapped(&wrapper)
                     }
-                    File::Json(json) => hunt.mapper.mapped(json),
-                    File::Mft(mft) => hunt.mapper.mapped(mft),
-                    File::Xml(xml) => hunt.mapper.mapped(xml),
+                    _ => hunt.mapper.mapped(&value),
                 };
                 let mapped = if self.inner.preprocess {
                     let mut flat = Vec::with_capacity(self.inner.fields.len());
@@ -764,15 +781,15 @@ impl Hunter {
                         preconditions,
                     } => {
                         if tau_engine::core::solve(filter, &mapped) {
-                            let matches = &self
-                                .inner
-                                .rules
+                            let rules = self.inner.rules.iter().collect::<Vec<(_, _)>>();
+                            let matches = rules
                                 .par_iter()
+                                .with_min_len(100)
                                 .filter_map(|(rid, rule)| {
                                     if !rule.is_kind(kind) {
                                         return None;
                                     }
-                                    if exclusions.contains(rule.name()) {
+                                    if exclusions.contains(rid) {
                                         return None;
                                     }
                                     if let Some(filter) = preconditions.get(rid) {
@@ -789,8 +806,8 @@ impl Hunter {
                                 .collect::<Vec<(_, _)>>();
                             for (rid, rule) in matches {
                                 if let Some(aggregate) = &rule.aggregate() {
-                                    files.insert(document_id, (document.clone(), timestamp));
-                                    let mut hasher = DefaultHasher::new();
+                                    files.insert(document_id, (value.clone(), timestamp));
+                                    let mut hasher = FxHasher::default();
                                     let mut skip = false;
                                     for field in &aggregate.fields {
                                         if let Some(value) =
@@ -808,7 +825,7 @@ impl Hunter {
                                     let id = hasher.finish();
                                     let aggregates = aggregates
                                         .entry((hunt.id, *rid))
-                                        .or_insert((aggregate, HashMap::new()));
+                                        .or_insert((aggregate, FxHashMap::default()));
                                     let docs = aggregates.1.entry(id).or_insert(vec![]);
                                     docs.push(document_id);
                                 } else {
@@ -830,8 +847,8 @@ impl Hunter {
                         };
                         if hit {
                             if let Some(aggregate) = aggregate {
-                                files.insert(document_id, (document.clone(), timestamp));
-                                let mut hasher = DefaultHasher::new();
+                                files.insert(document_id, (value.clone(), timestamp));
+                                let mut hasher = FxHasher::default();
                                 let mut skip = false;
                                 for field in &aggregate.fields {
                                     if let Some(value) =
@@ -849,7 +866,7 @@ impl Hunter {
                                 let id = hasher.finish();
                                 let aggregates = aggregates
                                     .entry((hunt.id, hunt.id))
-                                    .or_insert((aggregate, HashMap::new()));
+                                    .or_insert((aggregate, FxHashMap::default()));
                                 let docs = aggregates.1.entry(id).or_insert(vec![]);
                                 docs.push(document_id);
                             } else {
@@ -864,19 +881,13 @@ impl Hunter {
                 }
             }
             if !hits.is_empty() {
-                let data = match &document {
-                    File::Evtx(evtx) => evtx.data.clone(),
-                    File::Mft(mft) => mft.clone(),
-                    File::Json(json) => json.clone(),
-                    File::Xml(xml) => xml.clone(),
-                };
                 detections.push(Detections {
                     hits,
                     kind: Kind::Individual {
                         document: Document {
                             kind: kind.clone(),
                             path: &file,
-                            data: bincode::serialize(&Value::from(data))?,
+                            data: bincode::serialize(&value)?,
                         },
                     },
                 });
@@ -896,17 +907,11 @@ impl Hunter {
                     let mut documents = Vec::with_capacity(ids.len());
                     let mut timestamps = Vec::with_capacity(ids.len());
                     for id in ids {
-                        let (document, timestamp) = files.get(id).expect("could not get document");
-                        let data = match &document {
-                            File::Evtx(evtx) => evtx.data.clone(),
-                            File::Mft(mft) => mft.clone(),
-                            File::Json(json) => json.clone(),
-                            File::Xml(xml) => xml.clone(),
-                        };
+                        let (value, timestamp) = files.get(id).expect("could not get document");
                         documents.push(Document {
                             kind: kind.clone(),
                             path: &file,
-                            data: bincode::serialize(&Value::from(data))?,
+                            data: bincode::serialize(&value)?,
                         });
                         timestamps.push(*timestamp);
                     }

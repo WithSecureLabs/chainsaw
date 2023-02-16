@@ -187,16 +187,16 @@ pub fn print_log(
         let mut values = vec![];
         for field in hunt.mapper.fields() {
             if field.visible {
-                let data: Json;
+                let data: Value;
                 let wrapper;
                 let mapped = match &document.kind {
                     FileKind::Evtx => {
-                        data = Json::from(bincode::deserialize::<Value>(&document.data)?);
+                        data = bincode::deserialize::<Value>(&document.data)?;
                         wrapper = crate::evtx::Wrapper(&data);
                         hunt.mapper.mapped(&wrapper)
                     }
                     FileKind::Json | FileKind::Jsonl | FileKind::Mft | FileKind::Xml => {
-                        data = Json::from(bincode::deserialize::<Value>(&document.data)?);
+                        data = bincode::deserialize::<Value>(&document.data)?;
                         hunt.mapper.mapped(&data)
                     }
                     FileKind::Unknown => continue,
@@ -366,22 +366,18 @@ pub fn print_detections(
                     // What we do here is hash each row since if the fields are the same but the values
                     // are not then we would lose data, so in this case we split the row
                     for hit in &grouping.hits {
-                        let data: Json;
+                        let data: Value;
                         let wrapper;
                         let mapped = match &document.kind {
                             FileKind::Evtx => {
-                                data = Json::from(
-                                    bincode::deserialize::<Value>(&document.data)
-                                        .expect("could not decompress"),
-                                );
+                                data = bincode::deserialize::<Value>(&document.data)
+                                    .expect("could not decompress");
                                 wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
                             FileKind::Json | FileKind::Jsonl | FileKind::Mft | FileKind::Xml => {
-                                data = Json::from(
-                                    bincode::deserialize::<Value>(&document.data)
-                                        .expect("could not decompress"),
-                                );
+                                data = bincode::deserialize::<Value>(&document.data)
+                                    .expect("could not decompress");
                                 hit.hunt.mapper.mapped(&data)
                             }
                             FileKind::Unknown => continue,
@@ -618,16 +614,16 @@ pub fn print_csv(
                     // What we do here is hash each row since if the fields are the same but the values
                     // are not then we would lose data, so in this case we split the row
                     for hit in &grouping.hits {
-                        let data: Json;
+                        let data: Value;
                         let wrapper;
                         let mapped = match &document.kind {
                             FileKind::Evtx => {
-                                data = Json::from(bincode::deserialize::<Value>(&document.data)?);
+                                data = bincode::deserialize::<Value>(&document.data)?;
                                 wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
                             FileKind::Json | FileKind::Jsonl | FileKind::Mft | FileKind::Xml => {
-                                data = Json::from(bincode::deserialize::<Value>(&document.data)?);
+                                data = bincode::deserialize::<Value>(&document.data)?;
                                 hit.hunt.mapper.mapped(&data)
                             }
                             FileKind::Unknown => continue,

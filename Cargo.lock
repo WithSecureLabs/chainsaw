@@ -169,6 +169,7 @@ dependencies = [
  "quick-xml 0.27.1",
  "rayon",
  "regex",
+ "rustc-hash",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -1331,6 +1332,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustc-hash"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
+
+[[package]]
 name = "rustix"
 version = "0.36.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1524,9 +1531,9 @@ dependencies = [
 
 [[package]]
 name = "tau-engine"
-version = "1.10.0"
+version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3152b13b53ee40216706004ce64a0136141bdc03037d26e81411b1c9766b8016"
+checksum = "582a9d32a0bdf3952e00861507ef5b953fe222ce5a0e7e34f9b43b1dfe0c02b6"
 dependencies = [
  "aho-corasick",
  "lazy_static",
