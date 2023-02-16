@@ -23,7 +23,7 @@ pub enum Document {
 }
 
 pub struct Documents<'a> {
-    iterator: Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
+    iterator: Box<dyn Iterator<Item = crate::Result<Document>> + Send + Sync + 'a>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Hash, Eq)]
@@ -284,18 +284,17 @@ impl Reader {
                     .parse()
                     .map(|r| r.map(Document::Evtx).map_err(|e| e.into())),
             )
-                as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
+                as Box<dyn Iterator<Item = crate::Result<Document>> + Send + Sync + 'a>,
             Parser::Json(parser) => Box::new(parser.parse().map(|r| r.map(Document::Json)))
-                as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
+                as Box<dyn Iterator<Item = crate::Result<Document>> + Send + Sync + 'a>,
             Parser::Jsonl(parser) => Box::new(parser.parse().map(|r| r.map(Document::Json)))
-                as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
+                as Box<dyn Iterator<Item = crate::Result<Document>> + Send + Sync + 'a>,
             Parser::Mft(parser) => Box::new(parser.parse().map(|r| r.map(Document::Mft)))
-                as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
+                as Box<dyn Iterator<Item = crate::Result<Document>> + Send + Sync + 'a>,
             Parser::Xml(parser) => Box::new(parser.parse().map(|r| r.map(Document::Xml)))
-                as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>,
-            Parser::Unknown => {
-                Box::new(Unknown) as Box<dyn Iterator<Item = crate::Result<Document>> + 'a>
-            }
+                as Box<dyn Iterator<Item = crate::Result<Document>> + Send + Sync + 'a>,
+            Parser::Unknown => Box::new(Unknown)
+                as Box<dyn Iterator<Item = crate::Result<Document>> + Send + Sync + 'a>,
         };
         Documents { iterator }
     }
