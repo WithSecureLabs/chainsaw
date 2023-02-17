@@ -492,19 +492,35 @@ fn run() -> Result<()> {
             } else {
                 cs_eprintln!("[+] Loaded {} forensic artefacts ({})", files.len(), size);
             }
+            let mut hits = 0;
+            let mut documents = 0;
             let mut detections = vec![];
             let pb = cli::init_progress_bar(files.len() as u64, "Hunting".to_string());
             for file in &files {
                 pb.tick();
-                detections.extend(hunter.hunt(file).with_context(|| {
+                let scratch = hunter.hunt(file).with_context(|| {
                     format!("Failed to hunt through file '{}'", file.to_string_lossy())
-                })?);
+                })?;
+                hits += scratch.iter().map(|d| d.hits.len()).sum::<usize>();
+                documents += scratch.len();
+                if jsonl {
+                    cli::print_json(
+                        &scratch,
+                        hunter.hunts(),
+                        hunter.rules(),
+                        local,
+                        timezone,
+                        jsonl,
+                    )?;
+                } else {
+                    detections.extend(scratch);
+                }
                 pb.inc(1);
             }
             pb.finish();
             if csv {
                 cli::print_csv(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
-            } else if json || jsonl {
+            } else if json {
                 if output.is_some() {
                     cs_eprintln!("[+] Writing results to output file...");
                 }
@@ -516,6 +532,8 @@ fn run() -> Result<()> {
                     timezone,
                     jsonl,
                 )?;
+            } else if jsonl {
+                // Work already done
             } else if log {
                 cli::print_log(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
             } else {
@@ -530,11 +548,7 @@ fn run() -> Result<()> {
                     timezone,
                 );
             }
-            cs_eprintln!(
-                "[+] {} Detections found on {} documents",
-                detections.iter().map(|d| d.hits.len()).sum::<usize>(),
-                detections.len()
-            );
+            cs_eprintln!("[+] {} Detections found on {} documents", hits, documents,);
         }
         Command::Lint { path, kind, tau } => {
             init_writer(None, false, false, false)?;
