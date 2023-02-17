@@ -133,6 +133,25 @@ macro_rules! cs_print_json {
 }
 
 #[macro_export]
+macro_rules! cs_print_json_pretty {
+    ($value:expr) => {{
+        use std::io::Write;
+        unsafe {
+            match $crate::WRITER.output.as_ref() {
+                Some(mut f) => {
+                    ::serde_json::to_writer_pretty(f, $value)?;
+                    f.flush()
+                }
+                None => {
+                    ::serde_json::to_writer_pretty(std::io::stdout(), $value)?;
+                    std::io::stdout().flush()
+                }
+            }
+        }
+    }};
+}
+
+#[macro_export]
 macro_rules! cs_print_yaml {
     ($value:expr) => {{
         use std::io::Write;

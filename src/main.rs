@@ -14,14 +14,14 @@ use chrono_tz::Tz;
 use clap::{Parser, Subcommand};
 
 use chainsaw::{
-    cli, get_files, lint as lint_rule, load as load_rule, set_writer, Filter, Format, Hunter,
-    RuleKind, RuleLevel, RuleStatus, Searcher, Writer,
+    cli, get_files, lint as lint_rule, load as load_rule, set_writer, Document, Filter, Format,
+    Hunter, Reader, RuleKind, RuleLevel, RuleStatus, Searcher, Writer,
 };
 
 #[derive(Parser)]
 #[clap(
     name = "chainsaw",
-    about = "Rapidly Search and Hunt through Windows Forensic Artefacts",
+    about = "Rapidly work with Forensic Artefacts",
     after_help = r"Examples:
 
     Hunt with Sigma and Chainsaw Rules:
@@ -51,7 +51,32 @@ struct Args {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Hunt through event logs using detection rules for threat detection
+    /// Dump an artefact into a different format.
+    Dump {
+        /// The path to an artefact to dump.
+        path: PathBuf,
+
+        /// Dump in json format.
+        #[arg(group = "format", short = 'j', long = "json")]
+        json: bool,
+        /// Print the output in jsonl format.
+        #[arg(group = "format", long = "jsonl")]
+        jsonl: bool,
+        /// Allow chainsaw to try and load files it cannot identify.
+        #[arg(long = "load-unknown")]
+        load_unknown: bool,
+        /// A path to output results to.
+        #[arg(short = 'o', long = "output")]
+        output: Option<PathBuf>,
+        /// Supress informational output.
+        #[arg(short = 'q')]
+        quiet: bool,
+        /// Continue to hunt when an error is encountered.
+        #[arg(long = "skip-errors")]
+        skip_errors: bool,
+    },
+
+    /// Hunt through artefacts using detection rules for threat detection.
     Hunt {
         /// The path to a collection of rules to use for hunting.
         rules: Option<PathBuf>,
@@ -145,7 +170,7 @@ enum Command {
         tau: bool,
     },
 
-    /// Search through forensic artefacts for keywords
+    /// Search through forensic artefacts for keywords.
     Search {
         /// A string or regular expression pattern to search for.
         /// Not used when -e or -t is specified.
@@ -287,6 +312,68 @@ fn run() -> Result<()> {
             .build_global()?;
     }
     match args.cmd {
+        Command::Dump {
+            path,
+
+            json,
+            jsonl,
+            load_unknown,
+            output,
+            quiet,
+            skip_errors,
+        } => {
+            init_writer(output.clone(), false, json, quiet)?;
+            if !args.no_banner {
+                print_title();
+            }
+            let mut reader = Reader::load(&path, load_unknown, skip_errors)?;
+            cs_eprintln!(
+                "[+] Dumping the contents of forensic artefact - {}...",
+                path.display()
+            );
+            if json {
+                cs_print!("[");
+            }
+            let mut first = true;
+            for result in reader.documents() {
+                let document = match result {
+                    Ok(document) => document,
+                    Err(e) => {
+                        if skip_errors {
+                            cs_eyellowln!(
+                                "[!] failed to parse document '{}' - {}\n",
+                                path.display(),
+                                e
+                            );
+                            continue;
+                        }
+                        return Err(e);
+                    }
+                };
+                let value = match document {
+                    Document::Evtx(evtx) => evtx.data,
+                    Document::Json(json) | Document::Xml(json) | Document::Mft(json) => json,
+                };
+                if json {
+                    if first {
+                        first = false;
+                    } else {
+                        cs_println!(",");
+                    }
+                    cs_print_json_pretty!(&value)?;
+                } else if jsonl {
+                    cs_print_json!(&value)?;
+                    println!();
+                } else {
+                    cs_println!("---");
+                    cs_print_yaml!(&value)?;
+                }
+            }
+            if json {
+                cs_println!("]");
+            }
+            cs_eprintln!("[+] Done");
+        }
         Command::Hunt {
             rules,
             mut path,
