@@ -658,9 +658,9 @@ dependencies = [
 
 [[package]]
 name = "evtx"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c122a6b1c22f24d0af0394f337d4da971882946e4b9898f8c2ea1271e2c933d4"
+checksum = "b3c0a23f64c81e962c993ccb5d9e88bbd62a3fcabdec20b037a8383f7c3e163f"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -672,7 +672,7 @@ dependencies = [
  "encoding",
  "indoc",
  "log",
- "quick-xml 0.23.1",
+ "quick-xml 0.24.1",
  "rayon",
  "serde",
  "serde_json",
@@ -1267,9 +1267,9 @@ checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 
 [[package]]
 name = "quick-xml"
-version = "0.23.1"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11bafc859c6815fbaffbbbf4229ecb767ac913fecb27f9ad4343662e9ef099ea"
+checksum = "37dddbbe9df96afafcb8027fcf263971b726530e12f0787f620a7ba5b4846081"
 dependencies = [
  "memchr",
 ]
