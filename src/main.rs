@@ -830,6 +830,7 @@ fn run() -> Result<()> {
                         cs_print_json!(&hit)?;
                         println!();
                     } else {
+                        cs_println!("---");
                         cs_print_yaml!(&hit)?;
                     }
                     hits += 1;
