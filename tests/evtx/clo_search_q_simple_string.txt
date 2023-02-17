@@ -1,3 +1,4 @@
+---
 Event:
   EventData:
     AuthenticationPackageName: Negotiate
@@ -51,6 +52,7 @@ Event:
 Event_attributes:
   xmlns: http://schemas.microsoft.com/win/2004/08/events/event
 
+---
 Event:
   EventData:
     AuthenticationPackageName: Negotiate
