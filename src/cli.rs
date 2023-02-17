@@ -55,9 +55,7 @@ pub fn format_field_length(data: &str, full_output: bool, col_width: u32) -> Str
     // Take the context_field and format it for printing. Remove newlines, break into even chunks etc.
     // If this is a scheduled task we need to parse the XML to make it more readable
     let mut scratch = data
-        .replace('\n', "")
-        .replace('\r', "")
-        .replace('\t', "")
+        .replace(['\n', '\r', '\t'], "")
         .replace("  ", " ")
         .chars()
         .collect::<Vec<char>>()
@@ -260,13 +258,13 @@ pub fn print_detections(
             .or_insert((vec![], HashSet::new()));
         // NOTE: We only support count in aggs atm so we can inject that value in...!
         if hunt.is_aggregation() {
-            (*headers).0.push("count".to_owned());
-            (*headers).1.insert("count".to_owned());
+            headers.0.push("count".to_owned());
+            headers.1.insert("count".to_owned());
         }
         for field in hunt.mapper.fields() {
             if field.visible && !headers.1.contains(&field.name) {
-                (*headers).0.push(field.name.clone());
-                (*headers).1.insert(field.name.clone());
+                headers.0.push(field.name.clone());
+                headers.1.insert(field.name.clone());
             }
         }
     }
@@ -513,13 +511,13 @@ pub fn print_csv(
             .or_insert((vec![], HashSet::new()));
         // NOTE: We only support count in aggs atm so we can inject that value in...!
         if hunt.is_aggregation() {
-            (*headers).0.push("count".to_owned());
-            (*headers).1.insert("count".to_owned());
+            (headers).0.push("count".to_owned());
+            (headers).1.insert("count".to_owned());
         }
         for field in hunt.mapper.fields() {
             if field.visible && !headers.1.contains(&field.name) {
-                (*headers).0.push(field.name.clone());
-                (*headers).1.insert(field.name.clone());
+                headers.0.push(field.name.clone());
+                headers.1.insert(field.name.clone());
             }
         }
     }

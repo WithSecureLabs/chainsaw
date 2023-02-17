@@ -48,24 +48,24 @@ impl Document for Rule {
             "title" => Some(Tau::String(Cow::Borrowed(&self.name))),
             "level" => Some(Tau::String(Cow::Owned(self.level.to_string()))),
             "status" => Some(Tau::String(Cow::Owned(self.status.to_string()))),
-            "id" => self.id.as_ref().map(|id| Tau::String(Cow::Borrowed(&id))),
+            "id" => self.id.as_ref().map(|id| Tau::String(Cow::Borrowed(id))),
             "logsource.category" => self
                 .logsource
                 .as_ref()
-                .and_then(|ls| ls.category.as_ref().map(|c| Tau::String(Cow::Borrowed(&c)))),
+                .and_then(|ls| ls.category.as_ref().map(|c| Tau::String(Cow::Borrowed(c)))),
             "logsource.definition" => self.logsource.as_ref().and_then(|ls| {
                 ls.definition
                     .as_ref()
-                    .map(|c| Tau::String(Cow::Borrowed(&c)))
+                    .map(|c| Tau::String(Cow::Borrowed(c)))
             }),
             "logsource.product" => self
                 .logsource
                 .as_ref()
-                .and_then(|ls| ls.product.as_ref().map(|c| Tau::String(Cow::Borrowed(&c)))),
+                .and_then(|ls| ls.product.as_ref().map(|c| Tau::String(Cow::Borrowed(c)))),
             "logsource.service" => self
                 .logsource
                 .as_ref()
-                .and_then(|ls| ls.service.as_ref().map(|c| Tau::String(Cow::Borrowed(&c)))),
+                .and_then(|ls| ls.service.as_ref().map(|c| Tau::String(Cow::Borrowed(c)))),
             _ => None,
         }
     }

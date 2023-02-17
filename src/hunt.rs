@@ -188,7 +188,7 @@ impl HunterBuilder {
                                     }
                                     let mut matched = true;
                                     for (f, v) in &precondition.for_ {
-                                        match sigma.find(&f) {
+                                        match sigma.find(f) {
                                             Some(value) => {
                                                 if value.as_str() != Some(v.as_str()) {
                                                     matched = false;
@@ -730,7 +730,7 @@ impl Hunter {
                     let mapped = if self.inner.preprocess {
                         let mut flat = Vec::with_capacity(self.inner.fields.len());
                         for field in &self.inner.fields {
-                            flat.push(mapped.find(&field));
+                            flat.push(mapped.find(field));
                         }
                         Cache {
                             cache: Some(flat),
@@ -897,8 +897,8 @@ impl Hunter {
                         hits,
                         kind: Kind::Individual {
                             document: Document {
-                                kind: kind.clone(),
-                                path: &file,
+                                kind,
+                                path: file,
                                 data: bincode::serialize(&value).ok()?,
                             },
                         },
@@ -927,7 +927,7 @@ impl Hunter {
                         let (value, timestamp) = files.get(id).expect("could not get document");
                         documents.push(Document {
                             kind: kind.clone(),
-                            path: &file,
+                            path: file,
                             data: bincode::serialize(&value)?,
                         });
                         timestamps.push(*timestamp);

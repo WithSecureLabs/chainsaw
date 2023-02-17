@@ -307,7 +307,7 @@ fn init_writer(output: Option<PathBuf>, csv: bool, json: bool, quiet: bool) -> c
 fn run() -> Result<()> {
     let args = Args::parse();
     if let Some(num_threads) = args.num_threads {
-        let _ = rayon::ThreadPoolBuilder::new()
+        rayon::ThreadPoolBuilder::new()
             .num_threads(num_threads)
             .build_global()?;
     }
@@ -322,7 +322,7 @@ fn run() -> Result<()> {
             quiet,
             skip_errors,
         } => {
-            init_writer(output.clone(), false, json, quiet)?;
+            init_writer(output, false, json, quiet)?;
             if !args.no_banner {
                 print_title();
             }
@@ -847,7 +847,7 @@ fn run() -> Result<()> {
 
 fn main() {
     if let Err(e) = run() {
-        if let Some(cause) = e.chain().skip(1).next() {
+        if let Some(cause) = e.chain().nth(1) {
             cs_eredln!("[x] {} - {}", e, cause);
         } else {
             cs_eredln!("[x] {}", e);

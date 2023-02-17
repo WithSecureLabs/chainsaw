@@ -318,7 +318,7 @@ pub fn get_files(
 ) -> crate::Result<Vec<PathBuf>> {
     let mut files: Vec<PathBuf> = vec![];
     if path.exists() {
-        let metadata = match fs::metadata(&path) {
+        let metadata = match fs::metadata(path) {
             Ok(metadata) => metadata,
             Err(e) => {
                 if skip_errors {

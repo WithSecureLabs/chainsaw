@@ -85,7 +85,7 @@ pub mod lines {
 
         pub fn parse(&mut self) -> impl Iterator<Item = Result<Json, Error>> + '_ {
             if let Some(file) = self.inner.take() {
-                return ParserIter(Some(file.lines().into_iter()));
+                return ParserIter(Some(file.lines()));
             }
             ParserIter(None)
         }
