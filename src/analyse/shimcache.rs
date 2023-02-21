@@ -112,7 +112,7 @@ impl ShimcacheAnalyzer {
             // If there were no matches, no additional timeline data can be inferred
             return Ok(None);
         }
-        cs_eprintln!("[+] {} matching entries found from shimcache", match_indices.len());
+        cs_eprintln!("[+] {} pattern matching entries found from shimcache", match_indices.len());
         // Consider the shimcache last update timestamp a match
         match_indices.insert(0, 0);
     
@@ -172,7 +172,7 @@ impl ShimcacheAnalyzer {
                     } else { continue; };
                     match &shimcache_entry.entry_type {
                         EntryType::File { path } => {
-                            if file_entry.path == path.to_lowercase() {
+                            if file_entry.path.to_lowercase() == path.to_lowercase() {
                                 let amcache_ts = file_entry.key_last_modified_ts.clone();
                                 entity.amcache_file = Some(file_entry);
                                 if let Some(TimelineTimestamp::Range{from, to}) = entity.timestamp {

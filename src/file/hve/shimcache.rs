@@ -303,7 +303,7 @@ impl super::Parser {
                 index += 4;
                 let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
                 index += 2;
-                let path = utf16_to_string(&shimcache_bytes.get(index..index+path_size).ok_or_else(e)?)?;
+                let mut path = utf16_to_string(&shimcache_bytes.get(index..index+path_size).ok_or_else(e)?)?;
                 index += path_size;
                 let package_len = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
                 index += 2;
@@ -320,6 +320,10 @@ impl super::Parser {
                 let data = Some(shimcache_bytes.get(index..index+data_size).ok_or_else(e)?.to_vec());
                 index += data_size;
 
+                // Assume "SYSVOL\" refers to "C:\"
+                if path.starts_with(r"SYSVOL\") {
+                    path = path.replacen(r"SYSVOL\", r"C:\", 1);
+                }
                 let entry_type = EntryType::File { path };
                 let executed = Some(insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32);
                 let last_modified_ts = if last_modified_time_utc_win32 != 0 {

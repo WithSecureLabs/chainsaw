@@ -531,7 +531,7 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
         "evidence type",
         "shimcache entry position",
         "shimcache timestamp",
-        "amcache timstamp",
+        "amcache timestamp",
         "entry details",
     ];
     let header_cells = headers.map(|s| cell!(s)).to_vec();
@@ -566,13 +566,9 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
             file.key_last_modified_ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
         } else { String::new() };
 
-        if entity.amcache_file.is_some() {
-            entry_details = format!("{:?}", &entity.amcache_file.as_ref()
-                .expect("amcache_file was unexpectedly None"))
-        } else if entity.shimcache_entry.is_some() {
-            entry_details = format!("{:?}", entity.shimcache_entry.as_ref()
-            .expect("shimcache_entry was unexpectedly None").entry_type)
-        };
+        if let Some(shimcache_entry) = &entity.shimcache_entry {
+            entry_details = format!("{:?}", shimcache_entry.entry_type)
+        }
 
         let timeline_entry_nr_string = timeline_entry_nr.to_string();
         let shimcache_row = [
@@ -590,6 +586,12 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
         timeline_entry_nr += 1;
 
         if entity.amcache_ts_match {
+            let mut entry_details = String::new();
+            if let Some(file_entry) = &entity.amcache_file {
+                entry_details = format!("{:?}", file_entry);
+            } else if let Some(program_entry) = &entity.amcache_program {
+                entry_details = format!("{:?}", program_entry);
+            };
             let amcache_row = [
                 &timeline_entry_nr_string,
                 &timestamp,
@@ -598,7 +600,7 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
                 "",
                 "",
                 &timestamp,
-                "",
+                &entry_details,
             ];
             let cells = amcache_row.map(|s| cell!(s)).to_vec();
             table.add_row(Row::new(cells));
