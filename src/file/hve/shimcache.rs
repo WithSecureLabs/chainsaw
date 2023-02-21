@@ -177,7 +177,6 @@ impl super::Parser {
             // Windows 7 32-bit
             if is_32bit {
                 shimcache.version = ShimcacheVersion::Windows7x86;
-                // TODO: verify that 32-bit win7 parsing works properly
                 while index < shimcache_bytes_len {
                     let e = || anyhow!("Error parsing windows 7 shimcache entry. Position: {}", cache_entry_position);
                     let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
@@ -285,7 +284,6 @@ impl super::Parser {
         }
         // Windows 8 or Windows 8.1 shimcache
         else if let Some(cache_signature) = win8_cache_signature {
-            // TODO: verify behavior of win8 shimcache parsing with test data
             if cache_signature == "00ts" {
                 shimcache.version = ShimcacheVersion::Windows80Windows2012;
             } else if cache_signature == "10ts" {
@@ -322,7 +320,6 @@ impl super::Parser {
                 let data = Some(shimcache_bytes.get(index..index+data_size).ok_or_else(e)?.to_vec());
                 index += data_size;
 
-                // TODO: check if a similar regex is needed for path parsing as in windows 10 shimcache
                 let entry_type = EntryType::File { path };
                 let executed = Some(insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32);
                 let last_modified_ts = if last_modified_time_utc_win32 != 0 {
@@ -352,13 +349,16 @@ impl super::Parser {
         // Windows 10 shimcache
         else {
             let offset_to_records = signature_number.clone() as usize;
-            let cache_signature = std::str::from_utf8(&shimcache_bytes.get(offset_to_records..offset_to_records+4).ok_or_else(e)?)?;
+            let win10_cache_signature: bool = match std::str::from_utf8(&shimcache_bytes.get(offset_to_records..offset_to_records+4).ok_or_else(e)?) {
+                Ok(signature) => signature == "10ts",
+                _ => false,
+            };
             if offset_to_records == 0x34 {
                 shimcache.version = ShimcacheVersion::Windows10Creators;
             } else {
                 shimcache.version = ShimcacheVersion::Windows10;
             }
-            if cache_signature == "10ts" {
+            if win10_cache_signature {
                 lazy_static! {
                     static ref RE: Regex = Regex::new(
                         r"^([0-9a-f]{8})\s+([0-9a-f]{16})\s+([0-9a-f]{16})\s+([\w]{4})\s+([\w.]+)\s+(\w+)\s*(\w*)$"

@@ -133,7 +133,6 @@ impl super::Parser {
             }
         // Older amcache format
         } else {
-            // TODO: verify correct behavior with test files
             /// A helper function for extracting unix timestamps from key values
             fn unix_ts_from_key(key: &CellKeyNode, value_name: &str) -> Result<Option<DateTime<Utc>>> {
                 let Some(key_value) = key.get_value(value_name) else {
