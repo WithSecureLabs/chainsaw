@@ -525,6 +525,7 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
     let mut table = Table::new();
     table.set_format(format);
     let headers = [
+        "timeline entry number",
         "timestamp",
         "timestamp description",
         "evidence type",
@@ -532,7 +533,6 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
         "shimcache timestamp",
         "amcache timstamp",
         "entry details",
-        "timeline entry number",
     ];
     let header_cells = headers.map(|s| cell!(s)).to_vec();
     table.add_row(Row::new(header_cells));
@@ -563,7 +563,7 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
             }
         }
         amcache_timestamp = if let Some(file) = &entity.amcache_file {
-            file.last_modified_ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
+            file.key_last_modified_ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
         } else { String::new() };
 
         if entity.amcache_file.is_some() {
@@ -576,6 +576,7 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
 
         let timeline_entry_nr_string = timeline_entry_nr.to_string();
         let shimcache_row = [
+            &timeline_entry_nr_string,
             &timestamp,
             &ts_description,
             "shimcache",
@@ -583,7 +584,6 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
             &shimcache_timestamp,
             &amcache_timestamp,
             &entry_details,
-            &timeline_entry_nr_string,
         ];
         let cells = shimcache_row.map(|s| cell!(s)).to_vec();
         table.add_row(Row::new(cells));
@@ -591,6 +591,7 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
 
         if entity.amcache_ts_match {
             let amcache_row = [
+                &timeline_entry_nr_string,
                 &timestamp,
                 "Amcache timestamp",
                 "amcache",
@@ -598,7 +599,6 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
                 "",
                 &timestamp,
                 "",
-                &timeline_entry_nr_string,
             ];
             let cells = amcache_row.map(|s| cell!(s)).to_vec();
             table.add_row(Row::new(cells));

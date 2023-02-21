@@ -61,8 +61,8 @@ impl ShimcacheAnalyzer {
 
         let mut shimcache_parser = HveParser::load(&self.shimcache_path)?;
         let shimcache = shimcache_parser.parse_shimcache()?;
-        cs_eprintln!("[+] Shimcache hive file loaded from {:?}", fs::canonicalize(&self.shimcache_path)
-            .expect("cloud not get absolute path"));
+        cs_eprintln!("[+] {} shimcache hive file loaded from {:?}", shimcache.version,
+            fs::canonicalize(&self.shimcache_path).expect("cloud not get absolute path"));
 
         let amcache: Option<AmcacheArtifact> = if let Some(amcache_path) = &self.amcache_path {
             let mut amcache_parser = HveParser::load(&amcache_path)?;
@@ -88,8 +88,7 @@ impl ShimcacheAnalyzer {
             timestamp: Some(TimelineTimestamp::Exact(shimcache.last_update_ts)),
         });
 
-        // Consider the shimcache last update timestamp a match
-        let mut match_indices: Vec<usize> = vec![0];
+        let mut match_indices: Vec<usize> = Vec::new();
         // Check for matches with config patterns and set timestamp
         for (i, entity) in timeline_entities.iter_mut().enumerate() {
             for re in &regexes {
@@ -114,6 +113,8 @@ impl ShimcacheAnalyzer {
             return Ok(None);
         }
         cs_eprintln!("[+] {} matching entries found from shimcache", match_indices.len());
+        // Consider the shimcache last update timestamp a match
+        match_indices.insert(0, 0);
     
         fn extract_ts_from_entity(entity: &TimelineEntity) -> DateTime<Utc> {
             match entity.timestamp {
@@ -164,52 +165,53 @@ impl ShimcacheAnalyzer {
             // Match shimcache and amcache entries and 
             // check if amcache timestamp matches timeline timestamp range
             let mut ts_match_count = 0;
-            for file in amcache.iter_files() {
+            for file_entry in amcache.file_entries.into_iter() {
                 for mut entity in &mut timeline_entities {
                     let shimcache_entry = if let Some(entry) = &entity.shimcache_entry {
                         entry
                     } else { continue; };
                     match &shimcache_entry.entry_type {
                         EntryType::File { path } => {
-                            if file.path == path.to_lowercase() {
-                                entity.amcache_file = Some(file.clone());
+                            if file_entry.path == path.to_lowercase() {
+                                let amcache_ts = file_entry.key_last_modified_ts.clone();
+                                entity.amcache_file = Some(file_entry);
                                 if let Some(TimelineTimestamp::Range{from, to}) = entity.timestamp {
-                                    let amcache_ts = file.last_modified_ts;
                                     if from < amcache_ts && amcache_ts < to {
                                         entity.amcache_ts_match = true;
                                         entity.timestamp = Some(TimelineTimestamp::Exact(amcache_ts));
                                         ts_match_count += 1;
                                     }
                                 }
+                                // Assume there are no two shimcache entries with the same path
+                                break;
                             }
                         },
                         EntryType::Program { .. } => (),
                     }
                 }
             }
-            for (_program_id, program) in amcache.programs {
-                if let Some(program_entry) = program.program_entry {
-                    for mut entity in &mut timeline_entities {
-                        let shimcache_entry = if let Some(entry) = &entity.shimcache_entry {
-                            entry
-                        } else { continue; };
-                        match &shimcache_entry.entry_type {
-                            EntryType::File { .. } => (),
-                            EntryType::Program { program_name, .. } => {
-                                if program_name == &program_entry.program_name {
-                                    if let Some(TimelineTimestamp::Range{from, to}) = entity.timestamp {
-                                        let amcache_ts = &program_entry.last_modified_ts;
-                                        if from < *amcache_ts && *amcache_ts < to {
-                                            entity.amcache_ts_match = true;
-                                            entity.timestamp = Some(TimelineTimestamp::Exact(*amcache_ts));
-                                            entity.amcache_program = Some(program_entry);
-                                            ts_match_count += 1;
-                                            break;
-                                        }
+            for program_entry in amcache.program_entries.into_iter() {
+                for mut entity in &mut timeline_entities {
+                    let shimcache_entry = if let Some(shimcache_entry) = &entity.shimcache_entry {
+                        shimcache_entry
+                    } else { continue; };
+                    match &shimcache_entry.entry_type {
+                        EntryType::File { .. } => (),
+                        EntryType::Program { program_name, .. } => {
+                            if program_name == &program_entry.program_name {
+                                if let Some(TimelineTimestamp::Range{from, to}) = entity.timestamp {
+                                    let amcache_ts = program_entry.last_modified_ts.clone();
+                                    entity.amcache_program = Some(program_entry);
+                                    if from < amcache_ts && amcache_ts < to {
+                                        entity.amcache_ts_match = true;
+                                        entity.timestamp = Some(TimelineTimestamp::Exact(amcache_ts));
+                                        ts_match_count += 1;
                                     }
+                                    // Assume there are no two shimcache entries with the same path
+                                    break;
                                 }
-                            },
-                        }
+                            }
+                        },
                     }
                 }
             }
@@ -224,7 +226,6 @@ impl ShimcacheAnalyzer {
             match_indices.sort();
             set_timestamp_ranges(&match_indices, &mut timeline_entities);
         }
-    
         Ok(Some(timeline_entities))
     }
 }

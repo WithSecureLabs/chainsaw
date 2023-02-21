@@ -1,9 +1,10 @@
 use std::{path::{PathBuf, Path}, fs};
 
 use anyhow::{Result, bail};
+use chrono::NaiveDateTime;
 use notatin::{
     parser::{Parser as HveParser, ParserIterator},
-    parser_builder::ParserBuilder,
+    parser_builder::{ParserBuilder},
 };
 use serde_json::Value as Json;
 
@@ -44,7 +45,18 @@ impl Parser {
             parser_builder.with_transaction_log(log_file);
         }
 
-        let parser = parser_builder.build()?;
+        let parser = match parser_builder.build() {
+            Ok(parser) => parser,
+            Err(error) => {
+                cs_eyellowln!(
+                    "[!] Failed to load hive {:?} with deleted record recovery. Error: \"{}\".\n    Reattempting without recovery...",
+                    path,
+                    error
+                );
+                parser_builder.recover_deleted(false);
+                parser_builder.build()?
+            }
+        };
 
         Ok(Self { inner: parser })
     }
@@ -57,6 +69,11 @@ impl Parser {
                 Err(e) => bail!(e),
             })
     }
+}
+
+fn win32_ts_to_datetime(ts_win32: u64) -> Result<NaiveDateTime> {
+    let ts_unix = (ts_win32 / 10_000) as i64 - 11644473600000;
+    NaiveDateTime::from_timestamp_millis(ts_unix).ok_or(anyhow!("Timestamp out of range!"))
 }
 
 #[cfg(test)]

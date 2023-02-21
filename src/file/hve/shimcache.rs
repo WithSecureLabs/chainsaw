@@ -1,9 +1,11 @@
 use std::{fmt::Display};
 
 use anyhow::{Result, bail, anyhow};
-use chrono::{NaiveDateTime, DateTime, Utc};
+use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
 use regex::Regex;
+
+use super::win32_ts_to_datetime;
 
 #[allow(dead_code)]
 enum InsertFlag {
@@ -49,9 +51,40 @@ pub enum EntryType {
     },
 }
 
+#[derive(Debug)]
+pub enum ShimcacheVersion {
+    Unknown,
+    Windows10,
+    Windows10Creators,
+    Windows7x64Windows2008R2,
+    Windows7x86,
+    Windows80Windows2012,
+    Windows81Windows2012R2,
+    WindowsVistaWin2k3Win2k8,
+    WindowsXP,
+}
+
+impl std::fmt::Display for ShimcacheVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match *self {
+            ShimcacheVersion::Unknown => write!(f, "Unknown"),
+            ShimcacheVersion::Windows10 => write!(f, "Windows 10"),
+            ShimcacheVersion::Windows10Creators => write!(f, "Windows 10 Creators"),
+            ShimcacheVersion::Windows7x64Windows2008R2 => write!(f, "Windows 7 64-bit or Windows Server 2008 R2"),
+            ShimcacheVersion::Windows7x86 => write!(f, "Windows 7 32-bit"),
+            ShimcacheVersion::Windows80Windows2012 => write!(f, "Windows 8 or Windows Server 2012"),
+            ShimcacheVersion::Windows81Windows2012R2 => write!(f, "Windows 8.1 or Windows 2012 R2"),
+            ShimcacheVersion::WindowsVistaWin2k3Win2k8 => write!(f, "Windows Vista, Windows Server 2003 or Windows Server 2008"),
+            ShimcacheVersion::WindowsXP => write!(f, "Unknown"),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct ShimcacheArtifact {
     pub entries: Vec<ShimcacheEntry>,
     pub last_update_ts: DateTime<Utc>,
+    pub version: ShimcacheVersion,
 }
 
 impl Display for ShimcacheEntry {
@@ -98,22 +131,27 @@ impl super::Parser {
 
         let mut shimcache = ShimcacheArtifact{
             entries: Vec::new(),
-            last_update_ts: shimcache_last_update_ts
+            last_update_ts: shimcache_last_update_ts,
+            version: ShimcacheVersion::Unknown,
         };
-        println!("{}", shimcache.last_update_ts);
 
         // Shimcache version signature is at a different index depending on version
         let e = || anyhow!("Shimcache byte indexing error!");
         let signature_number = u32::from_le_bytes(shimcache_bytes.get(0..4).ok_or_else(e)?.try_into()?);
-        let cache_signature = std::str::from_utf8(&shimcache_bytes.get(128..132).ok_or_else(e)?)?;
+        let win8_cache_signature = match std::str::from_utf8(&shimcache_bytes.get(128..132).ok_or_else(e)?) {
+            Ok(signature) => if signature == "00ts" || signature == "10ts" { Some(signature) } else { None },
+            Err(_e) => None,
+        };
 
         // Windows XP shimcache
         if signature_number == 0xdeadbeef {
+            shimcache.version = ShimcacheVersion::WindowsXP;
             bail!("Windows XP shimcache parsing not supported!");
         }
         // Windows Vista shimcache
         else if signature_number == 0xbadc0ffe
         {
+            shimcache.version = ShimcacheVersion::WindowsVistaWin2k3Win2k8;
             bail!("Windows Vista shimcache parsing not supported!");
         }
         // Windows 7 shimcache
@@ -136,7 +174,9 @@ impl super::Parser {
             index = 128;
             let mut cache_entry_position = 0;
 
+            // Windows 7 32-bit
             if is_32bit {
+                shimcache.version = ShimcacheVersion::Windows7x86;
                 // TODO: verify that 32-bit win7 parsing works properly
                 while index < shimcache_bytes_len {
                     let e = || anyhow!("Error parsing windows 7 shimcache entry. Position: {}", cache_entry_position);
@@ -187,7 +227,9 @@ impl super::Parser {
                     }
                     cache_entry_position += 1;
                 }
+            // Windows 7 64-bit
             } else {
+                shimcache.version = ShimcacheVersion::Windows7x64Windows2008R2;
                 while index < shimcache_bytes_len {
                     let e = || anyhow!("Error parsing windows 7 shimcache entry. Position: {}", cache_entry_position);
                     let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
@@ -242,8 +284,13 @@ impl super::Parser {
             }
         }
         // Windows 8 or Windows 8.1 shimcache
-        else if cache_signature == "00ts" || cache_signature == "10ts" {
+        else if let Some(cache_signature) = win8_cache_signature {
             // TODO: verify behavior of win8 shimcache parsing with test data
+            if cache_signature == "00ts" {
+                shimcache.version = ShimcacheVersion::Windows80Windows2012;
+            } else if cache_signature == "10ts" {
+                shimcache.version = ShimcacheVersion::Windows81Windows2012R2;
+            }
             let mut index = 128;
             let mut cache_entry_position = 0;
             while index < shimcache_bytes_len {
@@ -302,10 +349,15 @@ impl super::Parser {
                 cache_entry_position += 1;
             }
         }
+        // Windows 10 shimcache
         else {
             let offset_to_records = signature_number.clone() as usize;
             let cache_signature = std::str::from_utf8(&shimcache_bytes.get(offset_to_records..offset_to_records+4).ok_or_else(e)?)?;
-            // Windows 10 shimcache
+            if offset_to_records == 0x34 {
+                shimcache.version = ShimcacheVersion::Windows10Creators;
+            } else {
+                shimcache.version = ShimcacheVersion::Windows10;
+            }
             if cache_signature == "10ts" {
                 lazy_static! {
                     static ref RE: Regex = Regex::new(
@@ -368,16 +420,13 @@ impl super::Parser {
                     shimcache.entries.push(cache_entry);
                     cache_entry_position += 1;
                 }
+            } else {
+                bail!("Could not recognize shimcache version!");
             }
         }
 
         Ok(shimcache)
     }
-}
-
-fn win32_ts_to_datetime(ts_win32: u64) -> Result<NaiveDateTime> {
-    let ts_unix = (ts_win32 / 10_000) as i64 - 11644473600000;
-    NaiveDateTime::from_timestamp_millis(ts_unix).ok_or(anyhow!("Timestamp out of range!"))
 }
 
 fn utf16_to_string(bytes: &[u8]) -> Result<String> {
