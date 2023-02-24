@@ -365,7 +365,7 @@ impl super::Parser {
             if win10_cache_signature {
                 lazy_static! {
                     static ref RE: Regex = Regex::new(
-                        r"^([0-9a-f]{8})\s+([0-9a-f]{16})\s+([0-9a-f]{16})\s+([\w]{4})\s+([\w.]+)\s+(\w+)\s*(\w*)$"
+                        r"^([0-9a-f]{8})\s+([0-9a-f]{16})\s+([0-9a-f]{16})\s+([\w]{4})\s+([\w.-]+)\s+(\w+)\s*(\w*)$"
                     ).expect("invalid regex");
                 }
                 let mut index = offset_to_records.clone();

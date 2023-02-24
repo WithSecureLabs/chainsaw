@@ -592,6 +592,7 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
             } else if let Some(program_entry) = &entity.amcache_program {
                 entry_details = format!("{:?}", program_entry);
             };
+            let timeline_entry_nr_string = timeline_entry_nr.to_string();
             let amcache_row = [
                 &timeline_entry_nr_string,
                 &timestamp,
