@@ -299,14 +299,14 @@ impl HunterBuilder {
 
             let mut lookup = HashMap::with_capacity(keys.len());
             for (i, f) in keys.into_iter().enumerate() {
-                let x = (i / 256) as u32;
-                let y = (i % 256) as u32;
-                let mut chars = Vec::with_capacity(x as usize + 1);
+                let x = (i / 255) as u8;
+                let y = (i % 255) as u8;
+                let mut bytes = Vec::with_capacity(x as usize + 1);
                 for _ in 0..x {
-                    chars.push(char::from_u32(256).expect("invalid character"));
+                    bytes.push(255);
                 }
-                chars.push(char::from_u32(y).expect("invalid character"));
-                let field: String = chars.into_iter().collect();
+                bytes.push(y);
+                let field: String = unsafe { String::from_utf8_unchecked(bytes) };
                 lookup.insert(f.clone(), field);
                 fields.push(f);
             }
@@ -631,7 +631,7 @@ impl<'a> TauDocument for Cache<'a> {
     #[inline(always)]
     fn find(&self, key: &str) -> Option<Tau<'_>> {
         if let Some(cache) = &self.cache {
-            let index = key.chars().fold(0, |acc, x| acc + (x as usize));
+            let index = key.bytes().fold(0, |acc, x| acc + (x as usize));
             cache[index].clone()
         } else {
             self.mapped.find(key)
