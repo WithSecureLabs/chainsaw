@@ -96,7 +96,7 @@ impl ShimcacheAnalyzer {
                     entry
                 } else { continue; };
                 let pattern_matches = match &shimcache_entry.entry_type {
-                    EntryType::File { path, .. } => re.is_match(&path),
+                    EntryType::File { path, .. } => re.is_match(&path.to_lowercase()),
                     EntryType::Program { program_name, ..} => re.is_match(&program_name),
                 };
                 if pattern_matches {
