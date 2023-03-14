@@ -52,7 +52,7 @@ impl ShimcacheAnalyzer {
         }
     }
 
-    pub fn amcache_shimcache_timeline(&self, regex_patterns: &Vec<String>) -> Result<Option<Vec<TimelineEntity>>> {
+    pub fn amcache_shimcache_timeline(&self, regex_patterns: &Vec<String>) -> Result<Vec<TimelineEntity>> {
         if regex_patterns.is_empty() {
             bail!("No regex patterns defined!")
         }
@@ -110,9 +110,10 @@ impl ShimcacheAnalyzer {
         }
         if match_indices.is_empty() {
             // If there were no matches, no additional timeline data can be inferred
-            return Ok(None);
+            cs_eyellowln!("[!] 0 pattern matching entries found from shimcache")
+        } else {
+            cs_eprintln!("[+] {} pattern matching entries found from shimcache", match_indices.len());
         }
-        cs_eprintln!("[+] {} pattern matching entries found from shimcache", match_indices.len());
         // Consider the shimcache last update timestamp a match
         match_indices.insert(0, 0);
     
@@ -182,7 +183,8 @@ impl ShimcacheAnalyzer {
                                         ts_match_count += 1;
                                     }
                                 }
-                                // Assume there are no two shimcache entries with the same path
+                                // TODO: below assumption is incorrect, fix logic
+                                // WRONG: Assume there are no two shimcache entries with the same path
                                 break;
                             }
                         },
@@ -226,6 +228,6 @@ impl ShimcacheAnalyzer {
             match_indices.sort();
             set_timestamp_ranges(&match_indices, &mut timeline_entities);
         }
-        Ok(Some(timeline_entities))
+        Ok(timeline_entities)
     }
 }

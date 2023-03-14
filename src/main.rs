@@ -812,14 +812,11 @@ fn run() -> Result<()> {
 
                     // Do analysis
                     let timeline = shimcache_analyzer.amcache_shimcache_timeline(&regex_patterns)?;
-                    if let Some(entities) = timeline {
-                        cli::print_shimcache_analysis_csv(&entities)?;
-                        if let Some(output_path) = output {
-                            cs_eprintln!("[+] Saved output to {:?}", std::fs::canonicalize(output_path)
-                                .expect("could not get absolute path"));
-                        }
-                    } else {
-                        cs_eyellowln!("[!] No matching entries found from shimcache, nothing to output")
+                    cli::print_shimcache_analysis_csv(&timeline)?;
+
+                    if let Some(output_path) = output {
+                        cs_eprintln!("[+] Saved output to {:?}", std::fs::canonicalize(output_path)
+                            .expect("could not get absolute path"));
                     }
                 }
             }
