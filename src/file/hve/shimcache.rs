@@ -4,6 +4,7 @@ use anyhow::{Result, bail, anyhow};
 use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
 use regex::Regex;
+use serde::Serialize;
 
 use super::win32_ts_to_datetime;
 
@@ -27,11 +28,12 @@ enum InsertFlag {
     Unknown800000 = 0x00800000,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct ShimcacheEntry {
     pub cache_entry_position: u32,
     pub controlset: u32,
     pub data_size: Option<usize>,
+    #[serde(skip_serializing)]
     pub data: Option<Vec<u8>>,
     pub entry_type: EntryType,
     pub executed: Option<bool>,
@@ -40,7 +42,7 @@ pub struct ShimcacheEntry {
     pub signature: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum EntryType {
     File {
         path: String

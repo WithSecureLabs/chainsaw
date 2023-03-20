@@ -3,10 +3,11 @@ use chrono::{NaiveDateTime, DateTime, Utc};
 use notatin::{
     cell_key_node::CellKeyNode,
 };
+use serde::Serialize;
 
 use crate::file::hve::win32_ts_to_datetime;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct FileEntry {
     pub file_id: Option<String>,
     pub key_last_modified_ts: DateTime<Utc>,
@@ -17,7 +18,7 @@ pub struct FileEntry {
     pub sha1_hash: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct ProgramEntry {
     pub install_date: Option<DateTime<Utc>>,
     pub last_modified_ts: DateTime<Utc>,
