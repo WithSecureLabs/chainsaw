@@ -270,6 +270,9 @@ fn init_writer(output: Option<PathBuf>, csv: bool, json: bool, quiet: bool) -> c
     let (path, output) = match &output {
         Some(path) => {
             if csv {
+                if path.is_file() {
+                    anyhow::bail!("Unable to create output directory");
+                }
                 (Some(path.to_path_buf()), None)
             } else {
                 let file = match File::create(path) {
@@ -406,7 +409,15 @@ fn run() -> Result<()> {
             if column_width.is_none() {
                 column_width = resolve_col_width();
             }
-            init_writer(output.clone(), csv, json, quiet)?;
+            if let Err(e) = init_writer(output.clone(), csv, json, quiet) {
+                let mut writer = Writer::default();
+                writer.quiet = quiet;
+                set_writer(writer).expect("could not set writer");
+                if !args.no_banner {
+                    print_title();
+                }
+                return Err(e);
+            }
             if !args.no_banner {
                 print_title();
             }
