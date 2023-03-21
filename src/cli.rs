@@ -3,7 +3,7 @@ use std::fs;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
-use chrono::{DateTime, NaiveDateTime, TimeZone, Utc, SecondsFormat};
+use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use prettytable::{cell, format, Row, Table};
@@ -523,18 +523,21 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
         .padding(1, 1)
         .build();
 
+    fn format_ts(ts: &DateTime<Utc>) -> String {
+        ts.format("%Y-%m-%d %H:%M:%S%.3f").to_string()
+    }
+
     let mut table = Table::new();
     table.set_format(format);
     let headers = [
-        "timeline entry number",
-        "timestamp",
-        "timestamp description",
-        "evidence type",
-        "entry type",
-        "shimcache entry position",
-        "shimcache timestamp",
-        "amcache timestamp",
-        "raw entry",
+        "Timestamp UTC",
+        "File Path",
+        "Program Name",
+        "SHA-1 Hash",
+        "Timeline Entry Number",
+        "Entry Type",
+        "Timestamp Description",
+        "Raw Entry",
     ];
     let header_cells = headers.map(|s| cell!(s)).to_vec();
     table.add_row(Row::new(header_cells));
@@ -542,15 +545,15 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
     let mut timeline_entry_nr = 0;
     for entity in timeline {
         let timestamp: String;
-        let ts_description: String;
+        let mut file_path = String::new();
+        let mut program_name = String::new();
+        let sha1_hash = String::new();
         let mut entry_type = String::new();
-        let mut shimcache_entry_pos = String::new();
-        let mut shimcache_timestamp = String::new();
-        let amcache_timestamp: String;
+        let ts_description: String;
         let mut raw_entry = String::new();
 
         timestamp = match &entity.timestamp {
-            Some(TimelineTimestamp::Exact(ts, _type)) => ts.to_rfc3339_opts(SecondsFormat::AutoSi, true),
+            Some(TimelineTimestamp::Exact(ts, _type)) => format_ts(ts),
             _ => String::new(),
         };
         ts_description = if let Some(TimelineTimestamp::Exact(_ts, ts_type)) = &entity.timestamp {
@@ -562,18 +565,17 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
             }
         } else { String::new() };
         if let Some(shimcache_entry) = &entity.shimcache_entry {
-            entry_type = match shimcache_entry.entry_type {
-                EntryType::File { .. } => String::from("ShimcacheFileEntry"),
-                EntryType::Program { .. } => String::from("ShimcacheProgramEntry"),
+            match &shimcache_entry.entry_type {
+                EntryType::File { path } => {
+                    entry_type = String::from("ShimcacheFileEntry");
+                    file_path = path.clone();
+                },
+                EntryType::Program { program_name: name, .. } => {
+                    entry_type = String::from("ShimcacheProgramEntry");
+                    program_name = name.clone(); 
+                },
             };
-            shimcache_entry_pos = shimcache_entry.cache_entry_position.to_string();
-            if let Some(ts) = shimcache_entry.last_modified_ts {
-                shimcache_timestamp = ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
-            }
         }
-        amcache_timestamp = if let Some(file) = &entity.amcache_file {
-            file.key_last_modified_ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
-        } else { String::new() };
 
         if let Some(shimcache_entry) = &entity.shimcache_entry {
             raw_entry = serde_json::to_string(&shimcache_entry)?; 
@@ -581,14 +583,13 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
 
         let timeline_entry_nr_string = timeline_entry_nr.to_string();
         let shimcache_row = [
-            &timeline_entry_nr_string,
             &timestamp,
-            &ts_description,
-            "shimcache",
+            &file_path,
+            &program_name,
+            &sha1_hash,
+            &timeline_entry_nr_string,
             &entry_type,
-            &shimcache_entry_pos,
-            &shimcache_timestamp,
-            &amcache_timestamp,
+            &ts_description,
             &raw_entry,
         ];
         let cells = shimcache_row.map(|s| cell!(s)).to_vec();
@@ -597,19 +598,20 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
 
         if let Some(TimelineTimestamp::Exact(_ts, TimestampType::AmcacheRangeMatch)) = &entity.timestamp {
             if let Some(file_entry) = &entity.amcache_file {
-                let raw_entry = serde_json::to_string(&file_entry)?;
-                let amcache_timestamp = file_entry.key_last_modified_ts.to_rfc3339_opts(SecondsFormat::AutoSi, true);
+                let amcache_timestamp = format_ts(&file_entry.key_last_modified_ts);
+                let file_path = file_entry.path.clone();
+                let sha1_hash = file_entry.sha1_hash.as_ref().unwrap_or(&String::new()).to_string();
                 let entry_type = "AmcacheFileEntry";
+                let raw_entry = serde_json::to_string(&file_entry)?;
                 let timeline_entry_nr_string = timeline_entry_nr.to_string();
                 let amcache_row = [
-                    &timeline_entry_nr_string,
                     &amcache_timestamp,
+                    &file_path,
                     "",
-                    "amcache",
+                    &sha1_hash,
+                    &timeline_entry_nr_string,
                     entry_type,
                     "",
-                    "",
-                    &amcache_timestamp,
                     &raw_entry,
                 ];
                 let cells = amcache_row.map(|s| cell!(s)).to_vec();
