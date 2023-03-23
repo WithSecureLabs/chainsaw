@@ -65,11 +65,13 @@ impl ShimcacheAnalyzer {
         let regexes: Vec<Regex> = regex_patterns.iter()
             .map(|p| Regex::new(p)).collect::<Result<Vec<_>,_>>()?;
 
+        // Load shimcache
         let mut shimcache_parser = HveParser::load(&self.shimcache_path)?;
         let shimcache = shimcache_parser.parse_shimcache()?;
         cs_eprintln!("[+] {} shimcache hive file loaded from {:?}", shimcache.version,
             fs::canonicalize(&self.shimcache_path).expect("cloud not get absolute path"));
 
+        // Load amcache
         let amcache: Option<AmcacheArtifact> = if let Some(amcache_path) = &self.amcache_path {
             let mut amcache_parser = HveParser::load(&amcache_path)?;
             cs_eprintln!("[+] Amcache hive file loaded from {:?}", fs::canonicalize(amcache_path)
@@ -96,7 +98,7 @@ impl ShimcacheAnalyzer {
             indices
         }
     
-        /// Sets timestamp ranges for timeline entities based on shimcache entry order
+        /// Sets timestamp ranges for timeline entities based on shimcache entry order and indices
         fn set_timestamp_ranges(range_indices: &Vec<usize>, timeline_entities: &mut Vec<TimelineEntity>) {
             let first_index = *range_indices.first().expect("empty range_indices provided");
             if first_index > 0 {
@@ -153,7 +155,7 @@ impl ShimcacheAnalyzer {
                 } else { continue; };
                 let pattern_matches = match &shimcache_entry.entry_type {
                     EntryType::File { path, .. } => re.is_match(&path.to_lowercase()),
-                    EntryType::Program { program_name, ..} => re.is_match(&program_name),
+                    EntryType::Program { .. } => false,
                 };
                 if pattern_matches {
                     if let Some(ts) = shimcache_entry.last_modified_ts {
@@ -212,6 +214,7 @@ impl ShimcacheAnalyzer {
             // Find near Amcache and Shimcache timestamp pairs
             const MAX_TIME_DIFFERENCE: i64 = 1*60*1000; // 1 min
             let mut near_timestamps_count = 0;
+            let mut pattern_match_overlap_count = 0;
             for mut entity in &mut timeline_entities {
                 if let (Some(shimcache_entry), Some(amcache_entry)) = (&entity.shimcache_entry, &entity.amcache_file) {
                     if let Some(shimcache_ts) = shimcache_entry.last_modified_ts {
@@ -219,8 +222,13 @@ impl ShimcacheAnalyzer {
                         if difference.num_milliseconds().abs() > MAX_TIME_DIFFERENCE {
                             continue;
                         }
-                        entity.timestamp = Some(TimelineTimestamp::Exact(amcache_entry.key_last_modified_ts, TimestampType::NearTSMatch));
                         near_timestamps_count += 1;
+                        // Do not overwrite pattern matched timestamps
+                        if let Some(TimelineTimestamp::Exact(_ts, TimestampType::PatternMatch)) = entity.timestamp {
+                            pattern_match_overlap_count += 1;
+                            continue;
+                        }
+                        entity.timestamp = Some(TimelineTimestamp::Exact(amcache_entry.key_last_modified_ts, TimestampType::NearTSMatch));
                     }
                 }
             }
@@ -228,7 +236,7 @@ impl ShimcacheAnalyzer {
             cs_eprintln!(
                 "[+] {} near shimcache & amcache timestamp pairs found (with {} overlapping the pattern matched entries)",
                 near_timestamps_count,
-                near_timestamps_count + pattern_match_count - (new_exact_ts_indices.len() - 1),
+                pattern_match_overlap_count,
             );
 
             // Set timestamp ranges again, including Amcache & Shimcache timestamp matches

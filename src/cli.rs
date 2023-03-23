@@ -530,7 +530,7 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
     let mut table = Table::new();
     table.set_format(format);
     let headers = [
-        "Timestamp UTC",
+        "Timestamp",
         "File Path",
         "Program Name",
         "SHA-1 Hash",

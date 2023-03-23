@@ -33,7 +33,6 @@ pub struct ShimcacheEntry {
     pub cache_entry_position: u32,
     pub controlset: u32,
     pub data_size: Option<usize>,
-    #[serde(skip_serializing)]
     pub data: Option<Vec<u8>>,
     pub entry_type: EntryType,
     pub executed: Option<bool>,
@@ -322,6 +321,7 @@ impl super::Parser {
                 let data = Some(shimcache_bytes.get(index..index+data_size).ok_or_else(e)?.to_vec());
                 index += data_size;
 
+                // TODO: find a way to avoid below assumption
                 // Assume "SYSVOL\" refers to "C:\"
                 if path.starts_with(r"SYSVOL\") {
                     path = path.replacen(r"SYSVOL\", r"C:\", 1);
