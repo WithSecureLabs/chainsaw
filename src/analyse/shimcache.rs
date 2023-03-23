@@ -219,7 +219,6 @@ impl ShimcacheAnalyzer {
                         if difference.num_milliseconds().abs() > MAX_TIME_DIFFERENCE {
                             continue;
                         }
-                        // TODO: choose which timestamp to use based on researched logic
                         entity.timestamp = Some(TimelineTimestamp::Exact(amcache_entry.key_last_modified_ts, TimestampType::NearTSMatch));
                         near_timestamps_count += 1;
                     }
@@ -227,7 +226,7 @@ impl ShimcacheAnalyzer {
             }
             let new_exact_ts_indices = get_exact_ts_indices(&timeline_entities);
             cs_eprintln!(
-                "[+] {} temporally near shimcache & amcache timestamp pairs found (with {} overlapping pattern matched entries)",
+                "[+] {} near shimcache & amcache timestamp pairs found (with {} overlapping the pattern matched entries)",
                 near_timestamps_count,
                 near_timestamps_count + pattern_match_count - (new_exact_ts_indices.len() - 1),
             );

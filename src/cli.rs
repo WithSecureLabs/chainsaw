@@ -3,7 +3,7 @@ use std::fs;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
-use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, NaiveDateTime, TimeZone, Utc, SecondsFormat};
 use chrono_tz::Tz;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use prettytable::{cell, format, Row, Table};
@@ -524,7 +524,7 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
         .build();
 
     fn format_ts(ts: &DateTime<Utc>) -> String {
-        ts.format("%Y-%m-%d %H:%M:%S%.3f").to_string()
+        ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
     }
 
     let mut table = Table::new();
@@ -544,34 +544,32 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
 
     let mut timeline_entry_nr = 0;
     for entity in timeline {
-        let timestamp: String;
+        let mut timestamp = String::new();
         let mut file_path = String::new();
         let mut program_name = String::new();
-        let sha1_hash = String::new();
-        let mut entry_type = String::new();
-        let ts_description: String;
+        let mut entry_type = "";
+        let mut ts_description = "";
         let mut raw_entry = String::new();
 
-        timestamp = match &entity.timestamp {
-            Some(TimelineTimestamp::Exact(ts, _type)) => format_ts(ts),
-            _ => String::new(),
-        };
-        ts_description = if let Some(TimelineTimestamp::Exact(_ts, ts_type)) = &entity.timestamp {
-            match ts_type {
-                TimestampType::AmcacheRangeMatch => String::from("Amcache timestamp range match"),
-                TimestampType::NearTSMatch => String::from("Timestamp near pair"),
-                TimestampType::PatternMatch => String::from("Shimcache rule match"),
-                TimestampType::ShimcacheLastUpdate => String::from("Latest shimcache update"),
+        if let Some(TimelineTimestamp::Exact(ts, _type)) = &entity.timestamp {
+            timestamp = format_ts(ts);
+        }
+        if let Some(TimelineTimestamp::Exact(_ts, ts_type)) = &entity.timestamp {
+            ts_description = match ts_type {
+                TimestampType::AmcacheRangeMatch => "Amcache timestamp range match",
+                TimestampType::NearTSMatch => "Timestamp near pair",
+                TimestampType::PatternMatch => "Shimcache pattern match",
+                TimestampType::ShimcacheLastUpdate => "Latest shimcache update",
             }
-        } else { String::new() };
+        };
         if let Some(shimcache_entry) = &entity.shimcache_entry {
             match &shimcache_entry.entry_type {
                 EntryType::File { path } => {
-                    entry_type = String::from("ShimcacheFileEntry");
+                    entry_type = "ShimcacheFileEntry";
                     file_path = path.clone();
                 },
                 EntryType::Program { program_name: name, .. } => {
-                    entry_type = String::from("ShimcacheProgramEntry");
+                    entry_type = "ShimcacheProgramEntry";
                     program_name = name.clone(); 
                 },
             };
@@ -586,16 +584,17 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
             &timestamp,
             &file_path,
             &program_name,
-            &sha1_hash,
+            "",
             &timeline_entry_nr_string,
-            &entry_type,
-            &ts_description,
+            entry_type,
+            ts_description,
             &raw_entry,
         ];
         let cells = shimcache_row.map(|s| cell!(s)).to_vec();
         table.add_row(Row::new(cells));
         timeline_entry_nr += 1;
 
+        // If there is an amcache time range match, add a separate row for it
         if let Some(TimelineTimestamp::Exact(_ts, TimestampType::AmcacheRangeMatch)) = &entity.timestamp {
             if let Some(file_entry) = &entity.amcache_file {
                 let amcache_timestamp = format_ts(&file_entry.key_last_modified_ts);
