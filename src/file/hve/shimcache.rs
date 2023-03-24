@@ -42,13 +42,40 @@ pub struct ShimcacheEntry {
 }
 
 #[derive(Debug, Serialize)]
+pub enum CPUArchitecture {
+    AMD64,
+    ARM,
+    I386,
+    IA64,
+    Unknown(u16),
+}
+
+impl CPUArchitecture {
+    fn from_u16(num: u16) -> CPUArchitecture {
+        match num {
+            34404 => CPUArchitecture::AMD64,
+            452 => CPUArchitecture::ARM,
+            332 => CPUArchitecture::I386,
+            512 => CPUArchitecture::IA64,
+            num => CPUArchitecture::Unknown(num),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
 pub enum EntryType {
     File {
         path: String
     },
     Program {
         full_string: String,
+        unknown_u32: String,
+        architecture: CPUArchitecture,
         program_name: String,
+        program_version: String,
+        sdk_version: String,
+        publisher_id: String,
+        neutral: bool,
     },
 }
 
@@ -365,11 +392,6 @@ impl super::Parser {
                 shimcache.version = ShimcacheVersion::Windows10;
             }
             if win10_cache_signature {
-                lazy_static! {
-                    static ref RE: Regex = Regex::new(
-                        r"^([0-9a-f]{8})\s+([0-9a-f]{16})\s+([0-9a-f]{16})\s+([\w]{4})\s+([\w.-]+)\s+(\w+)\s*(\w*)$"
-                    ).expect("invalid regex");
-                }
                 let mut index = offset_to_records.clone();
                 let mut cache_entry_position = 0;
                 while index < shimcache_bytes_len {
@@ -395,11 +417,46 @@ impl super::Parser {
                     index += data_size;
 
                     let entry_type: EntryType;
-                    if RE.is_match(&path) {
-                        let program_name = RE.captures(&path).expect("regex could not capture groups")
-                            .get(5).expect("could not get group 5 of regex")
-                            .as_str().to_string();
-                        entry_type = EntryType::Program { program_name, full_string: path };
+                    // Parse program entries further
+                    lazy_static! {
+                        static ref PROGRAM_RE: Regex = Regex::new(
+                            r"^([0-9a-f]{8})\s+([0-9a-f]{16})\s+([0-9a-f]{16})\s+([0-9a-f]{4})\s+([\w.-]+)\s+(\w+)\s*(\w*)$"
+                        ).expect("invalid regex");
+                    }
+                    if PROGRAM_RE.is_match(&path) {
+                        fn parse_version_hex(hex_str: &str) -> String {
+                            let version_numbers: Result<Vec<u16>, _> = vec![
+                                u16::from_str_radix(&hex_str[0..4], 16),
+                                u16::from_str_radix(&hex_str[4..8], 16),
+                                u16::from_str_radix(&hex_str[8..12], 16),
+                                u16::from_str_radix(&hex_str[12..16], 16),
+                            ].into_iter().collect();
+                            version_numbers.map(|numbers| {
+                                let number_strings: Vec<String> = numbers.into_iter().map(|n| n.to_string()).collect();
+                                number_strings.join(".")
+                            }).expect("unable to parse hex strings")
+                        }
+                        let capture = PROGRAM_RE.captures(&path).expect("regex could not capture groups");
+                        let unknown_u32 = capture.get(1).expect("could not get group").as_str().to_string();
+                        let program_version = parse_version_hex(capture.get(2).expect("could not get group").as_str());
+                        let sdk_version = parse_version_hex(capture.get(3).expect("could not get group").as_str());
+                        let architecture_u16 = u16::from_str_radix(capture.get(4).expect("could not get group").as_str(), 16)
+                                .expect("could not parse hex string");
+                        let architecture = CPUArchitecture::from_u16(architecture_u16);
+                        let program_name = capture.get(5).expect("could not get group").as_str().to_string();
+                        let publisher_id = capture.get(6).expect("could not get group").as_str().to_string();
+                        let neutral = capture.get(7).expect("could not get group").as_str() == "neutral";
+
+                        entry_type = EntryType::Program {
+                            program_name,
+                            full_string: path,
+                            unknown_u32,
+                            program_version,
+                            architecture,
+                            sdk_version,
+                            publisher_id,
+                            neutral,
+                        };
                     } else {
                         entry_type = EntryType::File { path };
                     }
