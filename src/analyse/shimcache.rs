@@ -60,7 +60,7 @@ impl ShimcacheAnalyzer {
 
     pub fn amcache_shimcache_timeline(&self, regex_patterns: &Vec<String>) -> Result<Vec<TimelineEntity>> {
         if regex_patterns.is_empty() {
-            cs_eyellowln!("[!] No regex patterns defined!")
+            cs_eyellowln!("[!] No regex patterns defined for matching shimcache entries!")
         }
         let regexes: Vec<Regex> = regex_patterns.iter()
             .map(|p| Regex::new(p)).collect::<Result<Vec<_>,_>>()?;

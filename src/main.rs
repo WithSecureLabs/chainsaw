@@ -12,7 +12,7 @@ use bytesize::ByteSize;
 use chrono::NaiveDateTime;
 use chrono_tz::Tz;
 
-use clap::{Parser, Subcommand, ArgGroup};
+use clap::{Parser, Subcommand};
 
 use chainsaw::{
     cli, get_files, lint as lint_rule, load as load_rule, set_writer, Filter, Format, Hunter,
@@ -220,17 +220,11 @@ enum Command {
 
 #[derive(Subcommand)]
 enum AnalyseCommand {
-    /// Create an execution timeline from the shimcache by detecting executables that are compiled before execution
-    #[clap(group(
-        ArgGroup::new("regex")
-            .multiple(true)
-            .required(true)
-            .args(&["additional_pattern", "regex_file"]),
-    ))]
+    /// Create an execution timeline from the shimcache with optional amcache enrichments
     Shimcache {
         /// The path to the shimcache artifact (SYSTEM registry file)
         shimcache: PathBuf,
-        /// A string or regular expression pattern to search for
+        /// A string or regular expression pattern for matching shimcache entries
         #[arg(
             short = 'e',
             long = "regex",
@@ -238,7 +232,7 @@ enum AnalyseCommand {
             number_of_values = 1
         )]
         additional_pattern: Option<Vec<String>>,
-        /// The path to the newline delimited file containing regex patterns to match
+        /// The path to the newline delimited file containing regex patterns for matching shimcache entries
         #[arg(short = 'r', long = "regexfile")]
         regex_file: Option<PathBuf>,
         /// A path to output the resulting csv file
