@@ -15,14 +15,14 @@ use chrono_tz::Tz;
 use clap::{Parser, Subcommand};
 
 use chainsaw::{
-    cli, get_files, lint as lint_rule, load as load_rule, set_writer, Filter, Format, Hunter,
-    RuleKind, RuleLevel, RuleStatus, Searcher, Writer, ShimcacheAnalyzer,
+    cli, get_files, lint as lint_rule, load as load_rule, set_writer, Document, Filter, Format,
+    Hunter, Reader, RuleKind, RuleLevel, RuleStatus, Searcher, Writer, ShimcacheAnalyzer
 };
 
 #[derive(Parser)]
 #[clap(
     name = "chainsaw",
-    about = "Rapidly Search and Hunt through Windows Forensic Artefacts",
+    about = "Rapidly work with Forensic Artefacts",
     after_help = r"Examples:
 
     Hunt with Sigma and Chainsaw Rules:
@@ -52,7 +52,32 @@ struct Args {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Hunt through event logs using detection rules for threat detection
+    /// Dump an artefact into a different format.
+    Dump {
+        /// The path to an artefact to dump.
+        path: PathBuf,
+
+        /// Dump in json format.
+        #[arg(group = "format", short = 'j', long = "json")]
+        json: bool,
+        /// Print the output in jsonl format.
+        #[arg(group = "format", long = "jsonl")]
+        jsonl: bool,
+        /// Allow chainsaw to try and load files it cannot identify.
+        #[arg(long = "load-unknown")]
+        load_unknown: bool,
+        /// A path to output results to.
+        #[arg(short = 'o', long = "output")]
+        output: Option<PathBuf>,
+        /// Supress informational output.
+        #[arg(short = 'q')]
+        quiet: bool,
+        /// Continue to hunt when an error is encountered.
+        #[arg(long = "skip-errors")]
+        skip_errors: bool,
+    },
+
+    /// Hunt through artefacts using detection rules for threat detection.
     Hunt {
         /// The path to a collection of rules to use for hunting.
         rules: Option<PathBuf>,
@@ -110,7 +135,7 @@ enum Command {
         /// Print the output in log like format.
         #[arg(group = "format", long = "log")]
         log: bool,
-        /// Enable preprocessing, which can result in increased performance.
+        /// (BETA) Enable preprocessing, which can result in increased performance.
         #[arg(long = "preprocess")]
         preprocess: bool,
         /// Supress informational output.
@@ -146,7 +171,7 @@ enum Command {
         tau: bool,
     },
 
-    /// Search through forensic artefacts for keywords
+    /// Search through forensic artefacts for keywords.
     Search {
         /// A string or regular expression pattern to search for.
         /// Not used when -e or -t is specified.
@@ -278,6 +303,9 @@ fn init_writer(output: Option<PathBuf>, csv: bool, json: bool, quiet: bool) -> c
     let (path, output) = match &output {
         Some(path) => {
             if csv {
+                if path.is_file() {
+                    anyhow::bail!("Unable to create output directory");
+                }
                 (Some(path.to_path_buf()), None)
             } else {
                 let file = match File::create(path) {
@@ -315,11 +343,73 @@ fn init_writer(output: Option<PathBuf>, csv: bool, json: bool, quiet: bool) -> c
 fn run() -> Result<()> {
     let args = Args::parse();
     if let Some(num_threads) = args.num_threads {
-        let _ = rayon::ThreadPoolBuilder::new()
+        rayon::ThreadPoolBuilder::new()
             .num_threads(num_threads)
             .build_global()?;
     }
     match args.cmd {
+        Command::Dump {
+            path,
+
+            json,
+            jsonl,
+            load_unknown,
+            output,
+            quiet,
+            skip_errors,
+        } => {
+            init_writer(output, false, json, quiet)?;
+            if !args.no_banner {
+                print_title();
+            }
+            let mut reader = Reader::load(&path, load_unknown, skip_errors)?;
+            cs_eprintln!(
+                "[+] Dumping the contents of forensic artefact - {}...",
+                path.display()
+            );
+            if json {
+                cs_print!("[");
+            }
+            let mut first = true;
+            for result in reader.documents() {
+                let document = match result {
+                    Ok(document) => document,
+                    Err(e) => {
+                        if skip_errors {
+                            cs_eyellowln!(
+                                "[!] failed to parse document '{}' - {}\n",
+                                path.display(),
+                                e
+                            );
+                            continue;
+                        }
+                        return Err(e);
+                    }
+                };
+                let value = match document {
+                    Document::Evtx(evtx) => evtx.data,
+                    Document::Hve(json) | Document::Json(json) | Document::Xml(json) | Document::Mft(json) => json,
+                };
+                if json {
+                    if first {
+                        first = false;
+                    } else {
+                        cs_println!(",");
+                    }
+                    cs_print_json_pretty!(&value)?;
+                } else if jsonl {
+                    cs_print_json!(&value)?;
+                    println!();
+                } else {
+                    cs_println!("---");
+                    cs_print_yaml!(&value)?;
+                }
+            }
+            if json {
+                cs_println!("]");
+            }
+            cs_eprintln!("[+] Done");
+        }
         Command::Hunt {
             rules,
             mut path,
@@ -352,7 +442,15 @@ fn run() -> Result<()> {
             if column_width.is_none() {
                 column_width = resolve_col_width();
             }
-            init_writer(output.clone(), csv, json, quiet)?;
+            if let Err(e) = init_writer(output.clone(), csv, json, quiet) {
+                let mut writer = Writer::default();
+                writer.quiet = quiet;
+                set_writer(writer).expect("could not set writer");
+                if !args.no_banner {
+                    print_title();
+                }
+                return Err(e);
+            }
             if !args.no_banner {
                 print_title();
             }
@@ -525,19 +623,35 @@ fn run() -> Result<()> {
             } else {
                 cs_eprintln!("[+] Loaded {} forensic artefacts ({})", files.len(), size);
             }
+            let mut hits = 0;
+            let mut documents = 0;
             let mut detections = vec![];
             let pb = cli::init_progress_bar(files.len() as u64, "Hunting".to_string());
             for file in &files {
                 pb.tick();
-                detections.extend(hunter.hunt(file).with_context(|| {
+                let scratch = hunter.hunt(file).with_context(|| {
                     format!("Failed to hunt through file '{}'", file.to_string_lossy())
-                })?);
+                })?;
+                hits += scratch.iter().map(|d| d.hits.len()).sum::<usize>();
+                documents += scratch.len();
+                if jsonl {
+                    cli::print_json(
+                        &scratch,
+                        hunter.hunts(),
+                        hunter.rules(),
+                        local,
+                        timezone,
+                        jsonl,
+                    )?;
+                } else {
+                    detections.extend(scratch);
+                }
                 pb.inc(1);
             }
             pb.finish();
             if csv {
                 cli::print_csv(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
-            } else if json || jsonl {
+            } else if json {
                 if output.is_some() {
                     cs_eprintln!("[+] Writing results to output file...");
                 }
@@ -549,6 +663,8 @@ fn run() -> Result<()> {
                     timezone,
                     jsonl,
                 )?;
+            } else if jsonl {
+                // Work already done
             } else if log {
                 cli::print_log(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
             } else {
@@ -563,11 +679,7 @@ fn run() -> Result<()> {
                     timezone,
                 );
             }
-            cs_eprintln!(
-                "[+] {} Detections found on {} documents",
-                detections.iter().map(|d| d.hits.len()).sum::<usize>(),
-                detections.len()
-            );
+            cs_eprintln!("[+] {} Detections found on {} documents", hits, documents,);
         }
         Command::Lint { path, kind, tau } => {
             init_writer(None, false, false, false)?;
@@ -762,6 +874,7 @@ fn run() -> Result<()> {
                         cs_print_json!(&hit)?;
                         println!();
                     } else {
+                        cs_println!("---");
                         cs_print_yaml!(&hit)?;
                     }
                     hits += 1;
@@ -821,7 +934,7 @@ fn run() -> Result<()> {
 
 fn main() {
     if let Err(e) = run() {
-        if let Some(cause) = e.chain().skip(1).next() {
+        if let Some(cause) = e.chain().nth(1) {
             cs_eredln!("[x] {} - {}", e, cause);
         } else {
             cs_eredln!("[x] {}", e);

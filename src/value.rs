@@ -1,9 +1,11 @@
-use std::collections::HashMap;
+use std::borrow::Cow;
 
+use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value as Json};
+use tau_engine::{AsValue, Document, Object, Value as Tau};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub enum Value {
     Null,
     Bool(bool),
@@ -12,7 +14,7 @@ pub enum Value {
     UInt(u64),
     String(String),
     Array(Vec<Value>),
-    Object(HashMap<String, Value>),
+    Object(FxHashMap<String, Value>),
 }
 
 impl From<Json> for Value {
@@ -52,5 +54,30 @@ impl From<Value> for Json {
             Value::Array(a) => Self::Array(a.into_iter().map(|v| v.into()).collect()),
             Value::Object(o) => Self::Object(o.into_iter().map(|(k, v)| (k, v.into())).collect()),
         }
+    }
+}
+
+impl AsValue for Value {
+    #[inline]
+    fn as_value(&self) -> Tau<'_> {
+        match self {
+            Self::Null => Tau::Null,
+            Self::String(s) => Tau::String(Cow::Borrowed(s)),
+            Self::Float(f) => Tau::Float(*f),
+            Self::Int(i) => Tau::Int(*i),
+            Self::UInt(u) => Tau::UInt(*u),
+            Self::Bool(b) => Tau::Bool(*b),
+            Self::Object(o) => Tau::Object(o),
+            Self::Array(a) => Tau::Array(a),
+        }
+    }
+}
+
+impl Document for Value {
+    fn find(&self, key: &str) -> Option<Tau> {
+        if let Self::Object(o) = self {
+            return Object::find(o, key);
+        }
+        None
     }
 }

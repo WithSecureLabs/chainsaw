@@ -1,6 +1,6 @@
 [package]
 name = "chainsaw"
-version = "2.3.1"
+version = "2.5.0"
 repository = "https://github.com/countercept/chainsaw"
 description = "Rapidly Search and Hunt Through Windows Forensic Artefacts"
 authors = ["James Dorgan <james@dorgan.io>","Alex Kornitzer <alex.kornitzer@withsecure.com>"]
@@ -28,6 +28,7 @@ prettytable-rs = "0.10"
 quick-xml = { version = "0.27", features = ["serialize"] }
 rayon = "1.5"
 regex = "1.6"
+rustc-hash = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
@@ -37,4 +38,6 @@ uuid = { version = "1.1", features = ["serde", "v4"] }
 
 
 [dev-dependencies]
+assert_cmd = "2.0"
 paste = "1.0"
+predicates = "2.1"

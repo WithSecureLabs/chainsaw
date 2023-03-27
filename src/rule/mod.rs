@@ -259,16 +259,10 @@ pub fn load(
         }
     };
     if let Some(levels) = levels.as_ref() {
-        rules = rules
-            .into_iter()
-            .filter(|r| levels.contains(r.level()))
-            .collect();
+        rules.retain(|r| levels.contains(r.level()));
     }
     if let Some(statuses) = statuses.as_ref() {
-        rules = rules
-            .into_iter()
-            .filter(|r| statuses.contains(r.status()))
-            .collect();
+        rules.retain(|r| statuses.contains(r.status()));
     }
     Ok(rules)
 }

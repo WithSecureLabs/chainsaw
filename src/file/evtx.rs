@@ -7,6 +7,7 @@ use serde_json::Value as Json;
 use tau_engine::{Document, Value as Tau};
 
 use crate::search::Searchable;
+use crate::value::Value;
 
 pub type Evtx = SerializedEvtxRecord<Json>;
 
@@ -30,8 +31,25 @@ impl Parser {
     }
 }
 
-pub struct Wrapper<'a>(pub &'a Json);
+pub struct Wrapper<'a>(pub &'a Value);
 impl<'a> Document for Wrapper<'a> {
+    fn find(&self, key: &str) -> Option<Tau<'_>> {
+        // As event logs can store values in a key or complex objects we do some aliasing here for
+        // convenience...
+        match key {
+            "Event.System.Provider" => self.0.find("Event.System.Provider_attributes.Name"),
+            "Event.System.TimeCreated" => self
+                .0
+                .find("Event.System.TimeCreated_attributes.SystemTime"),
+            _ => self.0.find(key),
+        }
+    }
+}
+// FIXME: Remove the need for this, it requires a big rethink on the data structures, as `search` is
+// the blocker here. It's actually quite easy to do, but just want to think it through first...
+// This structure means that we don't get the lookup speed improvements from using `Value`.
+pub struct WrapperLegacy<'a>(pub &'a Json);
+impl<'a> Document for WrapperLegacy<'a> {
     fn find(&self, key: &str) -> Option<Tau<'_>> {
         // As event logs can store values in a key or complex objects we do some aliasing here for
         // convenience...

@@ -1,0 +1,108 @@
+---
+Event:
+  EventData:
+    AuthenticationPackageName: Negotiate
+    ElevatedToken: '%%1842'
+    ImpersonationLevel: '%%1833'
+    IpAddress: '-'
+    IpPort: '-'
+    KeyLength: 0
+    LmPackageName: '-'
+    LogonGuid: 00000000-0000-0000-0000-000000000000
+    LogonProcessName: 'Advapi  '
+    LogonType: 5
+    ProcessId: '0x29c'
+    ProcessName: C:\Windows\System32\services.exe
+    RestrictedAdminMode: '-'
+    SubjectDomainName: WORKGROUP
+    SubjectLogonId: '0x3e7'
+    SubjectUserName: DESKTOP-JK4Q86I$
+    SubjectUserSid: S-1-5-18
+    TargetDomainName: NT AUTHORITY
+    TargetLinkedLogonId: '0x0'
+    TargetLogonId: '0x3e7'
+    TargetOutboundDomainName: '-'
+    TargetOutboundUserName: '-'
+    TargetUserName: SYSTEM
+    TargetUserSid: S-1-5-18
+    TransmittedServices: '-'
+    VirtualAccount: '%%1843'
+    WorkstationName: '-'
+  System:
+    Channel: Security
+    Computer: DESKTOP-JK4Q86I
+    Correlation_attributes:
+      ActivityID: 5965E1C0-DDA7-0003-D8E1-6559A7DDD801
+    EventID: 4624
+    EventRecordID: 31794
+    Execution_attributes:
+      ProcessID: 688
+      ThreadID: 736
+    Keywords: '0x8020000000000000'
+    Level: 0
+    Opcode: 0
+    Provider_attributes:
+      Guid: 54849625-5478-4994-A5BA-3E3B0328C30D
+      Name: Microsoft-Windows-Security-Auditing
+    Security: null
+    Task: 12544
+    TimeCreated_attributes:
+      SystemTime: 2022-10-11T19:26:52.154080Z
+    Version: 2
+Event_attributes:
+  xmlns: http://schemas.microsoft.com/win/2004/08/events/event
+
+---
+Event:
+  EventData:
+    AuthenticationPackageName: Negotiate
+    ElevatedToken: '%%1842'
+    ImpersonationLevel: '%%1833'
+    IpAddress: '-'
+    IpPort: '-'
+    KeyLength: 0
+    LmPackageName: '-'
+    LogonGuid: 00000000-0000-0000-0000-000000000000
+    LogonProcessName: 'Advapi  '
+    LogonType: 5
+    ProcessId: '0x29c'
+    ProcessName: C:\Windows\System32\services.exe
+    RestrictedAdminMode: '-'
+    SubjectDomainName: WORKGROUP
+    SubjectLogonId: '0x3e7'
+    SubjectUserName: DESKTOP-JK4Q86I$
+    SubjectUserSid: S-1-5-18
+    TargetDomainName: NT AUTHORITY
+    TargetLinkedLogonId: '0x0'
+    TargetLogonId: '0x3e7'
+    TargetOutboundDomainName: '-'
+    TargetOutboundUserName: '-'
+    TargetUserName: SYSTEM
+    TargetUserSid: S-1-5-18
+    TransmittedServices: '-'
+    VirtualAccount: '%%1843'
+    WorkstationName: '-'
+  System:
+    Channel: Security
+    Computer: DESKTOP-JK4Q86I
+    Correlation_attributes:
+      ActivityID: 5965E1C0-DDA7-0003-D8E1-6559A7DDD801
+    EventID: 4624
+    EventRecordID: 31799
+    Execution_attributes:
+      ProcessID: 688
+      ThreadID: 8108
+    Keywords: '0x8020000000000000'
+    Level: 0
+    Opcode: 0
+    Provider_attributes:
+      Guid: 54849625-5478-4994-A5BA-3E3B0328C30D
+      Name: Microsoft-Windows-Security-Auditing
+    Security: null
+    Task: 12544
+    TimeCreated_attributes:
+      SystemTime: 2022-10-11T19:26:56.066967Z
+    Version: 2
+Event_attributes:
+  xmlns: http://schemas.microsoft.com/win/2004/08/events/event
+

@@ -4,7 +4,7 @@ extern crate anyhow;
 pub(crate) use anyhow::Result;
 
 pub use analyse::shimcache::{ShimcacheAnalyzer};
-pub use file::{evtx, get_files, Kind as FileKind, Reader};
+pub use file::{evtx, get_files, Document, Kind as FileKind, Reader};
 pub use hunt::{Hunter, HunterBuilder};
 pub use rule::{
     lint, load, sigma, Filter, Kind as RuleKind, Level as RuleLevel, Status as RuleStatus,

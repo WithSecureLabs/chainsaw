@@ -1,15 +1,17 @@
 use std::borrow::Cow;
-use std::collections::{hash_map::DefaultHasher, BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
-use std::hash::{Hash, Hasher};
+use std::hash::{BuildHasherDefault, Hash, Hasher};
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
 // https://github.com/rust-lang/rust/issues/74465
 use once_cell::sync::OnceCell;
 use rayon::prelude::*;
+use rustc_hash::{FxHashMap, FxHasher};
 use serde::{
     ser::{SerializeStruct, Serializer},
     Deserialize, Serialize,
@@ -129,8 +131,7 @@ impl HunterBuilder {
 
     pub fn build(self) -> crate::Result<Hunter> {
         let mut hunts = vec![];
-        let mut keys = HashSet::new();
-        let rules = match self.rules {
+        let mut rules = match self.rules {
             Some(mut rules) => {
                 rules.sort_by(|x, y| x.name().cmp(y.name()));
                 let mut map = BTreeMap::new();
@@ -174,7 +175,7 @@ impl HunterBuilder {
                 if let RuleKind::Chainsaw = mapping.rules {
                     anyhow::bail!("Chainsaw rules do not support mappings");
                 }
-                let mut preconds = HashMap::new();
+                let mut preconds = FxHashMap::default();
                 if let Some(extensions) = &mapping.extensions {
                     if let Some(preconditions) = &extensions.preconditions {
                         for precondition in preconditions {
@@ -187,7 +188,7 @@ impl HunterBuilder {
                                     }
                                     let mut matched = true;
                                     for (f, v) in &precondition.for_ {
-                                        match sigma.find(&f) {
+                                        match sigma.find(f) {
                                             Some(value) => {
                                                 if value.as_str() != Some(v.as_str()) {
                                                     matched = false;
@@ -210,15 +211,19 @@ impl HunterBuilder {
                 }
                 mapping.groups.sort_by(|x, y| x.name.cmp(&y.name));
                 for group in mapping.groups {
-                    keys.extend(crate::ext::tau::extract_fields(&group.filter));
-                    keys.insert(group.timestamp.clone());
+                    let mut exclusions = HashSet::<Uuid, BuildHasherDefault<FxHasher>>::default();
+                    for (rid, rule) in &rules {
+                        if mapping.exclusions.contains(rule.name()) {
+                            exclusions.insert(*rid);
+                        }
+                    }
                     let mapper = Mapper::from(group.fields);
                     hunts.push(Hunt {
                         id: group.id,
 
                         group: group.name,
                         kind: HuntKind::Group {
-                            exclusions: mapping.exclusions.clone(),
+                            exclusions,
                             filter: group.filter,
                             kind: mapping.rules.clone(),
                             preconditions: preconds.clone(),
@@ -232,31 +237,177 @@ impl HunterBuilder {
             }
         }
 
-        for rule in rules.values() {
-            match rule {
-                Rule::Chainsaw(c) => match &c.filter {
-                    Filter::Detection(d) => {
-                        keys.extend(crate::ext::tau::extract_fields(&d.expression));
-                    }
-                    Filter::Expression(e) => {
-                        keys.extend(crate::ext::tau::extract_fields(e));
-                    }
-                },
-                Rule::Sigma(s) => {
-                    keys.extend(crate::ext::tau::extract_fields(&s.tau.detection.expression));
-                }
-            }
-        }
-
         let load_unknown = self.load_unknown.unwrap_or_default();
         let local = self.local.unwrap_or_default();
         let preprocess = self.preprocess.unwrap_or_default();
         let skip_errors = self.skip_errors.unwrap_or_default();
 
+        let mut fields = vec![];
+        if preprocess {
+            let mut keys = HashSet::new();
+            for hunt in &hunts {
+                keys.insert(hunt.timestamp.clone());
+                match &hunt.kind {
+                    HuntKind::Rule { aggregate, filter } => {
+                        if let Some(a) = &aggregate {
+                            keys.extend(a.fields.iter().cloned());
+                        }
+                        match &filter {
+                            Filter::Detection(d) => {
+                                keys.extend(crate::ext::tau::extract_fields(&d.expression));
+                            }
+                            Filter::Expression(e) => {
+                                keys.extend(crate::ext::tau::extract_fields(e));
+                            }
+                        }
+                    }
+                    HuntKind::Group {
+                        filter,
+                        preconditions,
+                        ..
+                    } => {
+                        keys.extend(crate::ext::tau::extract_fields(filter));
+                        for precondition in preconditions.values() {
+                            keys.extend(crate::ext::tau::extract_fields(precondition));
+                        }
+                    }
+                }
+            }
+            for rule in rules.values() {
+                match rule {
+                    Rule::Chainsaw(c) => {
+                        if let Some(a) = &c.aggregate {
+                            keys.extend(a.fields.iter().cloned());
+                        }
+                        match &c.filter {
+                            Filter::Detection(d) => {
+                                keys.extend(crate::ext::tau::extract_fields(&d.expression));
+                            }
+                            Filter::Expression(e) => {
+                                keys.extend(crate::ext::tau::extract_fields(e));
+                            }
+                        }
+                    }
+                    Rule::Sigma(s) => {
+                        if let Some(a) = &s.aggregate {
+                            keys.extend(a.fields.iter().cloned());
+                        }
+                        keys.extend(crate::ext::tau::extract_fields(&s.tau.detection.expression));
+                    }
+                }
+            }
+
+            let mut lookup = HashMap::with_capacity(keys.len());
+            for (i, f) in keys.into_iter().enumerate() {
+                let x = (i / 255) as u8;
+                let y = (i % 255) as u8;
+                let mut bytes = Vec::with_capacity(x as usize + 1);
+                for _ in 0..x {
+                    bytes.push(255);
+                }
+                bytes.push(y);
+                let field: String = unsafe { String::from_utf8_unchecked(bytes) };
+                lookup.insert(f.clone(), field);
+                fields.push(f);
+            }
+            hunts = hunts
+                .into_iter()
+                .map(|mut h| {
+                    h.timestamp = lookup
+                        .get(&h.timestamp)
+                        .expect("could not get field")
+                        .to_owned();
+                    h.kind = match h.kind {
+                        HuntKind::Rule {
+                            mut aggregate,
+                            mut filter,
+                        } => {
+                            if let Some(mut a) = aggregate.as_mut() {
+                                a.fields = a
+                                    .fields
+                                    .iter()
+                                    .map(|f| lookup.get(f).expect("could not get field"))
+                                    .cloned()
+                                    .collect();
+                            }
+                            filter = match filter {
+                                Filter::Detection(mut d) => {
+                                    d.expression =
+                                        crate::ext::tau::update_fields(d.expression, &lookup);
+                                    Filter::Detection(d)
+                                }
+                                Filter::Expression(e) => {
+                                    Filter::Expression(crate::ext::tau::update_fields(e, &lookup))
+                                }
+                            };
+                            HuntKind::Rule { aggregate, filter }
+                        }
+                        HuntKind::Group {
+                            exclusions,
+                            filter,
+                            kind,
+                            preconditions,
+                        } => HuntKind::Group {
+                            exclusions,
+                            filter: crate::ext::tau::update_fields(filter, &lookup),
+                            kind,
+                            preconditions: preconditions
+                                .into_iter()
+                                .map(|(i, p)| (i, crate::ext::tau::update_fields(p, &lookup)))
+                                .collect(),
+                        },
+                    };
+                    h
+                })
+                .collect();
+            rules = rules
+                .into_iter()
+                .map(|(i, r)| {
+                    let r = match r {
+                        Rule::Chainsaw(mut c) => {
+                            if let Some(mut a) = c.aggregate.as_mut() {
+                                a.fields = a
+                                    .fields
+                                    .iter()
+                                    .map(|f| lookup.get(f).expect("could not get field"))
+                                    .cloned()
+                                    .collect();
+                            }
+                            c.filter = match c.filter {
+                                Filter::Detection(mut d) => {
+                                    d.expression =
+                                        crate::ext::tau::update_fields(d.expression, &lookup);
+                                    Filter::Detection(d)
+                                }
+                                Filter::Expression(e) => {
+                                    Filter::Expression(crate::ext::tau::update_fields(e, &lookup))
+                                }
+                            };
+                            Rule::Chainsaw(c)
+                        }
+                        Rule::Sigma(mut s) => {
+                            if let Some(mut a) = s.aggregate.as_mut() {
+                                a.fields = a
+                                    .fields
+                                    .iter()
+                                    .map(|f| lookup.get(f).expect("could not get field"))
+                                    .cloned()
+                                    .collect();
+                            }
+                            s.tau.detection.expression =
+                                crate::ext::tau::update_fields(s.tau.detection.expression, &lookup);
+                            Rule::Sigma(s)
+                        }
+                    };
+                    (i, r)
+                })
+                .collect();
+        }
+
         Ok(Hunter {
             inner: HunterInner {
                 hunts,
-                keys,
+                fields,
                 rules,
 
                 from: self.from.map(|d| DateTime::from_utc(d, Utc)),
@@ -318,10 +469,10 @@ impl HunterBuilder {
 
 pub enum HuntKind {
     Group {
-        exclusions: HashSet<String>,
+        exclusions: HashSet<Uuid, BuildHasherDefault<FxHasher>>,
         filter: Expression,
         kind: RuleKind,
-        preconditions: HashMap<Uuid, Expression>,
+        preconditions: FxHashMap<Uuid, Expression>,
     },
     Rule {
         aggregate: Option<Aggregate>,
@@ -331,8 +482,8 @@ pub enum HuntKind {
 
 pub enum MapperKind {
     None,
-    Fast(HashMap<String, String>),
-    Full(HashMap<String, (String, Option<Container>, Option<ModSym>)>),
+    Fast(FxHashMap<String, String>),
+    Full(FxHashMap<String, (String, Option<Container>, Option<ModSym>)>),
 }
 
 pub struct Mapper {
@@ -354,7 +505,10 @@ impl Mapper {
             }
         }
         let kind = if full {
-            let mut map = HashMap::with_capacity(fields.len());
+            let mut map = FxHashMap::with_capacity_and_hasher(
+                fields.len(),
+                BuildHasherDefault::<FxHasher>::default(),
+            );
             for field in &fields {
                 map.insert(
                     field.from.clone(),
@@ -367,7 +521,10 @@ impl Mapper {
             }
             MapperKind::Full(map)
         } else if fast {
-            let mut map = HashMap::with_capacity(fields.len());
+            let mut map = FxHashMap::with_capacity_and_hasher(
+                fields.len(),
+                BuildHasherDefault::<FxHasher>::default(),
+            );
             for field in &fields {
                 map.insert(field.from.clone(), field.to.clone());
             }
@@ -395,7 +552,7 @@ impl Mapper {
 }
 
 pub struct Mapped<'a> {
-    cache: OnceCell<HashMap<String, Box<dyn TauDocument>>>,
+    cache: OnceCell<FxHashMap<String, Box<dyn TauDocument>>>,
     document: &'a dyn TauDocument,
     mapper: &'a Mapper,
 }
@@ -414,7 +571,7 @@ impl<'a> TauDocument for Mapped<'a> {
                     }
                     // Due to referencing and ownership, we parse all containers at once, which
                     // then allows us to use a OnceCell.
-                    let mut lookup = HashMap::new();
+                    let mut lookup = FxHashMap::default();
                     for field in &self.mapper.fields {
                         if let Some(container) = &field.container {
                             if !lookup.contains_key(&container.field) {
@@ -467,14 +624,15 @@ impl<'a> TauDocument for Mapped<'a> {
 }
 
 struct Cache<'a> {
-    cache: Option<HashMap<&'a str, Tau<'a>>>,
+    cache: Option<Vec<Option<Tau<'a>>>>,
     mapped: &'a Mapped<'a>,
 }
 impl<'a> TauDocument for Cache<'a> {
     #[inline(always)]
     fn find(&self, key: &str) -> Option<Tau<'_>> {
         if let Some(cache) = &self.cache {
-            cache.get(key).cloned()
+            let index = key.bytes().fold(0, |acc, x| acc + (x as usize));
+            cache[index].clone()
         } else {
             self.mapped.find(key)
         }
@@ -502,7 +660,7 @@ impl Hunt {
 
 pub struct HunterInner {
     hunts: Vec<Hunt>,
-    keys: HashSet<String>,
+    fields: Vec<String>,
     rules: BTreeMap<Uuid, Rule>,
 
     load_unknown: bool,
@@ -526,130 +684,182 @@ impl Hunter {
     pub fn hunt<'a>(&'a self, file: &'a Path) -> crate::Result<Vec<Detections>> {
         let mut reader = Reader::load(file, self.inner.load_unknown, self.inner.skip_errors)?;
         let kind = reader.kind();
-        // This can be optimised better ;)
-        let mut detections = vec![];
-        let mut aggregates: HashMap<(Uuid, Uuid), (&Aggregate, HashMap<u64, Vec<Uuid>>)> =
-            HashMap::new();
-        let mut files: HashMap<Uuid, (File, NaiveDateTime)> = HashMap::new();
-        for document in reader.documents() {
-            let document_id = Uuid::new_v4();
-            let document = match document {
-                Ok(document) => document,
-                Err(e) => {
-                    if self.inner.skip_errors {
-                        cs_eyellowln!(
-                            "[!] failed to parse document '{}' - {}\n",
-                            file.display(),
-                            e
-                        );
+        let aggregates: Mutex<FxHashMap<(Uuid, Uuid), (&Aggregate, FxHashMap<u64, Vec<Uuid>>)>> =
+            Mutex::new(FxHashMap::default());
+        let files: Mutex<FxHashMap<Uuid, (Value, NaiveDateTime)>> =
+            Mutex::new(FxHashMap::default());
+        let mut detections = reader
+            .documents()
+            .par_bridge()
+            .filter_map(|document| {
+                let document_id = Uuid::new_v4();
+                let document = match document {
+                    Ok(document) => document,
+                    Err(e) => {
+                        if self.inner.skip_errors {
+                            cs_eyellowln!(
+                                "[!] failed to parse document '{}' - {}\n",
+                                file.display(),
+                                e
+                            );
+                            return None;
+                        }
+                        return Some(Err(anyhow!(format!("{} in {}", e, file.display()))));
+                    }
+                };
+                let (kind, value): (FileKind, Value) = match document {
+                    File::Evtx(evtx) => (FileKind::Evtx, evtx.data.into()),
+                    File::Hve(hve) => (FileKind::Hve, hve.into()),
+                    File::Json(json) => (FileKind::Json, json.into()),
+                    File::Mft(mft) => (FileKind::Mft, mft.into()),
+                    File::Xml(xml) => (FileKind::Xml, xml.into()),
+                };
+                let mut hits = vec![];
+                for hunt in &self.inner.hunts {
+                    if hunt.file != kind {
                         continue;
                     }
-                    return Err(anyhow!(format!("{} in {}", e, file.display())));
-                }
-            };
-            let mut hits = vec![];
-            for hunt in &self.inner.hunts {
-                if hunt.file != kind {
-                    continue;
-                }
 
-                let wrapper;
-                let mapped = match &document {
-                    File::Evtx(evtx) => {
-                        wrapper = crate::evtx::Wrapper(&evtx.data);
-                        hunt.mapper.mapped(&wrapper)
-                    }
-                    File::Hve(hve) => hunt.mapper.mapped(hve),
-                    File::Json(json) => hunt.mapper.mapped(json),
-                    File::Mft(mft) => hunt.mapper.mapped(mft),
-                    File::Xml(xml) => hunt.mapper.mapped(xml),
-                };
-                let mapped = if self.inner.preprocess {
-                    let mut flat = HashMap::with_capacity(self.inner.keys.len());
-                    for key in &self.inner.keys {
-                        if let Some(value) = mapped.find(&key) {
-                            flat.insert(key.as_str(), value);
+                    let wrapper;
+                    let mapped = match &kind {
+                        FileKind::Evtx => {
+                            wrapper = crate::evtx::Wrapper(&value);
+                            hunt.mapper.mapped(&wrapper)
                         }
-                    }
-                    Cache {
-                        cache: Some(flat),
-                        mapped: &mapped,
-                    }
-                } else {
-                    Cache {
-                        cache: None,
-                        mapped: &mapped,
-                    }
-                };
+                        _ => hunt.mapper.mapped(&value),
+                    };
+                    let mapped = if self.inner.preprocess {
+                        let mut flat = Vec::with_capacity(self.inner.fields.len());
+                        for field in &self.inner.fields {
+                            flat.push(mapped.find(field));
+                        }
+                        Cache {
+                            cache: Some(flat),
+                            mapped: &mapped,
+                        }
+                    } else {
+                        Cache {
+                            cache: None,
+                            mapped: &mapped,
+                        }
+                    };
 
-                let timestamp = match mapped.find(&hunt.timestamp) {
-                    Some(value) => match value.as_str() {
-                        Some(timestamp) => {
-                            match NaiveDateTime::parse_from_str(timestamp, "%Y-%m-%dT%H:%M:%S%.6fZ")
-                            {
-                                Ok(t) => t,
-                                Err(e) => {
-                                    if self.inner.skip_errors {
-                                        cs_eyellowln!(
-                                            "failed to parse timestamp '{}' - {}",
-                                            timestamp,
-                                            e,
-                                        );
-                                        continue;
+                    let timestamp = match mapped.find(&hunt.timestamp) {
+                        Some(value) => match value.as_str() {
+                            Some(timestamp) => {
+                                match NaiveDateTime::parse_from_str(
+                                    timestamp,
+                                    "%Y-%m-%dT%H:%M:%S%.6fZ",
+                                ) {
+                                    Ok(t) => t,
+                                    Err(e) => {
+                                        if self.inner.skip_errors {
+                                            cs_eyellowln!(
+                                                "failed to parse timestamp '{}' - {}",
+                                                timestamp,
+                                                e,
+                                            );
+                                            return None;
+                                        } else {
+                                            return Some(Err(anyhow!(
+                                                "failed to parse timestamp '{}' - {}",
+                                                timestamp,
+                                                e
+                                            )));
+                                        }
+                                    }
+                                }
+                            }
+                            None => continue,
+                        },
+                        None => continue,
+                    };
+
+                    if self.skip(timestamp).ok()? {
+                        continue;
+                    }
+
+                    match &hunt.kind {
+                        HuntKind::Group {
+                            exclusions,
+                            filter,
+                            kind,
+                            preconditions,
+                        } => {
+                            if tau_engine::core::solve(filter, &mapped) {
+                                let rules = self.inner.rules.iter().collect::<Vec<(_, _)>>();
+                                let matches = rules
+                                    .iter()
+                                    .filter_map(|(rid, rule)| {
+                                        if !rule.is_kind(kind) {
+                                            return None;
+                                        }
+                                        if exclusions.contains(rid) {
+                                            return None;
+                                        }
+                                        if let Some(filter) = preconditions.get(rid) {
+                                            if !tau_engine::core::solve(filter, &mapped) {
+                                                return None;
+                                            }
+                                        }
+                                        if rule.solve(&mapped) {
+                                            Some((*rid, rule))
+                                        } else {
+                                            None
+                                        }
+                                    })
+                                    .collect::<Vec<(_, _)>>();
+                                for (rid, rule) in matches {
+                                    if let Some(aggregate) = &rule.aggregate() {
+                                        let mut files = files.lock().expect("could not lock files");
+                                        files.insert(document_id, (value.clone(), timestamp));
+                                        let mut hasher = FxHasher::default();
+                                        let mut skip = false;
+                                        for field in &aggregate.fields {
+                                            if let Some(value) =
+                                                mapped.find(field).and_then(|s| s.to_string())
+                                            {
+                                                value.hash(&mut hasher);
+                                            } else {
+                                                skip = true;
+                                                break;
+                                            }
+                                        }
+                                        if skip {
+                                            continue;
+                                        }
+                                        let id = hasher.finish();
+                                        let mut aggregates =
+                                            aggregates.lock().expect("could not lock aggregates");
+                                        let aggregates = aggregates
+                                            .entry((hunt.id, *rid))
+                                            .or_insert((aggregate, FxHashMap::default()));
+                                        let docs = aggregates.1.entry(id).or_insert(vec![]);
+                                        docs.push(document_id);
                                     } else {
-                                        anyhow::bail!(
-                                            "failed to parse timestamp '{}' - {}",
+                                        hits.push(Hit {
+                                            hunt: hunt.id,
+                                            rule: *rid,
                                             timestamp,
-                                            e
-                                        );
+                                        });
                                     }
                                 }
                             }
                         }
-                        None => continue,
-                    },
-                    None => continue,
-                };
-
-                if self.skip(timestamp)? {
-                    continue;
-                }
-
-                match &hunt.kind {
-                    HuntKind::Group {
-                        exclusions,
-                        filter,
-                        kind,
-                        preconditions,
-                    } => {
-                        if tau_engine::core::solve(filter, &mapped) {
-                            let matches = &self
-                                .inner
-                                .rules
-                                .par_iter()
-                                .filter_map(|(rid, rule)| {
-                                    if !rule.is_kind(kind) {
-                                        return None;
-                                    }
-                                    if exclusions.contains(rule.name()) {
-                                        return None;
-                                    }
-                                    if let Some(filter) = preconditions.get(rid) {
-                                        if !tau_engine::core::solve(filter, &mapped) {
-                                            return None;
-                                        }
-                                    }
-                                    if rule.solve(&mapped) {
-                                        Some((*rid, rule))
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect::<Vec<(_, _)>>();
-                            for (rid, rule) in matches {
-                                if let Some(aggregate) = &rule.aggregate() {
-                                    files.insert(document_id, (document.clone(), timestamp));
-                                    let mut hasher = DefaultHasher::new();
+                        HuntKind::Rule { aggregate, filter } => {
+                            let hit = match &filter {
+                                Filter::Detection(detection) => {
+                                    tau_engine::solve(detection, &mapped)
+                                }
+                                Filter::Expression(expression) => {
+                                    tau_engine::core::solve(expression, &mapped)
+                                }
+                            };
+                            if hit {
+                                if let Some(aggregate) = aggregate {
+                                    let mut files = files.lock().expect("could not lock files");
+                                    files.insert(document_id, (value.clone(), timestamp));
+                                    let mut hasher = FxHasher::default();
                                     let mut skip = false;
                                     for field in &aggregate.fields {
                                         if let Some(value) =
@@ -665,83 +875,42 @@ impl Hunter {
                                         continue;
                                     }
                                     let id = hasher.finish();
+                                    let mut aggregates =
+                                        aggregates.lock().expect("could not lock aggregates");
                                     let aggregates = aggregates
-                                        .entry((hunt.id, *rid))
-                                        .or_insert((aggregate, HashMap::new()));
+                                        .entry((hunt.id, hunt.id))
+                                        .or_insert((aggregate, FxHashMap::default()));
                                     let docs = aggregates.1.entry(id).or_insert(vec![]);
                                     docs.push(document_id);
                                 } else {
                                     hits.push(Hit {
                                         hunt: hunt.id,
-                                        rule: *rid,
+                                        rule: hunt.id,
                                         timestamp,
                                     });
                                 }
                             }
                         }
                     }
-                    HuntKind::Rule { aggregate, filter } => {
-                        let hit = match &filter {
-                            Filter::Detection(detection) => tau_engine::solve(detection, &mapped),
-                            Filter::Expression(expression) => {
-                                tau_engine::core::solve(expression, &mapped)
-                            }
-                        };
-                        if hit {
-                            if let Some(aggregate) = aggregate {
-                                files.insert(document_id, (document.clone(), timestamp));
-                                let mut hasher = DefaultHasher::new();
-                                let mut skip = false;
-                                for field in &aggregate.fields {
-                                    if let Some(value) =
-                                        mapped.find(field).and_then(|s| s.to_string())
-                                    {
-                                        value.hash(&mut hasher);
-                                    } else {
-                                        skip = true;
-                                        break;
-                                    }
-                                }
-                                if skip {
-                                    continue;
-                                }
-                                let id = hasher.finish();
-                                let aggregates = aggregates
-                                    .entry((hunt.id, hunt.id))
-                                    .or_insert((aggregate, HashMap::new()));
-                                let docs = aggregates.1.entry(id).or_insert(vec![]);
-                                docs.push(document_id);
-                            } else {
-                                hits.push(Hit {
-                                    hunt: hunt.id,
-                                    rule: hunt.id,
-                                    timestamp,
-                                });
-                            }
-                        }
-                    }
                 }
-            }
-            if !hits.is_empty() {
-                let data = match &document {
-                    File::Evtx(evtx) => evtx.data.clone(),
-                    File::Hve(hve) => hve.clone(),
-                    File::Mft(mft) => mft.clone(),
-                    File::Json(json) => json.clone(),
-                    File::Xml(xml) => xml.clone(),
-                };
-                detections.push(Detections {
-                    hits,
-                    kind: Kind::Individual {
-                        document: Document {
-                            kind: kind.clone(),
-                            path: &file,
-                            data: bincode::serialize(&Value::from(data))?,
+                if !hits.is_empty() {
+                    Some(Ok(Detections {
+                        hits,
+                        kind: Kind::Individual {
+                            document: Document {
+                                kind,
+                                path: file,
+                                data: bincode::serialize(&value).ok()?,
+                            },
                         },
-                    },
-                });
-            }
-        }
+                    }))
+                } else {
+                    None
+                }
+            })
+            .collect::<crate::Result<Vec<Detections>>>()?;
+        let aggregates = aggregates.into_inner().expect("could not lock aggregates");
+        let files = files.into_inner().expect("could not lock aggregates");
         for ((hid, rid), (aggregate, docs)) in aggregates {
             for ids in docs.values() {
                 let hit = match aggregate.count {
@@ -756,18 +925,11 @@ impl Hunter {
                     let mut documents = Vec::with_capacity(ids.len());
                     let mut timestamps = Vec::with_capacity(ids.len());
                     for id in ids {
-                        let (document, timestamp) = files.get(id).expect("could not get document");
-                        let data = match &document {
-                            File::Evtx(evtx) => evtx.data.clone(),
-                            File::Hve(hve) => hve.clone(),
-                            File::Mft(mft) => mft.clone(),
-                            File::Json(json) => json.clone(),
-                            File::Xml(xml) => xml.clone(),
-                        };
+                        let (value, timestamp) = files.get(id).expect("could not get document");
                         documents.push(Document {
                             kind: kind.clone(),
-                            path: &file,
-                            data: bincode::serialize(&Value::from(data))?,
+                            path: file,
+                            data: bincode::serialize(&value)?,
                         });
                         timestamps.push(*timestamp);
                     }
