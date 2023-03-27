@@ -68,7 +68,7 @@ pub enum EntryType {
         path: String
     },
     Program {
-        full_string: String,
+        raw_entry: String,
         unknown_u32: String,
         architecture: CPUArchitecture,
         program_name: String,
@@ -449,7 +449,7 @@ impl super::Parser {
 
                         entry_type = EntryType::Program {
                             program_name,
-                            full_string: path,
+                            raw_entry: path,
                             unknown_u32,
                             program_version,
                             architecture,

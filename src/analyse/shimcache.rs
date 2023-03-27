@@ -200,8 +200,9 @@ impl ShimcacheAnalyzer {
                     let shimcache_entry = if let Some(entry) = &entity.shimcache_entry {
                         entry
                     } else { continue; };
-                    if let EntryType::Program { program_name, .. } = &shimcache_entry.entry_type {
-                            if &program_entry.program_name == program_name {
+                    if let EntryType::Program { program_name, program_version, .. } = &shimcache_entry.entry_type {
+                            if &program_entry.program_name == program_name
+                            && &program_entry.version == program_version {
                                 entity.amcache_program = Some(program_entry);
                                 // TODO: below assumption is incorrect, fix logic
                                 // WRONG: Assume there are no two shimcache entries with the same path

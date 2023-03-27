@@ -21,9 +21,13 @@ pub struct FileEntry {
 #[derive(Debug, Serialize)]
 pub struct ProgramEntry {
     pub install_date: Option<DateTime<Utc>>,
+    pub uninstall_date: Option<DateTime<Utc>>,
     pub last_modified_ts: DateTime<Utc>,
     pub program_id: String,
     pub program_name: String,
+    pub version: String,
+    pub root_directory_path: Option<String>,
+    pub uninstall_string: Option<String>,
 }
 
 #[derive(Debug)]
@@ -74,18 +78,25 @@ impl super::Parser {
                     .ok_or(anyhow!("Could not get Name for program {}", key.key_name))?;
                 let install_date = string_value_from_key(&key, "InstallDate")?
                     .ok_or(anyhow!("Could not get InstallDate for program {}", program_id))?;
+                let version = string_value_from_key(&key, "Version")?
+                    .ok_or(anyhow!("Could not get Version for program {}", program_id))?;
 
                 let install_date = if !install_date.is_empty() {
                     Some(win_reg_str_ts_to_date_time(install_date.as_str())?)
-                } else {
-                    None
-                };
+                } else { None };
+
+                let root_directory_path = string_value_from_key(&key, "RootDirPath")?;
+                let uninstall_string = string_value_from_key(&key, "UninstallString")?;
 
                 let program_entry = ProgramEntry {
+                    install_date,
                     last_modified_ts,
                     program_id: program_id.clone(),
                     program_name,
-                    install_date,
+                    root_directory_path,
+                    uninstall_string,
+                    uninstall_date: None,
+                    version,
                 };
                 
                 program_entries.push(program_entry);
@@ -141,11 +152,13 @@ impl super::Parser {
                 };
                 Ok(match key_value.get_content().0 {
                     notatin::cell_value::CellValue::U32(num) => {
+                        if num == 0 { return Ok(None) }
                         let naive = NaiveDateTime::from_timestamp_opt(num as i64, 0)
                             .expect("unix timestamp our of range");
                         Some(DateTime::<Utc>::from_utc(naive, Utc))
                     }
                     notatin::cell_value::CellValue::U64(num) => {
+                        if num == 0 { return Ok(None) }
                         let naive = NaiveDateTime::from_timestamp_opt(num as i64, 0)
                             .expect("unix timestamp our of range");
                         Some(DateTime::<Utc>::from_utc(naive, Utc))
@@ -166,13 +179,21 @@ impl super::Parser {
                 let program_id = key.key_name.clone();
                 let program_name = string_value_from_key(&key, "0")?
                     .ok_or(anyhow!("Could not get \"0\" (program_name) for {}", key.key_name))?;
+                let version = string_value_from_key(&key, "1")?
+                    .ok_or(anyhow!("Could not get \"0\" (version) for {}", key.key_name))?;
                 let install_date = unix_ts_from_key(&key, "a")?;
+                let uninstall_date = unix_ts_from_key(&key, "b")?;
+
 
                 let program_entry = ProgramEntry {
+                    install_date,
                     last_modified_ts,
                     program_id,
                     program_name,
-                    install_date,
+                    root_directory_path: None,
+                    uninstall_date,
+                    uninstall_string: None,
+                    version,
                 };
                 program_entries.push(program_entry);
             }
