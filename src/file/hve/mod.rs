@@ -1,15 +1,17 @@
-use std::{path::{PathBuf, Path}, fs};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
-use anyhow::{Result, bail};
 use chrono::NaiveDateTime;
 use notatin::{
     parser::{Parser as HveParser, ParserIterator},
-    parser_builder::{ParserBuilder},
+    parser_builder::ParserBuilder,
 };
 use serde_json::Value as Json;
 
-pub mod shimcache;
 pub mod amcache;
+pub mod shimcache;
 
 pub type Hve = Json;
 
@@ -21,17 +23,19 @@ impl Parser {
     pub fn load(path: &Path) -> crate::Result<Self> {
         // Find registry transaction logs from the same directory
         let mut transaction_log_files: Vec<PathBuf> = Vec::new();
-        let parent_dir = path.parent().ok_or(anyhow!("Could not get registry hive parent directory!"))?;
+        let parent_dir = path
+            .parent()
+            .ok_or(anyhow!("Could not get registry hive parent directory!"))?;
         let hive_file_name = path.file_name();
-        let parent_dir_files = fs::read_dir(parent_dir)?.into_iter().collect::<Result<Vec<_>,_>>()?;
+        let parent_dir_files = fs::read_dir(parent_dir)?
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?;
         for dir_entry in parent_dir_files {
             let path = dir_entry.path();
             if path.file_stem() == hive_file_name {
                 let file_extension = path.extension();
                 if let Some(extension) = file_extension {
-                    if extension == "LOG"
-                    || extension == "LOG1"
-                    || extension == "LOG2" {
+                    if extension == "LOG" || extension == "LOG1" || extension == "LOG2" {
                         transaction_log_files.push(path);
                     }
                 }
@@ -61,7 +65,7 @@ impl Parser {
         Ok(Self { inner: parser })
     }
 
-    pub fn parse(&mut self) -> impl Iterator<Item = Result<Json>> + '_ {
+    pub fn parse(&mut self) -> impl Iterator<Item = crate::Result<Json>> + '_ {
         ParserIterator::new(&self.inner)
             .iter()
             .map(|c| match serde_json::to_value(c) {
@@ -71,7 +75,7 @@ impl Parser {
     }
 }
 
-fn win32_ts_to_datetime(ts_win32: u64) -> Result<NaiveDateTime> {
+fn win32_ts_to_datetime(ts_win32: u64) -> crate::Result<NaiveDateTime> {
     let ts_unix = (ts_win32 / 10_000) as i64 - 11644473600000;
     NaiveDateTime::from_timestamp_millis(ts_unix).ok_or(anyhow!("Timestamp out of range!"))
 }
@@ -81,7 +85,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn amcache_parsing_works_win10() -> Result<()> {
+    fn amcache_parsing_works_win10() -> crate::Result<()> {
         let mut parser = Parser::load(&PathBuf::from(
             "/mnt/hgfs/vm_shared/win10_vm_hives/am/Amcache.hve",
         ))?;
@@ -91,7 +95,7 @@ mod tests {
     }
 
     #[test]
-    fn shimcache_parsing_works_win7() -> Result<()> {
+    fn shimcache_parsing_works_win7() -> crate::Result<()> {
         let mut parser = Parser::load(&PathBuf::from(
             "/mnt/hgfs/vm_shared/Module 5 - Disk/cache/shimcache/SYSTEM",
         ))?;
@@ -100,15 +104,14 @@ mod tests {
     }
 
     #[test]
-    fn shimcache_parsing_works_win10() -> Result<()> {
+    fn shimcache_parsing_works_win10() -> crate::Result<()> {
         let mut parser = Parser::load(&PathBuf::from(
             "/mnt/hgfs/vm_shared/win10_vm_hives/shim/SYSTEM",
         ))?;
-        let shimcache= parser.parse_shimcache()?;
+        let shimcache = parser.parse_shimcache()?;
         for entry in shimcache.entries {
             println!("{entry}");
         }
         Ok(())
     }
-
 }

@@ -1,6 +1,5 @@
-use std::{fmt::Display};
+use std::fmt::Display;
 
-use anyhow::{Result, bail, anyhow};
 use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -65,7 +64,7 @@ impl CPUArchitecture {
 #[derive(Debug, Serialize)]
 pub enum EntryType {
     File {
-        path: String
+        path: String,
     },
     Program {
         raw_entry: String,
@@ -98,11 +97,16 @@ impl std::fmt::Display for ShimcacheVersion {
             ShimcacheVersion::Unknown => write!(f, "Unknown"),
             ShimcacheVersion::Windows10 => write!(f, "Windows 10"),
             ShimcacheVersion::Windows10Creators => write!(f, "Windows 10 Creators"),
-            ShimcacheVersion::Windows7x64Windows2008R2 => write!(f, "Windows 7 64-bit or Windows Server 2008 R2"),
+            ShimcacheVersion::Windows7x64Windows2008R2 => {
+                write!(f, "Windows 7 64-bit or Windows Server 2008 R2")
+            }
             ShimcacheVersion::Windows7x86 => write!(f, "Windows 7 32-bit"),
             ShimcacheVersion::Windows80Windows2012 => write!(f, "Windows 8 or Windows Server 2012"),
             ShimcacheVersion::Windows81Windows2012R2 => write!(f, "Windows 8.1 or Windows 2012 R2"),
-            ShimcacheVersion::WindowsVistaWin2k3Win2k8 => write!(f, "Windows Vista, Windows Server 2003 or Windows Server 2008"),
+            ShimcacheVersion::WindowsVistaWin2k3Win2k8 => write!(
+                f,
+                "Windows Vista, Windows Server 2003 or Windows Server 2008"
+            ),
             ShimcacheVersion::WindowsXP => write!(f, "Unknown"),
         }
     }
@@ -122,42 +126,62 @@ impl Display for ShimcacheEntry {
             EntryType::Program { program_name, .. } => program_name,
         };
         match self.last_modified_ts {
-            Some(ts) => write!(f, "{}:\t{:?}, {}", self.cache_entry_position, ts, path_or_name),
+            Some(ts) => write!(
+                f,
+                "{}:\t{:?}, {}",
+                self.cache_entry_position, ts, path_or_name
+            ),
             None => write!(f, "{}:\t {}", self.cache_entry_position, path_or_name),
         }
     }
 }
 
 impl super::Parser {
-    pub fn parse_shimcache (&mut self) -> Result<ShimcacheArtifact> {
+    pub fn parse_shimcache(&mut self) -> crate::Result<ShimcacheArtifact> {
         // Find current ControlSet
-        let current_controlset_key = self.inner.get_key("Select", false)?
+        let current_controlset_key = self
+            .inner
+            .get_key("Select", false)?
             .ok_or(anyhow!("Key \"Select\" not found in shimcache!"))?;
-        let current_controlset_value = current_controlset_key.get_value("Current")
-            .ok_or(anyhow!("Value \"Current\" not found under key \"Select\" in shimcache!"))?.get_content().0;
+        let current_controlset_value = current_controlset_key
+            .get_value("Current")
+            .ok_or(anyhow!(
+                "Value \"Current\" not found under key \"Select\" in shimcache!"
+            ))?
+            .get_content()
+            .0;
         let controlset = match current_controlset_value {
             notatin::cell_value::CellValue::U32(num) => num,
-            _ => bail!("Value \"Current\" under key \"Select\" was not of type U32 in shimcache!")
+            _ => bail!("Value \"Current\" under key \"Select\" was not of type U32 in shimcache!"),
         };
 
         // Load shimcache binary data
         let controlset_name = format!("ControlSet{:0>3}", controlset);
-        let shimcache_key_path = format!("{controlset_name}\\Control\\Session Manager\\AppCompatCache");
+        let shimcache_key_path =
+            format!("{controlset_name}\\Control\\Session Manager\\AppCompatCache");
         let shimcache_key = self
             .inner
             .get_key(&shimcache_key_path, false)?
-            .ok_or(anyhow!("Could not find AppCompatCache with path {}!", shimcache_key_path))?;
+            .ok_or(anyhow!(
+                "Could not find AppCompatCache with path {}!",
+                shimcache_key_path
+            ))?;
         let shimcache_last_update_ts = shimcache_key.last_key_written_date_and_time();
-        let shimcache_cell_value = shimcache_key.get_value("AppCompatCache")
-            .ok_or(anyhow!("Value \"AppCompatCache\" not found under key \"{}\"!", shimcache_key_path))?
-            .get_content().0;
+        let shimcache_cell_value = shimcache_key
+            .get_value("AppCompatCache")
+            .ok_or(anyhow!(
+                "Value \"AppCompatCache\" not found under key \"{}\"!",
+                shimcache_key_path
+            ))?
+            .get_content()
+            .0;
         let shimcache_bytes = match shimcache_cell_value {
             notatin::cell_value::CellValue::Binary(bytes) => bytes,
             _ => bail!("Shimcache value was not of type Binary!"),
         };
         let shimcache_bytes_len = shimcache_bytes.len();
 
-        let mut shimcache = ShimcacheArtifact{
+        let mut shimcache = ShimcacheArtifact {
             entries: Vec::new(),
             last_update_ts: shimcache_last_update_ts,
             version: ShimcacheVersion::Unknown,
@@ -165,11 +189,19 @@ impl super::Parser {
 
         // Shimcache version signature is at a different index depending on version
         let e = || anyhow!("Shimcache byte indexing error!");
-        let signature_number = u32::from_le_bytes(shimcache_bytes.get(0..4).ok_or_else(e)?.try_into()?);
-        let win8_cache_signature = match std::str::from_utf8(&shimcache_bytes.get(128..132).ok_or_else(e)?) {
-            Ok(signature) => if signature == "00ts" || signature == "10ts" { Some(signature) } else { None },
-            Err(_e) => None,
-        };
+        let signature_number =
+            u32::from_le_bytes(shimcache_bytes.get(0..4).ok_or_else(e)?.try_into()?);
+        let win8_cache_signature =
+            match std::str::from_utf8(&shimcache_bytes.get(128..132).ok_or_else(e)?) {
+                Ok(signature) => {
+                    if signature == "00ts" || signature == "10ts" {
+                        Some(signature)
+                    } else {
+                        None
+                    }
+                }
+                Err(_e) => None,
+            };
 
         // Windows XP shimcache
         if signature_number == 0xdeadbeef {
@@ -177,17 +209,21 @@ impl super::Parser {
             bail!("Windows XP shimcache parsing not supported!");
         }
         // Windows Vista shimcache
-        else if signature_number == 0xbadc0ffe
-        {
+        else if signature_number == 0xbadc0ffe {
             shimcache.version = ShimcacheVersion::WindowsVistaWin2k3Win2k8;
             bail!("Windows Vista shimcache parsing not supported!");
         }
         // Windows 7 shimcache
         else if signature_number == 0xbadc0fee {
             // Check if system is 32-bit
-            let environment_key_path = format!("{controlset_name}\\Control\\Session Manager\\Environment");
-            let environment_key = self.inner.get_key(&environment_key_path, false)?
-                .ok_or(anyhow!("Key \"{environment_key_path}\" not found in shimcache!"))?;
+            let environment_key_path =
+                format!("{controlset_name}\\Control\\Session Manager\\Environment");
+            let environment_key =
+                self.inner
+                    .get_key(&environment_key_path, false)?
+                    .ok_or(anyhow!(
+                        "Key \"{environment_key_path}\" not found in shimcache!"
+                    ))?;
             let processor_architecture_value = environment_key.get_value("PROCESSOR_ARCHITECTURE")
                 .ok_or(anyhow!("Value \"PROCESSOR_ARCHITECTURE\" not found under key \"{environment_key_path}\" in shimcache!"))?.get_content().0;
             let is_32bit = match processor_architecture_value {
@@ -195,7 +231,12 @@ impl super::Parser {
                 _ => bail!("Value \"PROCESSOR_ARCHITECTURE\" under key \"{environment_key_path}\" was not of type String in shimcache!")
             };
             let mut index = 4;
-            let entry_count = u32::from_le_bytes(shimcache_bytes.get(index..index+4).expect("could not index shimcache bytes").try_into()?) as usize;
+            let entry_count = u32::from_le_bytes(
+                shimcache_bytes
+                    .get(index..index + 4)
+                    .expect("could not index shimcache bytes")
+                    .try_into()?,
+            ) as usize;
             if entry_count == 0 {
                 return Ok(shimcache);
             }
@@ -206,36 +247,90 @@ impl super::Parser {
             if is_32bit {
                 shimcache.version = ShimcacheVersion::Windows7x86;
                 while index < shimcache_bytes_len {
-                    let e = || anyhow!("Error parsing windows 7 shimcache entry. Position: {}", cache_entry_position);
-                    let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
+                    let e = || {
+                        anyhow!(
+                            "Error parsing windows 7 shimcache entry. Position: {}",
+                            cache_entry_position
+                        )
+                    };
+                    let path_size = u16::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 2)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    ) as usize;
                     index += 2;
-                    let _max_path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
+                    let _max_path_size = u16::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 2)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    ) as usize;
                     index += 2;
-                    let path_offset = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?) as usize;
+                    let path_offset = u32::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 4)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    ) as usize;
                     index += 4;
-                    let last_modified_time_utc_win32 = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?);
+                    let last_modified_time_utc_win32 = u64::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 8)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    );
                     index += 8;
-                    let insert_flags = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?);
+                    let insert_flags = u32::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 4)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    );
                     index += 4;
                     // skip 4 (shim flags)
                     index += 4;
-                    let data_size = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?) as usize;
+                    let data_size = u32::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 4)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    ) as usize;
                     index += 4;
-                    let data_offset = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?) as usize;
+                    let data_offset = u32::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 4)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    ) as usize;
                     index += 4;
 
-                    let path = utf16_to_string(&shimcache_bytes.get(path_offset..path_offset+path_size).ok_or_else(e)?)?.replace(r"\??\", "");
-                    let data = Some(shimcache_bytes.get(data_offset..data_offset+data_size).ok_or_else(e)?.to_vec());
+                    let path = utf16_to_string(
+                        &shimcache_bytes
+                            .get(path_offset..path_offset + path_size)
+                            .ok_or_else(e)?,
+                    )?
+                    .replace(r"\??\", "");
+                    let data = Some(
+                        shimcache_bytes
+                            .get(data_offset..data_offset + data_size)
+                            .ok_or_else(e)?
+                            .to_vec(),
+                    );
                     let last_modified_ts = if last_modified_time_utc_win32 != 0 {
-                        let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;
-                        let last_modified_date_time = DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
+                        let last_modified_time_utc =
+                            win32_ts_to_datetime(last_modified_time_utc_win32)?;
+                        let last_modified_date_time =
+                            DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
                         Some(last_modified_date_time)
                     } else {
                         None
                     };
-                    let executed = Some(insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32);
+                    let executed = Some(
+                        insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32,
+                    );
                     let entry_type = EntryType::File { path };
-    
+
                     let cache_entry = ShimcacheEntry {
                         cache_entry_position,
                         data,
@@ -247,7 +342,7 @@ impl super::Parser {
                         signature: None,
                         controlset,
                     };
-    
+
                     shimcache.entries.push(cache_entry);
                     if shimcache.entries.len() >= entry_count {
                         break;
@@ -258,38 +353,92 @@ impl super::Parser {
             } else {
                 shimcache.version = ShimcacheVersion::Windows7x64Windows2008R2;
                 while index < shimcache_bytes_len {
-                    let e = || anyhow!("Error parsing windows 7 shimcache entry. Position: {}", cache_entry_position);
-                    let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
+                    let e = || {
+                        anyhow!(
+                            "Error parsing windows 7 shimcache entry. Position: {}",
+                            cache_entry_position
+                        )
+                    };
+                    let path_size = u16::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 2)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    ) as usize;
                     index += 2;
-                    let _max_path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
+                    let _max_path_size = u16::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 2)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    ) as usize;
                     index += 2;
                     // skip 4 unknown (padding)
                     index += 4;
-                    let path_offset = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?) as usize;
+                    let path_offset = u64::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 8)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    ) as usize;
                     index += 8;
-                    let last_modified_time_utc_win32 = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?);
+                    let last_modified_time_utc_win32 = u64::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 8)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    );
                     index += 8;
-                    let insert_flags = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?);
+                    let insert_flags = u32::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 4)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    );
                     index += 4;
                     // skip 4 (shim flags)
                     index += 4;
-                    let data_size = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?) as usize;
+                    let data_size = u64::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 8)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    ) as usize;
                     index += 8;
-                    let data_offset = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?) as usize;
+                    let data_offset = u64::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 8)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    ) as usize;
                     index += 8;
 
-                    let path = utf16_to_string(&shimcache_bytes.get(path_offset..path_offset+path_size).ok_or_else(e)?)?.replace(r"\??\", "");
-                    let data = Some(shimcache_bytes.get(data_offset..data_offset+data_size).ok_or_else(e)?.to_vec());
+                    let path = utf16_to_string(
+                        &shimcache_bytes
+                            .get(path_offset..path_offset + path_size)
+                            .ok_or_else(e)?,
+                    )?
+                    .replace(r"\??\", "");
+                    let data = Some(
+                        shimcache_bytes
+                            .get(data_offset..data_offset + data_size)
+                            .ok_or_else(e)?
+                            .to_vec(),
+                    );
                     let last_modified_ts = if last_modified_time_utc_win32 != 0 {
-                        let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;
-                        let last_modified_date_time = DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
+                        let last_modified_time_utc =
+                            win32_ts_to_datetime(last_modified_time_utc_win32)?;
+                        let last_modified_date_time =
+                            DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
                         Some(last_modified_date_time)
                     } else {
                         None
                     };
-                    let executed = Some(insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32);
+                    let executed = Some(
+                        insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32,
+                    );
                     let entry_type = EntryType::File { path };
-    
+
                     let cache_entry = ShimcacheEntry {
                         cache_entry_position,
                         data,
@@ -301,7 +450,7 @@ impl super::Parser {
                         signature: None,
                         controlset,
                     };
-    
+
                     shimcache.entries.push(cache_entry);
                     if shimcache.entries.len() >= entry_count {
                         break;
@@ -320,32 +469,73 @@ impl super::Parser {
             let mut index = 128;
             let mut cache_entry_position = 0;
             while index < shimcache_bytes_len {
-                let signature = std::str::from_utf8(&shimcache_bytes.get(index..index+4).ok_or_else(e)?)?.to_string();
+                let signature =
+                    std::str::from_utf8(&shimcache_bytes.get(index..index + 4).ok_or_else(e)?)?
+                        .to_string();
                 if signature != cache_signature {
                     break;
                 }
                 index += 4;
                 // skip 4 unknown
                 index += 4;
-                let _ce_data_size = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?) as usize;
+                let _ce_data_size = u32::from_le_bytes(
+                    shimcache_bytes
+                        .get(index..index + 4)
+                        .ok_or_else(e)?
+                        .try_into()?,
+                ) as usize;
                 index += 4;
-                let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
+                let path_size = u16::from_le_bytes(
+                    shimcache_bytes
+                        .get(index..index + 2)
+                        .ok_or_else(e)?
+                        .try_into()?,
+                ) as usize;
                 index += 2;
-                let mut path = utf16_to_string(&shimcache_bytes.get(index..index+path_size).ok_or_else(e)?)?;
+                let mut path = utf16_to_string(
+                    &shimcache_bytes
+                        .get(index..index + path_size)
+                        .ok_or_else(e)?,
+                )?;
                 index += path_size;
-                let package_len = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
+                let package_len = u16::from_le_bytes(
+                    shimcache_bytes
+                        .get(index..index + 2)
+                        .ok_or_else(e)?
+                        .try_into()?,
+                ) as usize;
                 index += 2;
                 //skip package data
                 index += package_len;
-                let insert_flags = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?);
+                let insert_flags = u32::from_le_bytes(
+                    shimcache_bytes
+                        .get(index..index + 4)
+                        .ok_or_else(e)?
+                        .try_into()?,
+                );
                 index += 4;
                 // skip 4 (shim flags)
                 index += 4;
-                let last_modified_time_utc_win32 = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?);
+                let last_modified_time_utc_win32 = u64::from_le_bytes(
+                    shimcache_bytes
+                        .get(index..index + 8)
+                        .ok_or_else(e)?
+                        .try_into()?,
+                );
                 index += 8;
-                let data_size = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?) as usize;
+                let data_size = u32::from_le_bytes(
+                    shimcache_bytes
+                        .get(index..index + 4)
+                        .ok_or_else(e)?
+                        .try_into()?,
+                ) as usize;
                 index += 4;
-                let data = Some(shimcache_bytes.get(index..index+data_size).ok_or_else(e)?.to_vec());
+                let data = Some(
+                    shimcache_bytes
+                        .get(index..index + data_size)
+                        .ok_or_else(e)?
+                        .to_vec(),
+                );
                 index += data_size;
 
                 // TODO: find a way to avoid below assumption
@@ -354,10 +544,13 @@ impl super::Parser {
                     path = path.replacen(r"SYSVOL\", r"C:\", 1);
                 }
                 let entry_type = EntryType::File { path };
-                let executed = Some(insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32);
+                let executed =
+                    Some(insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32);
                 let last_modified_ts = if last_modified_time_utc_win32 != 0 {
-                    let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;
-                    let last_modified_date_time = DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
+                    let last_modified_time_utc =
+                        win32_ts_to_datetime(last_modified_time_utc_win32)?;
+                    let last_modified_date_time =
+                        DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
                     Some(last_modified_date_time)
                 } else {
                     None
@@ -382,7 +575,11 @@ impl super::Parser {
         // Windows 10 shimcache
         else {
             let offset_to_records = signature_number.clone() as usize;
-            let win10_cache_signature: bool = match std::str::from_utf8(&shimcache_bytes.get(offset_to_records..offset_to_records+4).ok_or_else(e)?) {
+            let win10_cache_signature: bool = match std::str::from_utf8(
+                &shimcache_bytes
+                    .get(offset_to_records..offset_to_records + 4)
+                    .ok_or_else(e)?,
+            ) {
                 Ok(signature) => signature == "10ts",
                 _ => false,
             };
@@ -395,25 +592,61 @@ impl super::Parser {
                 let mut index = offset_to_records.clone();
                 let mut cache_entry_position = 0;
                 while index < shimcache_bytes_len {
-                    let e = || anyhow!("Error parsing windows 10 shimcache entry. Position: {}", cache_entry_position);
-                    let signature = std::str::from_utf8(&shimcache_bytes.get(index..index+4).ok_or_else(e)?)?.to_string();
+                    let e = || {
+                        anyhow!(
+                            "Error parsing windows 10 shimcache entry. Position: {}",
+                            cache_entry_position
+                        )
+                    };
+                    let signature =
+                        std::str::from_utf8(&shimcache_bytes.get(index..index + 4).ok_or_else(e)?)?
+                            .to_string();
                     if signature != "10ts" {
                         break;
                     }
                     index += 4;
                     // skip 4 unknown
                     index += 4;
-                    let _cache_entry_size = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?);
+                    let _cache_entry_size = u32::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 4)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    );
                     index += 4;
-                    let path_size = u16::from_le_bytes(shimcache_bytes.get(index..index+2).ok_or_else(e)?.try_into()?) as usize;
+                    let path_size = u16::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 2)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    ) as usize;
                     index += 2;
-                    let path = utf16_to_string(&shimcache_bytes.get(index..index+path_size).ok_or_else(e)?)?;
+                    let path = utf16_to_string(
+                        &shimcache_bytes
+                            .get(index..index + path_size)
+                            .ok_or_else(e)?,
+                    )?;
                     index += path_size;
-                    let last_modified_time_utc_win32 = u64::from_le_bytes(shimcache_bytes.get(index..index+8).ok_or_else(e)?.try_into()?);
+                    let last_modified_time_utc_win32 = u64::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 8)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    );
                     index += 8;
-                    let data_size = u32::from_le_bytes(shimcache_bytes.get(index..index+4).ok_or_else(e)?.try_into()?) as usize;
+                    let data_size = u32::from_le_bytes(
+                        shimcache_bytes
+                            .get(index..index + 4)
+                            .ok_or_else(e)?
+                            .try_into()?,
+                    ) as usize;
                     index += 4;
-                    let data = Some(shimcache_bytes.get(index..index+data_size).ok_or_else(e)?.to_vec());
+                    let data = Some(
+                        shimcache_bytes
+                            .get(index..index + data_size)
+                            .ok_or_else(e)?
+                            .to_vec(),
+                    );
                     index += data_size;
 
                     let entry_type: EntryType;
@@ -430,22 +663,49 @@ impl super::Parser {
                                 u16::from_str_radix(&hex_str[4..8], 16),
                                 u16::from_str_radix(&hex_str[8..12], 16),
                                 u16::from_str_radix(&hex_str[12..16], 16),
-                            ].into_iter().collect();
-                            version_numbers.map(|numbers| {
-                                let number_strings: Vec<String> = numbers.into_iter().map(|n| n.to_string()).collect();
-                                number_strings.join(".")
-                            }).expect("unable to parse hex strings")
+                            ]
+                            .into_iter()
+                            .collect();
+                            version_numbers
+                                .map(|numbers| {
+                                    let number_strings: Vec<String> =
+                                        numbers.into_iter().map(|n| n.to_string()).collect();
+                                    number_strings.join(".")
+                                })
+                                .expect("unable to parse hex strings")
                         }
-                        let capture = PROGRAM_RE.captures(&path).expect("regex could not capture groups");
-                        let unknown_u32 = capture.get(1).expect("could not get group").as_str().to_string();
-                        let program_version = parse_version_hex(capture.get(2).expect("could not get group").as_str());
-                        let sdk_version = parse_version_hex(capture.get(3).expect("could not get group").as_str());
-                        let architecture_u16 = u16::from_str_radix(capture.get(4).expect("could not get group").as_str(), 16)
-                                .expect("could not parse hex string");
+                        let capture = PROGRAM_RE
+                            .captures(&path)
+                            .expect("regex could not capture groups");
+                        let unknown_u32 = capture
+                            .get(1)
+                            .expect("could not get group")
+                            .as_str()
+                            .to_string();
+                        let program_version = parse_version_hex(
+                            capture.get(2).expect("could not get group").as_str(),
+                        );
+                        let sdk_version = parse_version_hex(
+                            capture.get(3).expect("could not get group").as_str(),
+                        );
+                        let architecture_u16 = u16::from_str_radix(
+                            capture.get(4).expect("could not get group").as_str(),
+                            16,
+                        )
+                        .expect("could not parse hex string");
                         let architecture = CPUArchitecture::from_u16(architecture_u16);
-                        let program_name = capture.get(5).expect("could not get group").as_str().to_string();
-                        let publisher_id = capture.get(6).expect("could not get group").as_str().to_string();
-                        let neutral = capture.get(7).expect("could not get group").as_str() == "neutral";
+                        let program_name = capture
+                            .get(5)
+                            .expect("could not get group")
+                            .as_str()
+                            .to_string();
+                        let publisher_id = capture
+                            .get(6)
+                            .expect("could not get group")
+                            .as_str()
+                            .to_string();
+                        let neutral =
+                            capture.get(7).expect("could not get group").as_str() == "neutral";
 
                         entry_type = EntryType::Program {
                             program_name,
@@ -461,8 +721,10 @@ impl super::Parser {
                         entry_type = EntryType::File { path };
                     }
                     let last_modified_ts = if last_modified_time_utc_win32 != 0 {
-                        let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;
-                        let last_modified_date_time = DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
+                        let last_modified_time_utc =
+                            win32_ts_to_datetime(last_modified_time_utc_win32)?;
+                        let last_modified_date_time =
+                            DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
                         Some(last_modified_date_time)
                     } else {
                         None
@@ -492,11 +754,9 @@ impl super::Parser {
     }
 }
 
-fn utf16_to_string(bytes: &[u8]) -> Result<String> {
+fn utf16_to_string(bytes: &[u8]) -> crate::Result<String> {
     let bytes_vec = Vec::from_iter(bytes);
-    let chunk_iterator = bytes_vec
-        .chunks_exact(2)
-        .into_iter();
+    let chunk_iterator = bytes_vec.chunks_exact(2).into_iter();
     if chunk_iterator.remainder().len() > 0 {
         bail!("Bytes did not align to 16 bits!");
     }

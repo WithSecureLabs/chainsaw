@@ -3,7 +3,7 @@ extern crate anyhow;
 
 pub(crate) use anyhow::Result;
 
-pub use analyse::shimcache::{ShimcacheAnalyzer};
+pub use analyse::shimcache::ShimcacheAnalyzer;
 pub use file::{evtx, get_files, Document, Kind as FileKind, Reader};
 pub use hunt::{Hunter, HunterBuilder};
 pub use rule::{
@@ -15,8 +15,8 @@ pub use write::{set_writer, Format, Writer, WRITER};
 #[macro_use]
 mod write;
 
-pub mod cli;
 mod analyse;
+pub mod cli;
 mod ext;
 mod file;
 mod hunt;

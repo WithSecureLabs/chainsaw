@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use self::evtx::{Evtx, Parser as EvtxParser};
-use self::hve::{Parser as HveParser, Hve};
+use self::hve::{Hve, Parser as HveParser};
 use self::json::{lines::Parser as JsonlParser, Json, Parser as JsonParser};
 use self::mft::{Mft, Parser as MftParser};
 use self::xml::{Parser as XmlParser, Xml};

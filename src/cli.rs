@@ -3,7 +3,7 @@ use std::fs;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
-use chrono::{DateTime, NaiveDateTime, TimeZone, Utc, SecondsFormat};
+use chrono::{DateTime, NaiveDateTime, SecondsFormat, TimeZone, Utc};
 use chrono_tz::Tz;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use prettytable::{cell, format, Row, Table};
@@ -13,8 +13,8 @@ use tau_engine::{Document, Value as Tau};
 use uuid::Uuid;
 
 use crate::analyse::shimcache::{TimelineEntity, TimelineTimestamp, TimestampType};
-use crate::file::Kind as FileKind;
 use crate::file::hve::shimcache::EntryType;
+use crate::file::Kind as FileKind;
 use crate::hunt::{Detections, Hunt, Kind};
 use crate::rule::{Kind as RuleKind, Level, Rule, Status};
 use crate::value::Value;
@@ -195,7 +195,10 @@ pub fn print_log(
                         wrapper = crate::evtx::Wrapper(&data);
                         hunt.mapper.mapped(&wrapper)
                     }
-                    FileKind::Hve | FileKind::Json | FileKind::Jsonl | FileKind::Mft
+                    FileKind::Hve
+                    | FileKind::Json
+                    | FileKind::Jsonl
+                    | FileKind::Mft
                     | FileKind::Xml => {
                         data = bincode::deserialize::<Value>(&document.data)?;
                         hunt.mapper.mapped(&data)
@@ -376,7 +379,10 @@ pub fn print_detections(
                                 wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
-                            FileKind::Hve | FileKind::Json | FileKind::Jsonl | FileKind::Mft
+                            FileKind::Hve
+                            | FileKind::Json
+                            | FileKind::Jsonl
+                            | FileKind::Mft
                             | FileKind::Xml => {
                                 data = bincode::deserialize::<Value>(&document.data)
                                     .expect("could not decompress");
@@ -493,12 +499,12 @@ pub fn print_detections(
 }
 
 pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Result<()> {
-    let path = unsafe {
-        &WRITER.path
-    };
+    let path = unsafe { &WRITER.path };
     let csv = if let Some(path) = path {
         Some(prettytable::csv::Writer::from_path(path)?)
-    } else { None };
+    } else {
+        None
+    };
     let format = format::FormatBuilder::new()
         .column_separator('│')
         .borders('│')
@@ -561,16 +567,18 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
                 EntryType::File { path } => {
                     entry_type = "ShimcacheFileEntry";
                     file_path = path.clone();
-                },
-                EntryType::Program { program_name: name, .. } => {
+                }
+                EntryType::Program {
+                    program_name: name, ..
+                } => {
                     entry_type = "ShimcacheProgramEntry";
-                    program_name = name.clone(); 
-                },
+                    program_name = name.clone();
+                }
             };
         }
 
         if let Some(shimcache_entry) = &entity.shimcache_entry {
-            raw_entry = serde_json::to_string(&shimcache_entry)?; 
+            raw_entry = serde_json::to_string(&shimcache_entry)?;
         }
 
         let timeline_entry_nr_string = timeline_entry_nr.to_string();
@@ -589,11 +597,17 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
         timeline_entry_nr += 1;
 
         // If there is an amcache time range match, add a separate row for it
-        if let Some(TimelineTimestamp::Exact(_ts, TimestampType::AmcacheRangeMatch)) = &entity.timestamp {
+        if let Some(TimelineTimestamp::Exact(_ts, TimestampType::AmcacheRangeMatch)) =
+            &entity.timestamp
+        {
             if let Some(file_entry) = &entity.amcache_file {
                 let amcache_timestamp = format_ts(&file_entry.key_last_modified_ts);
                 let file_path = file_entry.path.clone();
-                let sha1_hash = file_entry.sha1_hash.as_ref().unwrap_or(&String::new()).to_string();
+                let sha1_hash = file_entry
+                    .sha1_hash
+                    .as_ref()
+                    .unwrap_or(&String::new())
+                    .to_string();
                 let entry_type = "AmcacheFileEntry";
                 let raw_entry = serde_json::to_string(&file_entry)?;
                 let timeline_entry_nr_string = timeline_entry_nr.to_string();
@@ -754,7 +768,10 @@ pub fn print_csv(
                                 wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
-                            FileKind::Hve | FileKind::Json | FileKind::Jsonl | FileKind::Mft
+                            FileKind::Hve
+                            | FileKind::Json
+                            | FileKind::Jsonl
+                            | FileKind::Mft
                             | FileKind::Xml => {
                                 data = bincode::deserialize::<Value>(&document.data)?;
                                 hit.hunt.mapper.mapped(&data)

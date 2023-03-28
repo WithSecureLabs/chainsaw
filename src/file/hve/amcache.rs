@@ -1,8 +1,5 @@
-use anyhow::{Result, bail};
-use chrono::{NaiveDateTime, DateTime, Utc};
-use notatin::{
-    cell_key_node::CellKeyNode,
-};
+use chrono::{DateTime, NaiveDateTime, Utc};
+use notatin::cell_key_node::CellKeyNode;
 use serde::Serialize;
 
 use crate::file::hve::win32_ts_to_datetime;
@@ -38,9 +35,12 @@ pub struct AmcacheArtifact {
 }
 
 impl super::Parser {
-    pub fn parse_amcache(&mut self) -> Result<AmcacheArtifact> {
+    pub fn parse_amcache(&mut self) -> crate::Result<AmcacheArtifact> {
         /// A helper function for getting string values from registry keys
-        fn string_value_from_key(key: &CellKeyNode, value_name: &str) -> Result<Option<String>> {
+        fn string_value_from_key(
+            key: &CellKeyNode,
+            value_name: &str,
+        ) -> crate::Result<Option<String>> {
             let Some(key_value) = key.get_value(value_name) else {
                 return Ok(None);
             };
@@ -48,7 +48,8 @@ impl super::Parser {
                 notatin::cell_value::CellValue::String(str) => Some(str),
                 _ => bail!(
                     "Value \"{}\" in key \"{}\" was not of type String!",
-                    value_name, key.get_pretty_path()
+                    value_name,
+                    key.get_pretty_path()
                 ),
             })
         }
@@ -56,11 +57,14 @@ impl super::Parser {
         let mut program_entries: Vec<ProgramEntry> = Vec::new();
         let mut file_entries: Vec<FileEntry> = Vec::new();
 
-        let is_new_format: bool = self.inner.get_key(r"Root\InventoryApplicationFile", false)?.is_some();
+        let is_new_format: bool = self
+            .inner
+            .get_key(r"Root\InventoryApplicationFile", false)?
+            .is_some();
         // TODO: extract all of the possible values, not just the ones that seem useful
         if is_new_format {
             /// A helper function for converting registry timestamp strings to DateTime
-            fn win_reg_str_ts_to_date_time(ts_str: &str) -> Result<DateTime<Utc>> {
+            fn win_reg_str_ts_to_date_time(ts_str: &str) -> crate::Result<DateTime<Utc>> {
                 let naive = NaiveDateTime::parse_from_str(ts_str, "%m/%d/%Y %H:%M:%S")?;
                 Ok(DateTime::<Utc>::from_utc(naive, Utc))
             }
@@ -76,14 +80,18 @@ impl super::Parser {
                 let program_id = key.key_name.clone();
                 let program_name = string_value_from_key(&key, "Name")?
                     .ok_or(anyhow!("Could not get Name for program {}", key.key_name))?;
-                let install_date = string_value_from_key(&key, "InstallDate")?
-                    .ok_or(anyhow!("Could not get InstallDate for program {}", program_id))?;
+                let install_date = string_value_from_key(&key, "InstallDate")?.ok_or(anyhow!(
+                    "Could not get InstallDate for program {}",
+                    program_id
+                ))?;
                 let version = string_value_from_key(&key, "Version")?
                     .ok_or(anyhow!("Could not get Version for program {}", program_id))?;
 
                 let install_date = if !install_date.is_empty() {
                     Some(win_reg_str_ts_to_date_time(install_date.as_str())?)
-                } else { None };
+                } else {
+                    None
+                };
 
                 let root_directory_path = string_value_from_key(&key, "RootDirPath")?;
                 let uninstall_string = string_value_from_key(&key, "UninstallString")?;
@@ -98,10 +106,10 @@ impl super::Parser {
                     uninstall_date: None,
                     version,
                 };
-                
+
                 program_entries.push(program_entry);
             }
-    
+
             // Get and parse data from InventoryApplicationFile
             let mut key_inventory_application_file = self
                 .inner
@@ -111,8 +119,10 @@ impl super::Parser {
             for key in subkeys {
                 let program_id = string_value_from_key(&key, "ProgramId")?;
                 let file_id = string_value_from_key(&key, "FileId")?;
-                let path = string_value_from_key(&key, "LowerCaseLongPath")?
-                    .ok_or(anyhow!("Could not get LowerCaseLongPath for file {}", key.key_name))?;
+                let path = string_value_from_key(&key, "LowerCaseLongPath")?.ok_or(anyhow!(
+                    "Could not get LowerCaseLongPath for file {}",
+                    key.key_name
+                ))?;
                 let link_date_str = string_value_from_key(&key, "LinkDate")?
                     .ok_or(anyhow!("Could not get LinkDate for file {}", key.key_name))?;
                 let link_date = if !link_date_str.is_empty() {
@@ -122,14 +132,17 @@ impl super::Parser {
                 };
 
                 // FileId is the SHA-1 hash of the file with "0000" prepended. Discard prefix
-                let sha1_hash = file_id.as_ref().map(|id| {
-                    if id.len() == 44 && &id[..4] == "0000" {
-                        Some(String::from(&id[4..]))
-                    } else {
-                        // In case unexpected value
-                        None
-                    }
-                }).flatten();
+                let sha1_hash = file_id
+                    .as_ref()
+                    .map(|id| {
+                        if id.len() == 44 && &id[..4] == "0000" {
+                            Some(String::from(&id[4..]))
+                        } else {
+                            // In case unexpected value
+                            None
+                        }
+                    })
+                    .flatten();
 
                 let key_last_modified_ts = key.last_key_written_date_and_time();
                 let file_entry = FileEntry {
@@ -146,44 +159,57 @@ impl super::Parser {
         // Older amcache format
         } else {
             /// A helper function for extracting unix timestamps from key values
-            fn unix_ts_from_key(key: &CellKeyNode, value_name: &str) -> Result<Option<DateTime<Utc>>> {
+            fn unix_ts_from_key(
+                key: &CellKeyNode,
+                value_name: &str,
+            ) -> crate::Result<Option<DateTime<Utc>>> {
                 let Some(key_value) = key.get_value(value_name) else {
                     return Ok(None);
                 };
                 Ok(match key_value.get_content().0 {
                     notatin::cell_value::CellValue::U32(num) => {
-                        if num == 0 { return Ok(None) }
+                        if num == 0 {
+                            return Ok(None);
+                        }
                         let naive = NaiveDateTime::from_timestamp_opt(num as i64, 0)
                             .expect("unix timestamp our of range");
                         Some(DateTime::<Utc>::from_utc(naive, Utc))
                     }
                     notatin::cell_value::CellValue::U64(num) => {
-                        if num == 0 { return Ok(None) }
+                        if num == 0 {
+                            return Ok(None);
+                        }
                         let naive = NaiveDateTime::from_timestamp_opt(num as i64, 0)
                             .expect("unix timestamp our of range");
                         Some(DateTime::<Utc>::from_utc(naive, Utc))
                     }
                     _ => bail!(
                         "Value \"{}\" in key \"{}\" was not of type U32 or U64!",
-                        value_name, key.get_pretty_path()
+                        value_name,
+                        key.get_pretty_path()
                     ),
                 })
             }
 
             // Get and parse data from Programs
-            let mut key_programs = self.inner.get_key(r"Root\Programs", false)?
+            let mut key_programs = self
+                .inner
+                .get_key(r"Root\Programs", false)?
                 .ok_or(anyhow!("Programs key not found in amcache!"))?;
             let subkeys = key_programs.read_sub_keys(&mut self.inner);
             for key in subkeys {
                 let last_modified_ts = key.last_key_written_date_and_time();
                 let program_id = key.key_name.clone();
-                let program_name = string_value_from_key(&key, "0")?
-                    .ok_or(anyhow!("Could not get \"0\" (program_name) for {}", key.key_name))?;
-                let version = string_value_from_key(&key, "1")?
-                    .ok_or(anyhow!("Could not get \"0\" (version) for {}", key.key_name))?;
+                let program_name = string_value_from_key(&key, "0")?.ok_or(anyhow!(
+                    "Could not get \"0\" (program_name) for {}",
+                    key.key_name
+                ))?;
+                let version = string_value_from_key(&key, "1")?.ok_or(anyhow!(
+                    "Could not get \"0\" (version) for {}",
+                    key.key_name
+                ))?;
                 let install_date = unix_ts_from_key(&key, "a")?;
                 let uninstall_date = unix_ts_from_key(&key, "b")?;
-
 
                 let program_entry = ProgramEntry {
                     install_date,
@@ -199,7 +225,9 @@ impl super::Parser {
             }
 
             // Get and parse data from File
-            let mut key_file = self.inner.get_key(r"Root\File", false)?
+            let mut key_file = self
+                .inner
+                .get_key(r"Root\File", false)?
                 .ok_or(anyhow!("File key not found in amcache!"))?;
             let volume_keys = key_file.read_sub_keys(&mut self.inner);
             for mut key_volume in volume_keys {
@@ -207,25 +235,36 @@ impl super::Parser {
                 for key_file in file_keys {
                     let program_id = string_value_from_key(&key_file, "100")?;
                     let file_id = string_value_from_key(&key_file, "101")?;
-                    let path = string_value_from_key(&key_file, "15")?
-                        .ok_or(anyhow!("Could not get \"15\" (path) for file {}", key_file.key_name))?;
+                    let path = string_value_from_key(&key_file, "15")?.ok_or(anyhow!(
+                        "Could not get \"15\" (path) for file {}",
+                        key_file.key_name
+                    ))?;
                     let link_date = unix_ts_from_key(&key_file, "f")?; // compilation_date
                     let file_last_modified_ts = if let Some(value) = key_file.get_value("17") {
-                        if let (notatin::cell_value::CellValue::U64(ts), _logs) = value.get_content() {
+                        if let (notatin::cell_value::CellValue::U64(ts), _logs) =
+                            value.get_content()
+                        {
                             let naive = win32_ts_to_datetime(ts)?;
                             Some(DateTime::<Utc>::from_utc(naive, Utc))
-                        } else { None }
-                    } else { None };
-
-                    // FileId is the SHA-1 hash of the file with "0000" prepended. Discard prefix
-                    let sha1_hash = file_id.as_ref().map(|id| {
-                        if id.len() == 44 && &id[..4] == "0000" {
-                            Some(String::from(&id[4..]))
                         } else {
-                            // In case unexpected value
                             None
                         }
-                    }).flatten();
+                    } else {
+                        None
+                    };
+
+                    // FileId is the SHA-1 hash of the file with "0000" prepended. Discard prefix
+                    let sha1_hash = file_id
+                        .as_ref()
+                        .map(|id| {
+                            if id.len() == 44 && &id[..4] == "0000" {
+                                Some(String::from(&id[4..]))
+                            } else {
+                                // In case unexpected value
+                                None
+                            }
+                        })
+                        .flatten();
 
                     let key_last_modified_ts = key_file.last_key_written_date_and_time();
                     let file_entry = FileEntry {

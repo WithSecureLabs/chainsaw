@@ -2,10 +2,10 @@
 extern crate chainsaw;
 extern crate term_size;
 
+use std::fs::{self, File};
 use std::io::BufRead;
-use std::{collections::HashSet, io::BufReader};
-use std::fs::{File, self};
 use std::path::PathBuf;
+use std::{collections::HashSet, io::BufReader};
 
 use anyhow::{Context, Result};
 use bytesize::ByteSize;
@@ -16,7 +16,7 @@ use clap::{Parser, Subcommand};
 
 use chainsaw::{
     cli, get_files, lint as lint_rule, load as load_rule, set_writer, Document, Filter, Format,
-    Hunter, Reader, RuleKind, RuleLevel, RuleStatus, Searcher, Writer, ShimcacheAnalyzer
+    Hunter, Reader, RuleKind, RuleLevel, RuleStatus, Searcher, ShimcacheAnalyzer, Writer,
 };
 
 #[derive(Parser)]
@@ -266,7 +266,7 @@ enum AnalyseCommand {
         /// The path to the amcache artifact (Amcache.hve) for timeline enrichment
         #[arg(short = 'a', long = "amcache")]
         amcache: Option<PathBuf>,
-    }
+    },
 }
 
 fn print_title() {
@@ -385,7 +385,10 @@ fn run() -> Result<()> {
                 };
                 let value = match document {
                     Document::Evtx(evtx) => evtx.data,
-                    Document::Hve(json) | Document::Json(json) | Document::Xml(json) | Document::Mft(json) => json,
+                    Document::Hve(json)
+                    | Document::Json(json)
+                    | Document::Xml(json)
+                    | Document::Mft(json) => json,
                 };
                 if json {
                     if first {
@@ -888,9 +891,7 @@ fn run() -> Result<()> {
             }
             cs_eprintln!("[+] Found {} hits", hits);
         }
-        Command::Analyse {
-            cmd,
-        } => {
+        Command::Analyse { cmd } => {
             match cmd {
                 AnalyseCommand::Shimcache {
                     additional_pattern,
@@ -909,8 +910,10 @@ fn run() -> Result<()> {
                     let mut regex_patterns: Vec<String> = Vec::new();
                     if let Some(regex_file) = regex_file {
                         let mut file_regex_patterns = BufReader::new(File::open(&regex_file)?)
-                            .lines().collect::<Result<Vec<_>, _>>()?;
-                        cs_eprintln!("[+] Regex file with {} pattern(s) loaded from {:?}", 
+                            .lines()
+                            .collect::<Result<Vec<_>, _>>()?;
+                        cs_eprintln!(
+                            "[+] Regex file with {} pattern(s) loaded from {:?}",
                             file_regex_patterns.len(),
                             fs::canonicalize(&regex_file).expect("cloud not get absolute path")
                         );
@@ -921,12 +924,16 @@ fn run() -> Result<()> {
                     }
 
                     // Do analysis
-                    let timeline = shimcache_analyzer.amcache_shimcache_timeline(&regex_patterns)?;
+                    let timeline =
+                        shimcache_analyzer.amcache_shimcache_timeline(&regex_patterns)?;
                     cli::print_shimcache_analysis_csv(&timeline)?;
 
                     if let Some(output_path) = output {
-                        cs_eprintln!("[+] Saved output to {:?}", std::fs::canonicalize(output_path)
-                            .expect("could not get absolute path"));
+                        cs_eprintln!(
+                            "[+] Saved output to {:?}",
+                            std::fs::canonicalize(output_path)
+                                .expect("could not get absolute path")
+                        );
                     }
                 }
             }
