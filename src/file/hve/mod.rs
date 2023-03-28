@@ -28,7 +28,6 @@ impl Parser {
             .ok_or(anyhow!("Could not get registry hive parent directory!"))?;
         let hive_file_name = path.file_name();
         let parent_dir_files = fs::read_dir(parent_dir)?
-            .into_iter()
             .collect::<Result<Vec<_>, _>>()?;
         for dir_entry in parent_dir_files {
             let path = dir_entry.path();

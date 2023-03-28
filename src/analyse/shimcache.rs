@@ -86,7 +86,7 @@ impl ShimcacheAnalyzer {
 
         // Load amcache
         let amcache: Option<AmcacheArtifact> = if let Some(amcache_path) = &self.amcache_path {
-            let mut amcache_parser = HveParser::load(&amcache_path)?;
+            let mut amcache_parser = HveParser::load(amcache_path)?;
             cs_eprintln!(
                 "[+] Amcache hive file loaded from {:?}",
                 fs::canonicalize(amcache_path).expect("could not get absolute path")
@@ -162,7 +162,7 @@ impl ShimcacheAnalyzer {
         let mut timeline_entities: Vec<TimelineEntity> = shimcache
             .entries
             .into_iter()
-            .map(|e| TimelineEntity::with_shimcache_entry(e))
+            .map(TimelineEntity::with_shimcache_entry)
             .collect();
         // Prepend the shimcache last update timestamp as the first timeline entity
         timeline_entities.insert(
@@ -316,7 +316,7 @@ impl ShimcacheAnalyzer {
                 };
                 if let EntryType::File { .. } = &shimcache_entry.entry_type {
                     if let Some(TimelineTimestamp::Range { from, to }) = entity.timestamp {
-                        let amcache_ts = amcache_file_entry.key_last_modified_ts.clone();
+                        let amcache_ts = amcache_file_entry.key_last_modified_ts;
                         if from < amcache_ts && amcache_ts < to {
                             entity.timestamp = Some(TimelineTimestamp::Exact(
                                 amcache_ts,

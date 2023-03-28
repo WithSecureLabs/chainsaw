@@ -192,7 +192,7 @@ impl super::Parser {
         let signature_number =
             u32::from_le_bytes(shimcache_bytes.get(0..4).ok_or_else(e)?.try_into()?);
         let win8_cache_signature =
-            match std::str::from_utf8(&shimcache_bytes.get(128..132).ok_or_else(e)?) {
+            match std::str::from_utf8(shimcache_bytes.get(128..132).ok_or_else(e)?) {
                 Ok(signature) => {
                     if signature == "00ts" || signature == "10ts" {
                         Some(signature)
@@ -306,7 +306,7 @@ impl super::Parser {
                     index += 4;
 
                     let path = utf16_to_string(
-                        &shimcache_bytes
+                        shimcache_bytes
                             .get(path_offset..path_offset + path_size)
                             .ok_or_else(e)?,
                     )?
@@ -414,7 +414,7 @@ impl super::Parser {
                     index += 8;
 
                     let path = utf16_to_string(
-                        &shimcache_bytes
+                        shimcache_bytes
                             .get(path_offset..path_offset + path_size)
                             .ok_or_else(e)?,
                     )?
@@ -470,7 +470,7 @@ impl super::Parser {
             let mut cache_entry_position = 0;
             while index < shimcache_bytes_len {
                 let signature =
-                    std::str::from_utf8(&shimcache_bytes.get(index..index + 4).ok_or_else(e)?)?
+                    std::str::from_utf8(shimcache_bytes.get(index..index + 4).ok_or_else(e)?)?
                         .to_string();
                 if signature != cache_signature {
                     break;
@@ -493,7 +493,7 @@ impl super::Parser {
                 ) as usize;
                 index += 2;
                 let mut path = utf16_to_string(
-                    &shimcache_bytes
+                    shimcache_bytes
                         .get(index..index + path_size)
                         .ok_or_else(e)?,
                 )?;
@@ -574,9 +574,9 @@ impl super::Parser {
         }
         // Windows 10 shimcache
         else {
-            let offset_to_records = signature_number.clone() as usize;
+            let offset_to_records = signature_number as usize;
             let win10_cache_signature: bool = match std::str::from_utf8(
-                &shimcache_bytes
+                shimcache_bytes
                     .get(offset_to_records..offset_to_records + 4)
                     .ok_or_else(e)?,
             ) {
@@ -589,7 +589,7 @@ impl super::Parser {
                 shimcache.version = ShimcacheVersion::Windows10;
             }
             if win10_cache_signature {
-                let mut index = offset_to_records.clone();
+                let mut index = offset_to_records;
                 let mut cache_entry_position = 0;
                 while index < shimcache_bytes_len {
                     let e = || {
@@ -599,7 +599,7 @@ impl super::Parser {
                         )
                     };
                     let signature =
-                        std::str::from_utf8(&shimcache_bytes.get(index..index + 4).ok_or_else(e)?)?
+                        std::str::from_utf8(shimcache_bytes.get(index..index + 4).ok_or_else(e)?)?
                             .to_string();
                     if signature != "10ts" {
                         break;
@@ -622,7 +622,7 @@ impl super::Parser {
                     ) as usize;
                     index += 2;
                     let path = utf16_to_string(
-                        &shimcache_bytes
+                        shimcache_bytes
                             .get(index..index + path_size)
                             .ok_or_else(e)?,
                     )?;
@@ -649,14 +649,13 @@ impl super::Parser {
                     );
                     index += data_size;
 
-                    let entry_type: EntryType;
                     // Parse program entries further
                     lazy_static! {
                         static ref PROGRAM_RE: Regex = Regex::new(
                             r"^([0-9a-f]{8})\s+([0-9a-f]{16})\s+([0-9a-f]{16})\s+([0-9a-f]{4})\s+([\w.-]+)\s+(\w+)\s*(\w*)$"
                         ).expect("invalid regex");
                     }
-                    if PROGRAM_RE.is_match(&path) {
+                    let entry_type: EntryType = if PROGRAM_RE.is_match(&path) {
                         fn parse_version_hex(hex_str: &str) -> String {
                             let version_numbers: Result<Vec<u16>, _> = vec![
                                 u16::from_str_radix(&hex_str[0..4], 16),
@@ -707,7 +706,7 @@ impl super::Parser {
                         let neutral =
                             capture.get(7).expect("could not get group").as_str() == "neutral";
 
-                        entry_type = EntryType::Program {
+                        EntryType::Program {
                             program_name,
                             raw_entry: path,
                             unknown_u32,
@@ -716,10 +715,10 @@ impl super::Parser {
                             sdk_version,
                             publisher_id,
                             neutral,
-                        };
+                        }
                     } else {
-                        entry_type = EntryType::File { path };
-                    }
+                        EntryType::File { path }
+                    };
                     let last_modified_ts = if last_modified_time_utc_win32 != 0 {
                         let last_modified_time_utc =
                             win32_ts_to_datetime(last_modified_time_utc_win32)?;
@@ -756,8 +755,8 @@ impl super::Parser {
 
 fn utf16_to_string(bytes: &[u8]) -> crate::Result<String> {
     let bytes_vec = Vec::from_iter(bytes);
-    let chunk_iterator = bytes_vec.chunks_exact(2).into_iter();
-    if chunk_iterator.remainder().len() > 0 {
+    let chunk_iterator = bytes_vec.chunks_exact(2);
+    if !chunk_iterator.remainder().is_empty() {
         bail!("Bytes did not align to 16 bits!");
     }
     let word_vector: Vec<u16> = chunk_iterator
