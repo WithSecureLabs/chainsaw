@@ -1,7 +1,4 @@
-use std::{
-    fs::{self},
-    path::PathBuf,
-};
+use std::{fs, path::PathBuf};
 
 use chrono::{DateTime, Utc};
 use regex::Regex;
