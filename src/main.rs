@@ -249,7 +249,7 @@ enum AnalyseCommand {
     Shimcache {
         /// The path to the shimcache artifact (SYSTEM registry file)
         shimcache: PathBuf,
-        /// A string or regular expression pattern for matching shimcache entries
+        /// A string or regular expression for detecting shimcache entries whose timestamp matches their insertion time
         #[arg(
             short = 'e',
             long = "regex",
@@ -257,16 +257,16 @@ enum AnalyseCommand {
             number_of_values = 1
         )]
         additional_pattern: Option<Vec<String>>,
-        /// The path to the newline delimited file containing regex patterns for matching shimcache entries
+        /// The path to a newline delimited file containing regex patterns for detecting shimcache entries whose timestamp matches their insertion time
         #[arg(short = 'r', long = "regexfile")]
         regex_file: Option<PathBuf>,
-        /// A path to output the resulting csv file
+        /// The path to output the result csv file
         #[arg(short = 'o', long = "output")]
         output: Option<PathBuf>,
         /// The path to the amcache artifact (Amcache.hve) for timeline enrichment
         #[arg(short = 'a', long = "amcache")]
         amcache: Option<PathBuf>,
-        /// Enable near timestamp pair matching between shimcache and amcache
+        /// Enable near timestamp pair detection between shimcache and amcache for finding additional insertion timestamps for shimcache entries
         #[arg(short = 'p', long = "tspair", requires = "amcache")]
         ts_near_pair_matching: bool,
     },
