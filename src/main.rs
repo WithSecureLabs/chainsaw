@@ -266,6 +266,9 @@ enum AnalyseCommand {
         /// The path to the amcache artifact (Amcache.hve) for timeline enrichment
         #[arg(short = 'a', long = "amcache")]
         amcache: Option<PathBuf>,
+        /// Enable near timestamp pair matching between shimcache and amcache
+        #[arg(short = 'p', long = "tspair", requires = "amcache")]
+        ts_near_pair_matching: bool,
     },
 }
 
@@ -899,6 +902,7 @@ fn run() -> Result<()> {
                     output,
                     regex_file,
                     shimcache,
+                    ts_near_pair_matching,
                 } => {
                     if !args.no_banner {
                         print_title();
@@ -924,8 +928,8 @@ fn run() -> Result<()> {
                     }
 
                     // Do analysis
-                    let timeline =
-                        shimcache_analyzer.amcache_shimcache_timeline(&regex_patterns)?;
+                    let timeline = shimcache_analyzer
+                        .amcache_shimcache_timeline(&regex_patterns, ts_near_pair_matching)?;
                     cli::print_shimcache_analysis_csv(&timeline)?;
 
                     if let Some(output_path) = output {

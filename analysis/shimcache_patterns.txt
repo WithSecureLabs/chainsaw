@@ -1,0 +1,15 @@
+^[a-z]:\\windows\\temp\\.+\\\.be\\vc_redist\.x86\.exe$
+^[a-z]:\\windows\\temp\\.+\\\.cr\\vcredist_x86\.exe$
+^[a-z]:\\windows\\temp\\.+\\\.be\\vc_redist\.x64\.exe$
+^[a-z]:\\windows\\temp\\.+\\\.cr\\vcredist_x64\.exe$
+^[a-z]:\\users\\.+\\appdata\\local\\temp\\.+~setup\\vcredist_x64.exe$
+^[a-z]:\\users\\.+\\appdata\\local\\temp\\.+~setup\\vcredist_x86.exe$
+^[a-z]:\\windows\\psexesvc.exe$
+^[a-z]:\\users\\.+\\appdata\\local\\microsoft\\onedrive\\.+\\filesyncconfig.exe$
+^[a-z]:\\program files \(x86\)\\microsoft\\edgeupdate\\install\\.+\\.+\.tmp\\setup\.exe$
+^[a-z]:\\program files \(x86\)\\microsoft\\temp\\.+\.tmp\\microsoftedgeupdate\.exe$
+^[a-z]:\\program files \(x86\)\\microsoft\\edgeupdate\\install\\.+\\microsoftedge_x64_.+\.exe$
+^[a-z]:\\program files \(x86\)\\microsoft\\edgeupdate\\install\\.+\\microsoftedgeupdatesetup_x86_.+\.exe$
+^[a-z]:\\windows\\softwaredistribution\\download\\install\\am_delta_patch_.+\.exe$
+^[a-z]:\\windows\\softwaredistribution\\download\\install\\am_engine_patch_.+\.exe$
+^[a-z]:\\program files\\google\\chrome\\application\\.+\\installer\\chrmstp\.exe$

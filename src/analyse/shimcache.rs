@@ -63,6 +63,7 @@ impl ShimcacheAnalyzer {
     pub fn amcache_shimcache_timeline(
         &self,
         regex_patterns: &Vec<String>,
+        ts_near_pair_matching: bool,
     ) -> crate::Result<Vec<TimelineEntity>> {
         if regex_patterns.is_empty() {
             cs_eyellowln!("[!] No regex patterns defined for matching shimcache entries!")
@@ -96,10 +97,11 @@ impl ShimcacheAnalyzer {
         fn extract_ts_from_entity(entity: &TimelineEntity) -> DateTime<Utc> {
             match &entity.timestamp {
                 Some(TimelineTimestamp::Exact(timestamp, _type)) => *timestamp,
-                _ => panic!("Provided entities should only have exact timestamps!"),
+                _ => unimplemented!("Provided entities should only have exact timestamps!"),
             }
         }
 
+        /// Gets the indices of timeline entities which have a timestamp of the type Exact
         fn get_exact_ts_indices(timeline_entities: &Vec<TimelineEntity>) -> Vec<usize> {
             let mut indices: Vec<usize> = Vec::new();
             for (i, entity) in timeline_entities.iter().enumerate() {
@@ -260,43 +262,47 @@ impl ShimcacheAnalyzer {
                 }
             }
 
-            // Find near Amcache and Shimcache timestamp pairs
-            const MAX_TIME_DIFFERENCE: i64 = 1 * 60 * 1000; // 1 min
-            let mut near_timestamps_count = 0;
-            let mut pattern_match_overlap_count = 0;
-            for mut entity in &mut timeline_entities {
-                if let (Some(shimcache_entry), Some(amcache_entry)) =
-                    (&entity.shimcache_entry, &entity.amcache_file)
-                {
-                    if let Some(shimcache_ts) = shimcache_entry.last_modified_ts {
-                        let difference = shimcache_ts - amcache_entry.key_last_modified_ts;
-                        if difference.num_milliseconds().abs() > MAX_TIME_DIFFERENCE {
-                            continue;
+            if ts_near_pair_matching {
+                // Find near Amcache and Shimcache timestamp pairs
+                const MAX_TIME_DIFFERENCE: i64 = 1 * 60 * 1000; // 1 min
+                let mut near_timestamps_count = 0;
+                let mut pattern_match_overlap_count = 0;
+                for mut entity in &mut timeline_entities {
+                    if let (Some(shimcache_entry), Some(amcache_entry)) =
+                        (&entity.shimcache_entry, &entity.amcache_file)
+                    {
+                        if let Some(shimcache_ts) = shimcache_entry.last_modified_ts {
+                            let difference = shimcache_ts - amcache_entry.key_last_modified_ts;
+                            if difference.num_milliseconds().abs() > MAX_TIME_DIFFERENCE {
+                                continue;
+                            }
+                            near_timestamps_count += 1;
+                            // Do not overwrite pattern matched timestamps
+                            if let Some(TimelineTimestamp::Exact(
+                                _ts,
+                                TimestampType::PatternMatch,
+                            )) = entity.timestamp
+                            {
+                                pattern_match_overlap_count += 1;
+                                continue;
+                            }
+                            entity.timestamp = Some(TimelineTimestamp::Exact(
+                                amcache_entry.key_last_modified_ts,
+                                TimestampType::NearTSMatch,
+                            ));
                         }
-                        near_timestamps_count += 1;
-                        // Do not overwrite pattern matched timestamps
-                        if let Some(TimelineTimestamp::Exact(_ts, TimestampType::PatternMatch)) =
-                            entity.timestamp
-                        {
-                            pattern_match_overlap_count += 1;
-                            continue;
-                        }
-                        entity.timestamp = Some(TimelineTimestamp::Exact(
-                            amcache_entry.key_last_modified_ts,
-                            TimestampType::NearTSMatch,
-                        ));
                     }
                 }
-            }
-            let new_exact_ts_indices = get_exact_ts_indices(&timeline_entities);
-            cs_eprintln!(
-                "[+] {} near shimcache & amcache timestamp pairs found (with {} overlapping the pattern matched entries)",
-                near_timestamps_count,
-                pattern_match_overlap_count,
-            );
+                let new_exact_ts_indices = get_exact_ts_indices(&timeline_entities);
+                cs_eprintln!(
+                    "[+] {} near shimcache & amcache timestamp pairs found (with {} overlapping the pattern matched entries)",
+                    near_timestamps_count,
+                    pattern_match_overlap_count,
+                );
 
-            // Set timestamp ranges again, including Amcache & Shimcache timestamp matches
-            set_timestamp_ranges(&new_exact_ts_indices, &mut timeline_entities);
+                // Set timestamp ranges again, including Amcache & Shimcache timestamp near pairs
+                set_timestamp_ranges(&new_exact_ts_indices, &mut timeline_entities);
+            }
 
             // Find amcache entries whose timestamp corresponds to entity ts range
             let mut ts_match_count = 0;

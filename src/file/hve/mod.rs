@@ -78,39 +78,3 @@ fn win32_ts_to_datetime(ts_win32: u64) -> crate::Result<NaiveDateTime> {
     let ts_unix = (ts_win32 / 10_000) as i64 - 11644473600000;
     NaiveDateTime::from_timestamp_millis(ts_unix).ok_or(anyhow!("Timestamp out of range!"))
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn amcache_parsing_works_win10() -> crate::Result<()> {
-        let mut parser = Parser::load(&PathBuf::from(
-            "/mnt/hgfs/vm_shared/win10_vm_hives/am/Amcache.hve",
-        ))?;
-        let artifact_map = parser.parse_amcache()?;
-        println!("{:#?}", artifact_map);
-        Ok(())
-    }
-
-    #[test]
-    fn shimcache_parsing_works_win7() -> crate::Result<()> {
-        let mut parser = Parser::load(&PathBuf::from(
-            "/mnt/hgfs/vm_shared/Module 5 - Disk/cache/shimcache/SYSTEM",
-        ))?;
-        let _shimcache_entries = parser.parse_shimcache()?;
-        Ok(())
-    }
-
-    #[test]
-    fn shimcache_parsing_works_win10() -> crate::Result<()> {
-        let mut parser = Parser::load(&PathBuf::from(
-            "/mnt/hgfs/vm_shared/win10_vm_hives/shim/SYSTEM",
-        ))?;
-        let shimcache = parser.parse_shimcache()?;
-        for entry in shimcache.entries {
-            println!("{entry}");
-        }
-        Ok(())
-    }
-}

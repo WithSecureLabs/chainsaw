@@ -178,84 +178,70 @@ impl super::Parser {
         };
 
         // Find shimcache version
-        let mut shimcache_version = ShimcacheVersion::Unknown;
-
         let e = || anyhow!("Shimcache byte indexing error!");
         let signature_number =
             u32::from_le_bytes(shimcache_bytes.get(0..4).ok_or_else(e)?.try_into()?);
-        let win8_cache_signature =
-            match std::str::from_utf8(shimcache_bytes.get(128..132).ok_or_else(e)?) {
-                Ok(signature) => {
-                    if signature == "00ts" || signature == "10ts" {
-                        Some(signature)
-                    } else {
-                        None
+
+        let shimcache_version: ShimcacheVersion = match signature_number {
+            // Windows XP shimcache
+            0xdeadbeef => ShimcacheVersion::WindowsXP,
+            // Windows Vista shimcache
+            0xbadc0ffe => ShimcacheVersion::WindowsVistaWin2k3Win2k8,
+            // Windows 7 shimcache
+            0xbadc0fee => {
+                // Check if system is 32-bit
+                let environment_key_path =
+                    format!("{controlset_name}\\Control\\Session Manager\\Environment");
+                let environment_key =
+                    self.inner
+                        .get_key(&environment_key_path, false)?
+                        .ok_or(anyhow!(
+                            "Key \"{environment_key_path}\" not found in shimcache!"
+                        ))?;
+                let processor_architecture_value = environment_key.get_value("PROCESSOR_ARCHITECTURE")
+                .ok_or(anyhow!("Value \"PROCESSOR_ARCHITECTURE\" not found under key \"{environment_key_path}\" in shimcache!"))?.get_content().0;
+                let is_32bit = match processor_architecture_value {
+                    notatin::cell_value::CellValue::String(s) => s == "x86",
+                    _ => bail!("Value \"PROCESSOR_ARCHITECTURE\" under key \"{environment_key_path}\" was not of type String in shimcache!")
+                };
+
+                // Windows 7 32-bit
+                if is_32bit {
+                    ShimcacheVersion::Windows7x86
+                }
+                // Windows 7 64-bit
+                else {
+                    ShimcacheVersion::Windows7x64Windows2008R2
+                }
+            }
+            _ => {
+                let win8_cache_signature =
+                    std::str::from_utf8(shimcache_bytes.get(128..132).ok_or_else(e)?);
+
+                match win8_cache_signature {
+                    // Windows 8 shimcache
+                    Ok("00ts") => ShimcacheVersion::Windows80Windows2012,
+                    // Windows 8.1 shimcache
+                    Ok("10ts") => ShimcacheVersion::Windows81Windows2012R2,
+                    // Windows 10 shimcache
+                    _ => {
+                        let offset_to_records = signature_number as usize;
+                        let win10_cache_signature = std::str::from_utf8(
+                            shimcache_bytes
+                                .get(offset_to_records..offset_to_records + 4)
+                                .ok_or_else(e)?,
+                        );
+                        match win10_cache_signature {
+                            Ok("10ts") => match offset_to_records {
+                                0x34 => ShimcacheVersion::Windows10Creators,
+                                _ => ShimcacheVersion::Windows10,
+                            },
+                            _ => ShimcacheVersion::Unknown,
+                        }
                     }
                 }
-                Err(_e) => None,
-            };
-
-        // Windows XP shimcache
-        if signature_number == 0xdeadbeef {
-            shimcache_version = ShimcacheVersion::WindowsXP;
-        }
-        // Windows Vista shimcache
-        else if signature_number == 0xbadc0ffe {
-            shimcache_version = ShimcacheVersion::WindowsVistaWin2k3Win2k8;
-        }
-        // Windows 7 shimcache
-        else if signature_number == 0xbadc0fee {
-            // Check if system is 32-bit
-            let environment_key_path =
-                format!("{controlset_name}\\Control\\Session Manager\\Environment");
-            let environment_key =
-                self.inner
-                    .get_key(&environment_key_path, false)?
-                    .ok_or(anyhow!(
-                        "Key \"{environment_key_path}\" not found in shimcache!"
-                    ))?;
-            let processor_architecture_value = environment_key.get_value("PROCESSOR_ARCHITECTURE")
-                .ok_or(anyhow!("Value \"PROCESSOR_ARCHITECTURE\" not found under key \"{environment_key_path}\" in shimcache!"))?.get_content().0;
-            let is_32bit = match processor_architecture_value {
-                notatin::cell_value::CellValue::String(s) => s == "x86",
-                _ => bail!("Value \"PROCESSOR_ARCHITECTURE\" under key \"{environment_key_path}\" was not of type String in shimcache!")
-            };
-
-            // Windows 7 32-bit
-            if is_32bit {
-                shimcache_version = ShimcacheVersion::Windows7x86;
-            // Windows 7 64-bit
-            } else {
-                shimcache_version = ShimcacheVersion::Windows7x64Windows2008R2;
             }
-        }
-        // Windows 8 or Windows 8.1 shimcache
-        else if let Some(cache_signature) = win8_cache_signature {
-            if cache_signature == "00ts" {
-                shimcache_version = ShimcacheVersion::Windows80Windows2012;
-            } else if cache_signature == "10ts" {
-                shimcache_version = ShimcacheVersion::Windows81Windows2012R2;
-            }
-        }
-        // Windows 10 shimcache
-        else {
-            let offset_to_records = signature_number as usize;
-            let win10_cache_signature: bool = match std::str::from_utf8(
-                shimcache_bytes
-                    .get(offset_to_records..offset_to_records + 4)
-                    .ok_or_else(e)?,
-            ) {
-                Ok(signature) => signature == "10ts",
-                _ => false,
-            };
-            if win10_cache_signature {
-                if offset_to_records == 0x34 {
-                    shimcache_version = ShimcacheVersion::Windows10Creators;
-                } else {
-                    shimcache_version = ShimcacheVersion::Windows10;
-                }
-            }
-        }
+        };
 
         // Parse shimcache entries
         let shimcache_entries = match shimcache_version {
