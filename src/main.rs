@@ -2,9 +2,10 @@
 extern crate chainsaw;
 extern crate term_size;
 
-use std::collections::HashSet;
-use std::fs::File;
+use std::fs::{self, File};
+use std::io::BufRead;
 use std::path::PathBuf;
+use std::{collections::HashSet, io::BufReader};
 
 use anyhow::{Context, Result};
 use bytesize::ByteSize;
@@ -15,7 +16,7 @@ use clap::{Parser, Subcommand};
 
 use chainsaw::{
     cli, get_files, lint as lint_rule, load as load_rule, set_writer, Document, Filter, Format,
-    Hunter, Reader, RuleKind, RuleLevel, RuleStatus, Searcher, Writer,
+    Hunter, Reader, RuleKind, RuleLevel, RuleStatus, Searcher, ShimcacheAnalyzer, Writer,
 };
 
 #[derive(Parser)]
@@ -234,6 +235,41 @@ enum Command {
         #[arg(long = "to", requires = "timestamp")]
         to: Option<NaiveDateTime>,
     },
+
+    /// Perform various analyses on artifacts
+    Analyse {
+        #[command(subcommand)]
+        cmd: AnalyseCommand,
+    },
+}
+
+#[derive(Subcommand)]
+enum AnalyseCommand {
+    /// Create an execution timeline from the shimcache with optional amcache enrichments
+    Shimcache {
+        /// The path to the shimcache artifact (SYSTEM registry file)
+        shimcache: PathBuf,
+        /// A string or regular expression for detecting shimcache entries whose timestamp matches their insertion time
+        #[arg(
+            short = 'e',
+            long = "regex",
+            value_name = "pattern",
+            number_of_values = 1
+        )]
+        additional_pattern: Option<Vec<String>>,
+        /// The path to a newline delimited file containing regex patterns for detecting shimcache entries whose timestamp matches their insertion time
+        #[arg(short = 'r', long = "regexfile")]
+        regex_file: Option<PathBuf>,
+        /// The path to output the result csv file
+        #[arg(short = 'o', long = "output")]
+        output: Option<PathBuf>,
+        /// The path to the amcache artifact (Amcache.hve) for timeline enrichment
+        #[arg(short = 'a', long = "amcache")]
+        amcache: Option<PathBuf>,
+        /// Enable near timestamp pair detection between shimcache and amcache for finding additional insertion timestamps for shimcache entries
+        #[arg(short = 'p', long = "tspair", requires = "amcache")]
+        ts_near_pair_matching: bool,
+    },
 }
 
 fn print_title() {
@@ -352,7 +388,10 @@ fn run() -> Result<()> {
                 };
                 let value = match document {
                     Document::Evtx(evtx) => evtx.data,
-                    Document::Json(json) | Document::Xml(json) | Document::Mft(json) => json,
+                    Document::Hve(json)
+                    | Document::Json(json)
+                    | Document::Xml(json)
+                    | Document::Mft(json) => json,
                 };
                 if json {
                     if first {
@@ -854,6 +893,54 @@ fn run() -> Result<()> {
                 cs_println!("]");
             }
             cs_eprintln!("[+] Found {} hits", hits);
+        }
+        Command::Analyse { cmd } => {
+            match cmd {
+                AnalyseCommand::Shimcache {
+                    additional_pattern,
+                    amcache,
+                    output,
+                    regex_file,
+                    shimcache,
+                    ts_near_pair_matching,
+                } => {
+                    if !args.no_banner {
+                        print_title();
+                    }
+                    init_writer(output.clone(), true, false, false)?;
+                    let shimcache_analyzer = ShimcacheAnalyzer::new(shimcache, amcache);
+
+                    // Load regex
+                    let mut regex_patterns: Vec<String> = Vec::new();
+                    if let Some(regex_file) = regex_file {
+                        let mut file_regex_patterns = BufReader::new(File::open(&regex_file)?)
+                            .lines()
+                            .collect::<Result<Vec<_>, _>>()?;
+                        cs_eprintln!(
+                            "[+] Regex file with {} pattern(s) loaded from {:?}",
+                            file_regex_patterns.len(),
+                            fs::canonicalize(&regex_file).expect("cloud not get absolute path")
+                        );
+                        regex_patterns.append(&mut file_regex_patterns);
+                    }
+                    if let Some(mut additional_patterns) = additional_pattern {
+                        regex_patterns.append(&mut additional_patterns);
+                    }
+
+                    // Do analysis
+                    let timeline = shimcache_analyzer
+                        .amcache_shimcache_timeline(&regex_patterns, ts_near_pair_matching)?;
+                    cli::print_shimcache_analysis_csv(&timeline)?;
+
+                    if let Some(output_path) = output {
+                        cs_eprintln!(
+                            "[+] Saved output to {:?}",
+                            std::fs::canonicalize(output_path)
+                                .expect("could not get absolute path")
+                        );
+                    }
+                }
+            }
         }
     }
     Ok(())

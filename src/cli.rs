@@ -3,7 +3,7 @@ use std::fs;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
-use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, NaiveDateTime, SecondsFormat, TimeZone, Utc};
 use chrono_tz::Tz;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use prettytable::{cell, format, Row, Table};
@@ -12,6 +12,8 @@ use serde_json::{Map, Number, Value as Json};
 use tau_engine::{Document, Value as Tau};
 use uuid::Uuid;
 
+use crate::analyse::shimcache::{TimelineEntity, TimelineTimestamp, TimestampType};
+use crate::file::hve::shimcache::EntryType;
 use crate::file::Kind as FileKind;
 use crate::hunt::{Detections, Hunt, Kind};
 use crate::rule::{Kind as RuleKind, Level, Rule, Status};
@@ -193,7 +195,11 @@ pub fn print_log(
                         wrapper = crate::evtx::Wrapper(&data);
                         hunt.mapper.mapped(&wrapper)
                     }
-                    FileKind::Json | FileKind::Jsonl | FileKind::Mft | FileKind::Xml => {
+                    FileKind::Hve
+                    | FileKind::Json
+                    | FileKind::Jsonl
+                    | FileKind::Mft
+                    | FileKind::Xml => {
                         data = bincode::deserialize::<Value>(&document.data)?;
                         hunt.mapper.mapped(&data)
                     }
@@ -373,7 +379,11 @@ pub fn print_detections(
                                 wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
-                            FileKind::Json | FileKind::Jsonl | FileKind::Mft | FileKind::Xml => {
+                            FileKind::Hve
+                            | FileKind::Json
+                            | FileKind::Jsonl
+                            | FileKind::Mft
+                            | FileKind::Xml => {
                                 data = bincode::deserialize::<Value>(&document.data)
                                     .expect("could not decompress");
                                 hit.hunt.mapper.mapped(&data)
@@ -486,6 +496,154 @@ pub fn print_detections(
         cs_greenln!("\n[+] Group: {}", key);
         cs_print_table!(table);
     }
+}
+
+pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Result<()> {
+    let path = unsafe { &WRITER.path };
+    let csv = if let Some(path) = path {
+        Some(prettytable::csv::Writer::from_path(path)?)
+    } else {
+        None
+    };
+    let format = format::FormatBuilder::new()
+        .column_separator('│')
+        .borders('│')
+        .separators(
+            &[format::LinePosition::Top],
+            format::LineSeparator::new('─', '┬', '┌', '┐'),
+        )
+        .separators(
+            &[format::LinePosition::Intern],
+            format::LineSeparator::new('─', '┼', '├', '┤'),
+        )
+        .separators(
+            &[format::LinePosition::Bottom],
+            format::LineSeparator::new('─', '┴', '└', '┘'),
+        )
+        .padding(1, 1)
+        .build();
+
+    fn format_ts(ts: &DateTime<Utc>) -> String {
+        ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
+    }
+
+    let mut table = Table::new();
+    table.set_format(format);
+    let headers = [
+        "Timestamp",
+        "File Path",
+        "Program Name",
+        "SHA-1 Hash",
+        "Timeline Entry Number",
+        "Entry Type",
+        "Timestamp Description",
+        "Raw Entry",
+    ];
+    let header_cells = headers.map(|s| cell!(s)).to_vec();
+    table.add_row(Row::new(header_cells));
+
+    let mut timeline_entry_nr = 0;
+    for entity in timeline {
+        let mut timestamp = String::new();
+        let mut file_path = String::new();
+        let mut program_name = String::new();
+        let mut entry_type = "";
+        let mut ts_description = "";
+        let mut raw_entry = String::new();
+
+        if let Some(TimelineTimestamp::Exact(ts, _type)) = &entity.timestamp {
+            timestamp = format_ts(ts);
+        }
+        if let Some(TimelineTimestamp::Exact(_ts, ts_type)) = &entity.timestamp {
+            ts_description = match ts_type {
+                TimestampType::AmcacheRangeMatch => "Amcache timestamp range match",
+                TimestampType::NearTSMatch => "Timestamp near pair",
+                TimestampType::PatternMatch => "Shimcache pattern match",
+                TimestampType::ShimcacheLastUpdate => "Latest shimcache update",
+            }
+        };
+        if let Some(shimcache_entry) = &entity.shimcache_entry {
+            match &shimcache_entry.entry_type {
+                EntryType::File { path } => {
+                    entry_type = "ShimcacheFileEntry";
+                    file_path = path.clone();
+                }
+                EntryType::Program {
+                    program_name: name, ..
+                } => {
+                    entry_type = "ShimcacheProgramEntry";
+                    program_name = name.clone();
+                }
+            };
+        }
+
+        if let Some(shimcache_entry) = &entity.shimcache_entry {
+            raw_entry = serde_json::to_string(&shimcache_entry)?;
+        }
+
+        let timeline_entry_nr_string = timeline_entry_nr.to_string();
+        let shimcache_row = [
+            &timestamp,
+            &file_path,
+            &program_name,
+            "",
+            &timeline_entry_nr_string,
+            entry_type,
+            ts_description,
+            &raw_entry,
+        ];
+        let cells = shimcache_row.map(|s| cell!(s)).to_vec();
+        table.add_row(Row::new(cells));
+        timeline_entry_nr += 1;
+
+        // If there is an amcache time range or near ts match, add a separate row for it
+        if let Some(TimelineTimestamp::Exact(
+            _ts,
+            TimestampType::AmcacheRangeMatch | TimestampType::NearTSMatch,
+        )) = &entity.timestamp
+        {
+            if let Some(file_entry) = &entity.amcache_file {
+                let amcache_timestamp = format_ts(&file_entry.key_last_modified_ts);
+                let file_path = file_entry.path.clone();
+                let sha1_hash = file_entry
+                    .sha1_hash
+                    .as_ref()
+                    .unwrap_or(&String::new())
+                    .to_string();
+                let entry_type = "AmcacheFileEntry";
+                let raw_entry = serde_json::to_string(file_entry.as_ref())?;
+                let timeline_entry_nr_string = timeline_entry_nr.to_string();
+                let amcache_row = [
+                    &amcache_timestamp,
+                    &file_path,
+                    "",
+                    &sha1_hash,
+                    &timeline_entry_nr_string,
+                    entry_type,
+                    "",
+                    &raw_entry,
+                ];
+                let cells = amcache_row.map(|s| cell!(s)).to_vec();
+                table.add_row(Row::new(cells));
+                timeline_entry_nr += 1;
+            }
+        }
+    }
+    if let Some(writer) = csv {
+        table.to_csv_writer(writer)?;
+    } else {
+        // Truncate the number of columns for terminal output
+        const N_FIRST_COLUMNS: usize = 4;
+        for row in &mut table {
+            for i in (N_FIRST_COLUMNS..row.len()).rev() {
+                row.remove_cell(i);
+            }
+        }
+        cs_print_table!(table);
+        cs_eyellowln!("[!] Truncated output. Use --output to get all columns.");
+    }
+
+    Ok(())
 }
 
 pub fn print_csv(
@@ -620,7 +778,11 @@ pub fn print_csv(
                                 wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
-                            FileKind::Json | FileKind::Jsonl | FileKind::Mft | FileKind::Xml => {
+                            FileKind::Hve
+                            | FileKind::Json
+                            | FileKind::Jsonl
+                            | FileKind::Mft
+                            | FileKind::Xml => {
                                 data = bincode::deserialize::<Value>(&document.data)?;
                                 hit.hunt.mapper.mapped(&data)
                             }

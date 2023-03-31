@@ -709,6 +709,7 @@ impl Hunter {
                 };
                 let (kind, value): (FileKind, Value) = match document {
                     File::Evtx(evtx) => (FileKind::Evtx, evtx.data.into()),
+                    File::Hve(hve) => (FileKind::Hve, hve.into()),
                     File::Json(json) => (FileKind::Json, json.into()),
                     File::Mft(mft) => (FileKind::Mft, mft.into()),
                     File::Xml(xml) => (FileKind::Xml, xml.into()),

@@ -67,9 +67,10 @@ impl<'a> Iterator for Iter<'a> {
                             None => continue,
                         }
                     }
-                    Document::Json(json) | Document::Xml(json) | Document::Mft(json) => match json
-                        .find(field)
-                    {
+                    Document::Hve(json)
+                    | Document::Json(json)
+                    | Document::Xml(json)
+                    | Document::Mft(json) => match json.find(field) {
                         Some(value) => match value.as_str() {
                             Some(timestamp) => {
                                 NaiveDateTime::parse_from_str(timestamp, "%Y-%m-%dT%H:%M:%S%.6fZ")
@@ -148,7 +149,10 @@ impl<'a> Iterator for Iter<'a> {
                         return Some(Ok(evtx.data));
                     }
                 }
-                Document::Json(json) | Document::Xml(json) | Document::Mft(json) => {
+                Document::Hve(json)
+                | Document::Json(json)
+                | Document::Xml(json)
+                | Document::Mft(json) => {
                     if let Some(expression) = &self.searcher.tau {
                         if !tau_engine::core::solve(expression, &json) {
                             continue;
