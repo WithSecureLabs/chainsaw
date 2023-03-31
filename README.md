@@ -18,6 +18,7 @@ Chainsaw provides a powerful ‘first-response’ capability to quickly identify
  - :zap: Lightning fast, written in rust, wrapping the [EVTX parser](https://github.com/omerbenamram/evtx) library by [@OBenamram](https://twitter.com/obenamram?lang=en)
  - :feather: Clean and lightweight execution and output formats without unnecessary bloat
  - :fire: Document tagging (detection logic matching) provided by the [TAU Engine](https://github.com/countercept/tau-engine) Library
+ - :date: Create execution timelines by analysing Shimcache artefacts and enriching them with Amcache data
  - :bookmark_tabs: Output results in a variety of formats, such as ASCII table format, CSV format, and JSON format
  - :computer: Can be run on MacOS, Linux and Windows
 ---
@@ -141,6 +142,7 @@ Chainsaw provides a powerful ‘first-response’ capability to quickly identify
 - [Examples](#examples)
   - [Searching](#searching)
   - [Hunting](#hunting)
+  - [Shimcache Analysis](#shimcache-analysis)
 - [Acknowledgements](#acknowledgements)
 
 Extended information can be found in the Wiki for this tool: https://github.com/countercept/chainsaw/wiki
@@ -325,8 +327,40 @@ A massive thank you to  [@AlexKornitzer](https://twitter.com/AlexKornitzer?lang=
 
      ./chainsaw hunt evtx_attack_samples/ -s sigma/ --mapping mappings/sigma-event-logs-all.yml --from "2019-03-17T19:09:39" --to "2019-03-17T19:09:50" --json
 
+### Shimcache Analysis
+	COMMAND:
+	    analyse shimcache                 Create an execution timeline from the shimcache with optional amcache enrichments
+
+	USAGE:
+	    chainsaw analyse shimcache [OPTIONS] <SHIMCACHE>
+
+	ARGUMENTS:
+	    <SHIMCACHE>                       The path to the shimcache artifact (SYSTEM registry file)
+
+	OPTIONS:
+	    -e, --regex <pattern>             A string or regular expression for detecting shimcache entries whose timestamp matches their insertion time
+	    -r, --regexfile <REGEX_FILE>      The path to a newline delimited file containing regex patterns for detecting shimcache entries whose timestamp matches their insertion time
+	    -o, --output <OUTPUT>             The path to output the result csv file
+	    -a, --amcache <AMCACHE>           The path to the amcache artifact (Amcache.hve) for timeline enrichment
+	    -p, --tspair                      Enable near timestamp pair detection between shimcache and amcache for finding additional insertion timestamps for shimcache entries
+	    -h, --help                        Print help
+
+- Example pattern file for the  `--regexfile` parameter is included in [analysis/shimcache_patterns.txt](analysis/shimcache_patterns.txt).
+- Regex patterns are matched on paths in shimcache entires **converted to lowercase**.
+
+#### Command Examples
+   *Analyse a shimcache artifact with the provided regex patterns, and use amcache enrichment with timestamp near pair detection enabled. Output to a csv file.*
+
+    ./chainsaw analyse shimcache ./SYSTEM --regexfile ./analysis/shimcache_patterns.txt --amcache ./Amcache.hve --tspair --output ./output.csv
+
+
+   *Analyse a shimcache artifact with the provided regex patterns (without amcache enrichment). Output to the terminal.*
+
+    ./chainsaw analyse shimcache ./SYSTEM --regexfile ./analysis/shimcache_patterns.txt
+
 ### Acknowledgements
  - [EVTX-ATTACK-SAMPLES](https://github.com/sbousseaden/EVTX-ATTACK-SAMPLES) by [@SBousseaden](https://twitter.com/SBousseaden)
  - [Sigma](https://github.com/SigmaHQ/sigma) detection rules
  - [EVTX parser](https://github.com/omerbenamram/evtx) library by [@OBenamram](https://twitter.com/obenamram?lang=en)
  - [TAU Engine](https://github.com/countercept/tau-engine) Library by [@AlexKornitzer](https://twitter.com/AlexKornitzer?lang=en)
+ - Shimcache analysis feature developed as a part of [CC-Driver](https://www.ccdriver-h2020.com/) project, funded by the European Union’s Horizon 2020 Research and Innovation Programme under Grant Agreement No. 883543

@@ -5,11 +5,13 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use self::evtx::{Evtx, Parser as EvtxParser};
+use self::hve::{Hve, Parser as HveParser};
 use self::json::{lines::Parser as JsonlParser, Json, Parser as JsonParser};
 use self::mft::{Mft, Parser as MftParser};
 use self::xml::{Parser as XmlParser, Xml};
 
 pub mod evtx;
+pub mod hve;
 pub mod json;
 pub mod mft;
 pub mod xml;
@@ -17,8 +19,9 @@ pub mod xml;
 #[derive(Clone)]
 pub enum Document {
     Evtx(Evtx),
-    Mft(Mft),
+    Hve(Hve),
     Json(Json),
+    Mft(Mft),
     Xml(Xml),
 }
 
@@ -30,6 +33,7 @@ pub struct Documents<'a> {
 #[serde(rename_all = "snake_case")]
 pub enum Kind {
     Evtx,
+    Hve,
     Json,
     Jsonl,
     Mft,
@@ -41,6 +45,7 @@ impl Kind {
     pub fn extensions(&self) -> Option<Vec<String>> {
         match self {
             Kind::Evtx => Some(vec!["evt".to_string(), "evtx".to_string()]),
+            Kind::Hve => Some(vec!["hve".to_string()]),
             Kind::Json => Some(vec!["json".to_string()]),
             Kind::Jsonl => Some(vec!["jsonl".to_string()]),
             Kind::Mft => Some(vec!["mft".to_string(), "bin".to_string()]),
@@ -69,6 +74,7 @@ impl Iterator for Unknown {
 
 pub enum Parser {
     Evtx(EvtxParser),
+    Hve(HveParser),
     Json(JsonParser),
     Jsonl(JsonlParser),
     Mft(MftParser),
@@ -196,6 +202,28 @@ impl Reader {
                         parser: Parser::Xml(parser),
                     })
                 }
+                "hve" => {
+                    let parser = match HveParser::load(file) {
+                        Ok(parser) => parser,
+                        Err(e) => {
+                            if skip_errors {
+                                cs_eyellowln!(
+                                    "[!] failed to load file '{}' - {}\n",
+                                    file.display(),
+                                    e
+                                );
+                                return Ok(Self {
+                                    parser: Parser::Unknown,
+                                });
+                            } else {
+                                anyhow::bail!(e);
+                            }
+                        }
+                    };
+                    Ok(Self {
+                        parser: Parser::Hve(parser),
+                    })
+                }
                 _ => {
                     if load_unknown {
                         if let Ok(parser) = EvtxParser::load(file) {
@@ -254,6 +282,10 @@ impl Reader {
                         return Ok(Self {
                             parser: Parser::Xml(parser),
                         });
+                    } else if let Ok(parser) = HveParser::load(file) {
+                        return Ok(Self {
+                            parser: Parser::Hve(parser),
+                        });
                     }
                     // NOTE: We don't support the JSONL parser as it is too generic, maybe we are
                     // happy to use it as the fallback...?
@@ -285,6 +317,8 @@ impl Reader {
                     .map(|r| r.map(Document::Evtx).map_err(|e| e.into())),
             )
                 as Box<dyn Iterator<Item = crate::Result<Document>> + Send + Sync + 'a>,
+            Parser::Hve(parser) => Box::new(parser.parse().map(|r| r.map(Document::Hve)))
+                as Box<dyn Iterator<Item = crate::Result<Document>> + Send + Sync + 'a>,
             Parser::Json(parser) => Box::new(parser.parse().map(|r| r.map(Document::Json)))
                 as Box<dyn Iterator<Item = crate::Result<Document>> + Send + Sync + 'a>,
             Parser::Jsonl(parser) => Box::new(parser.parse().map(|r| r.map(Document::Json)))
@@ -302,6 +336,7 @@ impl Reader {
     pub fn kind(&self) -> Kind {
         match self.parser {
             Parser::Evtx(_) => Kind::Evtx,
+            Parser::Hve(_) => Kind::Hve,
             Parser::Json(_) => Kind::Json,
             Parser::Jsonl(_) => Kind::Jsonl,
             Parser::Mft(_) => Kind::Mft,
