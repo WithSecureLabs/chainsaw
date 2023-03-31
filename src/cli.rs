@@ -596,9 +596,11 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
         table.add_row(Row::new(cells));
         timeline_entry_nr += 1;
 
-        // If there is an amcache time range match, add a separate row for it
-        if let Some(TimelineTimestamp::Exact(_ts, TimestampType::AmcacheRangeMatch)) =
-            &entity.timestamp
+        // If there is an amcache time range or near ts match, add a separate row for it
+        if let Some(TimelineTimestamp::Exact(
+            _ts,
+            TimestampType::AmcacheRangeMatch | TimestampType::NearTSMatch,
+        )) = &entity.timestamp
         {
             if let Some(file_entry) = &entity.amcache_file {
                 let amcache_timestamp = format_ts(&file_entry.key_last_modified_ts);
@@ -630,7 +632,15 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
     if let Some(writer) = csv {
         table.to_csv_writer(writer)?;
     } else {
+        // Truncate the number of columns for terminal output
+        const N_FIRST_COLUMNS: usize = 4;
+        for row in &mut table {
+            for i in (N_FIRST_COLUMNS..row.len()).rev() {
+                row.remove_cell(i);
+            }
+        }
         cs_print_table!(table);
+        cs_eyellowln!("[!] Truncated output. Use --output to get all columns.");
     }
 
     Ok(())
