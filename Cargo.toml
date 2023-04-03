@@ -1,6 +1,6 @@
 [package]
 name = "chainsaw"
-version = "2.5.0"
+version = "2.6.0"
 repository = "https://github.com/countercept/chainsaw"
 description = "Rapidly Search and Hunt Through Windows Forensic Artefacts"
 authors = ["James Dorgan <james@dorgan.io>","Alex Kornitzer <alex.kornitzer@withsecure.com>"]
