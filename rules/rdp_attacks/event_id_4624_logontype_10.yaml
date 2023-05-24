@@ -1,0 +1,32 @@
+title: RDP logon
+group: rdp_attacks
+description: An account was successfully logged onto via RDP
+authors:
+  - ElizaBolton
+
+
+kind: evtx
+level: critical
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: event id
+    to: Event.System.EventID
+  - name: logon type 
+    to: Event.EventData.LogonType  
+  - name: username
+    to: Event.EventData.TargetUserName
+  - name: computer
+    to: Event.System.Computer
+  - name: ip address
+    to: Event.EventData.IpAddress
+  - name: record id
+    to: Event.System.EventRecordID
+
+
+
+filter:  
+  Event.System.EventID: 4624
+  Event.EventData.LogonType: 10
