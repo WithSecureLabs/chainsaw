@@ -1,0 +1,33 @@
+title: User Authentication Succeeded 
+group: rdp_attacks
+description: User has successfully authenticated an rdp logon
+authors:
+  - ElizaBolton
+
+
+kind: evtx
+level: critical
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: event id
+    to: Event.System.EventID
+  - name: record id
+    to: Event.System.EventRecordID
+  - name: computer
+    to: Event.System.Computer
+  - name: username
+    to: Event.UserData.EventXML.Param1
+  - name: domain
+    to: Event.UserData.EventXML.Param2
+  - name: ip address
+    to: Event.UserData.EventXML.Param3
+  - name: provider
+    to: Event.System.Provider
+
+
+filter:
+  Event.System.EventID: 1149
+  Event.System.Provider: Microsoft-Windows-TerminalServices-RemoteConnectionManager
