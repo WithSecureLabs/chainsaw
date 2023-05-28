@@ -132,6 +132,10 @@ extensions:
       filter:
         Provider: Microsoft-Windows-DNS-Client
     - for:
+        logsource.service: dns-server
+      filter:
+        Provider: Microsoft-Windows-DNS-Server-Service   
+    - for:
         logsource.service: appxpackaging-om
       filter:
         Provider: Microsoft-Windows-AppxPackagingOM
