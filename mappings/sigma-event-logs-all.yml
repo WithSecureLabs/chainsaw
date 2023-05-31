@@ -21,6 +21,134 @@ exclusions:
 - WMI Event Subscription
 - USB Device Plugged
 
+extensions:
+  preconditions:
+    - for:
+        logsource.service: windefend
+      filter:
+        Provider: Microsoft-Windows-Windows Defender
+    - for:
+        logsource.category: file_block
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+    - for:
+        logsource.service: sysmon
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+    - for:
+        logsource.service: capi2
+      filter:
+        Provider: Microsoft-Windows-CAPI2
+    - for:
+        logsource.service: applocker
+      filter:
+        Provider: Microsoft-Windows-AppLocker
+    - for:
+        logsource.service: codeintegrity-operational
+      filter:
+        Provider: Microsoft-Windows-CodeIntegrity
+    - for:
+        logsource.service: firewall-as
+      filter:
+        Provider: Microsoft-Windows-Windows Firewall With Advanced Security
+    - for:
+        logsource.service: security
+      filter:
+        Provider: Microsoft-Windows-Security-Auditing
+    - for:
+        logsource.service: appxdeployment-server
+      filter:
+        Provider: Microsoft-Windows-AppXDeployment-Server
+    - for:
+        logsource.service: bits-client
+      filter:
+        Provider: Microsoft-Windows-Bits-Client
+    - for:
+        logsource.service: certificateservicesclient-lifecycle-system
+      filter:
+        Provider: Microsoft-Windows-CertificateServicesClient-Lifecycle-System  
+    - for:
+        logsource.service: ntlm
+      filter:
+        Provider: Microsoft-Windows-NTLM
+    - for:
+        logsource.service: smbclient-security
+      filter:
+        Provider: Microsoft-Windows-SMBClient
+    - for:
+        logsource.service: smbclient-connectivity
+      filter:
+        Provider: Microsoft-Windows-SMBClient
+    - for:
+        logsource.service: appmodel-runtime
+      filter:
+        Provider: Microsoft-Windows-AppModel-Runtime
+    - for:
+        logsource.service: security-mitigations
+      filter:
+        Provider: Microsoft-Windows-Security-Mitigations
+    - for:
+        logsource.service: taskscheduler
+      filter:
+        Provider: Microsoft-Windows-TaskScheduler
+    - for:
+        logsource.service: wmi
+      filter:
+        Provider: Microsoft-Windows-WMI-Activity
+    - for:
+        logsource.service: dhcp
+      filter:
+        Provider: Microsoft-Windows-DHCP-Server
+    - for:
+        logsource.service: printservice-admin
+      filter:
+        Provider: Microsoft-Windows-PrintService
+    - for:
+        logsource.service: printservice-operational
+      filter:
+        Provider: Microsoft-Windows-PrintService
+    - for:
+        logsource.service: terminalservices-localsessionmanager
+      filter:
+        Provider: Microsoft-Windows-TerminalServices-LocalSessionManager
+    - for:
+        logsource.service: diagnosis-scripted
+      filter:
+        Provider: Microsoft-Windows-Diagnosis-Scripted
+    - for:
+        logsource.service: shell-core
+      filter:
+        Provider: Microsoft-Windows-Shell-Core
+    - for:
+        logsource.service: openssh
+      filter:
+        Provider: OpenSSH
+    - for:
+        logsource.service: ldap_debug
+      filter:
+        Provider: Microsoft-Windows-LDAP-Client
+    - for:
+        logsource.service: dns-client
+      filter:
+        Provider: Microsoft-Windows-DNS-Client
+    - for:
+        logsource.service: dns-server
+      filter:
+        Provider: Microsoft-Windows-DNS-Server-Service   
+    - for:
+        logsource.service: appxpackaging-om
+      filter:
+        Provider: Microsoft-Windows-AppxPackagingOM
+    - for:
+        logsource.service: lsa-server
+      filter:
+        Provider: LsaSrv
+    - for:
+        id: 4a3a2b96-d7fc-4cb9-80e4-4a545fe95f46 #Remote Service Creation Rule
+      filter:
+        - Provider: Microsoft-Windows-Security-Auditing 
+        - Provider: System 
+        
 groups:
   - name: Sigma
     timestamp: Event.System.TimeCreated
