@@ -218,6 +218,18 @@ impl HunterBuilder {
                         }
                     }
                     let mapper = Mapper::from(group.fields);
+                    // FIXME: Due to how file types are handled we lose jsonl, as its file type
+                    // internally here is json, so we coerce it for now... Putting a match here
+                    // will make sure we don't make this mistake again until its handled properly.
+                    let file = match mapping.kind {
+                        FileKind::Evtx => FileKind::Evtx,
+                        FileKind::Hve => FileKind::Hve,
+                        FileKind::Json => FileKind::Json,
+                        FileKind::Jsonl => FileKind::Json,
+                        FileKind::Mft => FileKind::Mft,
+                        FileKind::Xml => FileKind::Xml,
+                        FileKind::Unknown => unreachable!(),
+                    };
                     hunts.push(Hunt {
                         id: group.id,
 
@@ -230,7 +242,7 @@ impl HunterBuilder {
                         },
                         timestamp: group.timestamp,
 
-                        file: mapping.kind.clone(),
+                        file,
                         mapper,
                     });
                 }
