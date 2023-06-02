@@ -25,7 +25,13 @@ fields:
     to: Event.EventData.Data[2]
   - name: Threat Path
     to: Event.EventData.Data[1]
-
+  - name: SHA1
+    container:
+      field: Event.EventData.Data[4]
+      format: json
+    to: sha1FileHash  
 
 filter:
-  Event.System.Provider: Sophos Anti-Virus
+  Event.System.Provider:
+    - Sophos Anti-Virus
+    - Sophos System Protection
