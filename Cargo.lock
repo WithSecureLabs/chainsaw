@@ -283,7 +283,7 @@ dependencies = [
  "bytesize",
  "chrono",
  "chrono-tz",
- "clap 4.3.0",
+ "clap 4.3.1",
  "colour",
  "evtx",
  "indicatif",
@@ -362,9 +362,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.3.0"
+version = "4.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93aae7a4192245f70fe75dd9157fc7b4a5bf53e88d30bd4396f7d8f9284d5acc"
+checksum = "b4ed2379f8603fa2b7509891660e802b88c70a79a6427a70abb5968054de2c28"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -373,9 +373,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.3.0"
+version = "4.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f423e341edefb78c9caba2d9c7f7687d0e72e89df3ce3394554754393ac3990"
+checksum = "72394f3339a76daf211e57d4bcb374410f3965dcc606dd0e03738c7888766980"
 dependencies = [
  "anstream",
  "anstyle",
@@ -386,9 +386,9 @@ dependencies = [
 
 [[package]]
 name = "clap_derive"
-version = "4.3.0"
+version = "4.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "191d9573962933b4027f932c600cd252ce27a8ad5979418fe78e43c07996f27b"
+checksum = "59e9ef9a08ee1c0e1f2e162121665ac45ac3783b0f897db7244ae75ad9a8f65b"
 dependencies = [
  "heck 0.4.1",
  "proc-macro2",
@@ -1115,7 +1115,7 @@ dependencies = [
  "bitflags",
  "byteorder",
  "chrono",
- "clap 4.3.0",
+ "clap 4.3.1",
  "csv",
  "dialoguer",
  "encoding",
@@ -1892,9 +1892,9 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "tau-engine"
-version = "1.12.1"
+version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71b268ff8b722c5d1292bab881a65b4b53112e5f945c61504027f11e3f151a9c"
+checksum = "0bca00d3f1468fd80527d52d69c81dcf192379cdc3ff5125ebd32d49aaa7d43c"
 dependencies = [
  "aho-corasick 0.7.20",
  "lazy_static",
