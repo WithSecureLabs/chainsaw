@@ -19,7 +19,7 @@ fields:
     to: Event.System.EventRecordID
   - name: Computer
     to: Event.System.Computer
-  - name: EventDetails
+  - name: Threat Name
     to: Event.EventData.Data
 
 filter:
