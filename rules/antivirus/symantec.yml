@@ -1,0 +1,54 @@
+---
+title: Symantec Endpoint
+group: Antivirus
+description: Events from Symantec Endpoint Protection.
+authors:
+  - Reece394
+
+
+kind: evtx
+level: critical
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: Threat Name
+    to: Event.EventData.Data
+
+filter:
+  Event.System.Provider: Symantec Endpoint Protection Client
+  Event.System.EventID:
+  # From https://knowledge.broadcom.com/external/article/170359/endpoint-protection-140x-event-log-entri.html
+  - 5 # Virus Found
+  - 6 # Scan Omission
+  - 12 # Configuration Changed
+  - 13 # Symantec AntiVirus Shutdown
+  - 14 # Symantec AntiVirus Startup
+  - 17 # Scan Action Auto-Changed. Occurs when Symantec AntiVirus has deleted or quarantined more than five infected files within the last minute
+  - 18 # Sent To Quarantine Server
+  - 19 # Delivered To Symantec Security Response
+  - 45 # SymProtect Action. Occurs when SymProtect blocks a tamper attempt.
+  - 46 # Detection Start
+  - 47 # Detection Action
+  - 48 # Pending Remediation Action
+  - 49 # Failed Remediation Action
+  - 50 # Successful Remediation Action
+  - 51 # Detection Finish
+  - 71 # Threat Now Whitelisted
+  - 72 # Interesting Process Found Start
+  - 75 # Interesting Process Found Finish
+  - 77 # SONAR Detected Threat Now Known
+  - 88 # ELAM enabled
+  - 89 # ELAM disabled
+  - 91 # ELAM blocked driver
+  - 92 # SymProtect enabled
+  - 93 # SymProtect disabled
+  - 95 # File is restored. The file is restored from quarantine.
+  - 34056 # Symantec Endpoint Protection Tamper Protection Disabled
