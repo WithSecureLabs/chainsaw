@@ -545,8 +545,8 @@ fn run() -> Result<()> {
                 ));
             }
             if failed > 0 {
-                cs_eprintln!(
-                    "[+] Loaded {} detection rules ({} not loaded)",
+                cs_eyellowln!(
+                    "[!] Loaded {} detection rules ({} not loaded)",
                     count,
                     failed
                 );
@@ -688,7 +688,7 @@ fn run() -> Result<()> {
                     timezone,
                 );
             }
-            cs_eprintln!("[+] {} Detections found on {} documents", hits, documents,);
+            cs_eprintln!("\n[+] {} Detections found on {} documents", hits, documents,);
         }
         Command::Lint { path, kind, tau } => {
             init_writer(None, false, false, false)?;
