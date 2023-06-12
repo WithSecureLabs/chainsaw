@@ -415,15 +415,13 @@ pub fn print_detections(
                                             let mut yaml =
                                                 serde_yaml::to_string(&tau_to_json(value))
                                                     .expect("could not get yaml");
-
                                             yaml = yaml
                                                 .split('\n')
                                                 .collect::<Vec<&str>>()
                                                 .iter()
                                                 .map(|x| format_field_length(x, full, column_width))
                                                 .collect::<Vec<String>>()
-                                                .join("\n")
-                                                .replace("\\n", "\n");
+                                                .join("\n");
                                             yaml.hash(&mut hasher);
                                             cells.push(cell!(yaml));
                                         }
