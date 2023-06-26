@@ -716,7 +716,7 @@ pub fn print_csv(
         cs_eprintln!("[+] Created {}", filename);
 
         if let Some(headers) = headers.remove(key) {
-            let mut cells = vec!["timestamp", "detections"];
+            let mut cells = vec!["timestamp", "detections", "path"];
             if headers.is_empty() {
                 cells.push("data");
             } else {
@@ -838,6 +838,7 @@ pub fn print_csv(
                             .collect::<Vec<_>>()
                             .join(";"),
                     );
+                    cells.push(document.path.to_string_lossy().to_string());
                     cells.extend(row);
                     csv.write_record(cells)?;
                 }
