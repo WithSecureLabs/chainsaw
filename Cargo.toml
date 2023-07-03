@@ -30,9 +30,10 @@ rayon = "1.5"
 regex = "1.6"
 rustc-hash = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde_json = { version = "1.0", features = ["raw_value"] }
 serde_yaml = "0.9"
 tau-engine = { version = "1.0", features = ["core", "json", "sync"] }
+tempfile = "3.2"
 term_size = "0.3"
 uuid = { version = "1.1", features = ["serde", "v4"] }
 

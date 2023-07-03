@@ -92,6 +92,9 @@ enum Command {
         #[arg(short = 'r', long = "rule", number_of_values = 1)]
         rule: Option<Vec<PathBuf>>,
 
+        /// Cache results to disk to reduce memory usage at the cost of performance.
+        #[arg(short = 'c', long = "cache-to-disk", requires("jsonl"))]
+        cache: bool,
         /// Set the column width for the tabular output.
         #[arg(long = "column-width", conflicts_with = "json")]
         column_width: Option<u32>,
@@ -421,6 +424,7 @@ fn run() -> Result<()> {
             rule,
 
             load_unknown,
+            cache,
             mut column_width,
             csv,
             extension,
@@ -638,7 +642,12 @@ fn run() -> Result<()> {
             let pb = cli::init_progress_bar(files.len() as u64, "Hunting".to_string());
             for file in &files {
                 pb.tick();
-                let scratch = hunter.hunt(file).with_context(|| {
+                let cache = if cache {
+                    tempfile::tempfile().ok()
+                } else {
+                    None
+                };
+                let scratch = hunter.hunt(file, &cache).with_context(|| {
                     format!("Failed to hunt through file '{}'", file.to_string_lossy())
                 })?;
                 hits += scratch.iter().map(|d| d.hits.len()).sum::<usize>();
@@ -651,6 +660,7 @@ fn run() -> Result<()> {
                         local,
                         timezone,
                         jsonl,
+                        cache,
                     )?;
                 } else {
                     detections.extend(scratch);
@@ -671,6 +681,7 @@ fn run() -> Result<()> {
                     local,
                     timezone,
                     jsonl,
+                    None,
                 )?;
             } else if jsonl {
                 // Work already done

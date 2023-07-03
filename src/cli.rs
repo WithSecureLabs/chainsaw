@@ -1,6 +1,7 @@
 use std::collections::{hash_map::DefaultHasher, BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::hash::{Hash, Hasher};
+use std::io::*;
 use std::time::Duration;
 
 use chrono::{DateTime, NaiveDateTime, SecondsFormat, TimeZone, Utc};
@@ -8,7 +9,7 @@ use chrono_tz::Tz;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use prettytable::{cell, format, Row, Table};
 use serde::Serialize;
-use serde_json::{Map, Number, Value as Json};
+use serde_json::{value::RawValue, Map, Number, Value as Json};
 use tau_engine::{Document, Value as Tau};
 use uuid::Uuid;
 
@@ -167,6 +168,7 @@ pub fn print_log(
                 count = documents.len();
                 documents.first().expect("could not get document")
             }
+            _ => unimplemented!(),
         };
 
         let name = match rule {
@@ -353,6 +355,7 @@ pub fn print_detections(
                         count = documents.len();
                         documents.first().expect("could not get document")
                     }
+                    _ => unimplemented!(),
                 };
 
                 let mut rows = vec![];
@@ -754,6 +757,7 @@ pub fn print_csv(
                         count = documents.len();
                         documents.first().expect("could not get document")
                     }
+                    _ => unimplemented!(),
                 };
 
                 let mut rows = vec![];
@@ -886,6 +890,7 @@ pub fn print_json(
     local: bool,
     timezone: Option<Tz>,
     jsonl: bool,
+    cache: Option<fs::File>,
 ) -> crate::Result<()> {
     let hunts: HashMap<_, _> = hunts.iter().map(|h| (&h.id, h)).collect();
     let mut detections = detections
@@ -950,9 +955,54 @@ pub fn print_json(
         .collect::<Vec<Detection>>();
     detections.sort_by(|x, y| x.timestamp.cmp(&y.timestamp));
     if jsonl {
-        for det in &detections {
-            cs_print_json!(det)?;
-            cs_println!();
+        if let Some(cache) = cache.as_ref() {
+            let mut f = BufReader::new(cache);
+            for det in detections {
+                match det.kind {
+                    Kind::Cached {
+                        document,
+                        offset,
+                        size,
+                    } => {
+                        let _ = f.seek(SeekFrom::Start(*offset as u64));
+                        let mut buf = vec![0u8; *size];
+                        let _ = f.read_exact(&mut buf).expect("could not read cached data");
+                        let data = String::from_utf8(buf).expect("could not convert cached data");
+                        let raw =
+                            RawValue::from_string(data).expect("could not serialize cached data");
+                        let kind = Kind::Cached {
+                            document: crate::hunt::RawDocument {
+                                kind: document.kind.clone(),
+                                path: document.path.clone(),
+                                data: Some(&*raw),
+                            },
+                            offset: *offset,
+                            size: *size,
+                        };
+
+                        cs_print_json!(&Detection {
+                            authors: &det.authors,
+                            group: &det.group,
+                            kind: &kind,
+                            level: &det.level,
+                            name: &det.name,
+                            source: det.source,
+                            status: &det.status,
+                            timestamp: det.timestamp,
+                            sigma: det.sigma,
+                        })?;
+                    }
+                    _ => {
+                        cs_print_json!(&det)?;
+                    }
+                }
+                cs_println!();
+            }
+        } else {
+            for det in detections {
+                cs_print_json!(&det)?;
+                cs_println!();
+            }
         }
     } else {
         cs_print_json!(&detections)?;

@@ -302,6 +302,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "tau-engine",
+ "tempfile",
  "term_size",
  "uuid",
 ]

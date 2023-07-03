@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::hash::{BuildHasherDefault, Hash, Hasher};
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -16,7 +16,7 @@ use serde::{
     ser::{SerializeStruct, Serializer},
     Deserialize, Serialize,
 };
-use serde_json::Value as Json;
+use serde_json::{value::RawValue, Value as Json};
 use tau_engine::{
     core::parser::{Expression, ModSym, Pattern},
     Document as TauDocument, Value as Tau,
@@ -104,10 +104,29 @@ impl<'a> Serialize for Document<'a> {
 }
 
 #[derive(Debug, Serialize)]
+pub struct RawDocument<'a> {
+    pub kind: FileKind,
+    pub path: &'a Path,
+    #[serde(borrow)]
+    pub data: Option<&'a RawValue>,
+}
+
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "snake_case", tag = "kind")]
 pub enum Kind<'a> {
-    Aggregate { documents: Vec<Document<'a>> },
-    Individual { document: Document<'a> },
+    Aggregate {
+        documents: Vec<Document<'a>>,
+    },
+    Individual {
+        document: Document<'a>,
+    },
+    Cached {
+        document: RawDocument<'a>,
+        #[serde(skip)]
+        offset: usize,
+        #[serde(skip)]
+        size: usize,
+    },
 }
 
 #[derive(Default)]
@@ -693,13 +712,18 @@ impl Hunter {
         HunterBuilder::new()
     }
 
-    pub fn hunt<'a>(&'a self, file: &'a Path) -> crate::Result<Vec<Detections>> {
+    pub fn hunt<'a>(
+        &'a self,
+        file: &'a Path,
+        cache: &Option<std::fs::File>,
+    ) -> crate::Result<Vec<Detections>> {
         let mut reader = Reader::load(file, self.inner.load_unknown, self.inner.skip_errors)?;
         let kind = reader.kind();
         let aggregates: Mutex<FxHashMap<(Uuid, Uuid), (&Aggregate, FxHashMap<u64, Vec<Uuid>>)>> =
             Mutex::new(FxHashMap::default());
         let files: Mutex<FxHashMap<Uuid, (Value, NaiveDateTime)>> =
             Mutex::new(FxHashMap::default());
+        let offset = Mutex::new(0);
         let mut detections = reader
             .documents()
             .par_bridge()
@@ -906,16 +930,38 @@ impl Hunter {
                     }
                 }
                 if !hits.is_empty() {
-                    Some(Ok(Detections {
-                        hits,
-                        kind: Kind::Individual {
-                            document: Document {
-                                kind,
-                                path: file,
-                                data: bincode::serialize(&value).ok()?,
+                    if let Some(mut cache) = cache.as_ref() {
+                        let mut offset = offset.lock().expect("could not lock offset");
+                        let json = serde_json::to_string(&Json::from(value))
+                            .expect("could not serialise data");
+                        let _ = cache.write_all(json.as_bytes());
+                        let val = *offset;
+                        let size = json.as_bytes().len();
+                        *offset += size;
+                        Some(Ok(Detections {
+                            hits,
+                            kind: Kind::Cached {
+                                document: RawDocument {
+                                    kind,
+                                    path: file,
+                                    data: None,
+                                },
+                                offset: val,
+                                size,
                             },
-                        },
-                    }))
+                        }))
+                    } else {
+                        Some(Ok(Detections {
+                            hits,
+                            kind: Kind::Individual {
+                                document: Document {
+                                    kind,
+                                    path: file,
+                                    data: bincode::serialize(&value).ok()?,
+                                },
+                            },
+                        }))
+                    }
                 } else {
                     None
                 }
