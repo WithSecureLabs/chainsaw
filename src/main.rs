@@ -653,7 +653,12 @@ fn run() -> Result<()> {
             for file in &files {
                 pb.tick();
                 let cache = if cache {
-                    tempfile::tempfile().ok()
+                    match tempfile::tempfile() {
+                        Ok(f) => Some(f),
+                        Err(e) => {
+                            anyhow::bail!("Failed to create cache on disk - {}", e);
+                        }
+                    }
                 } else {
                     None
                 };
