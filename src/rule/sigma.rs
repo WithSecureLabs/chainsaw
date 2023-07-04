@@ -550,6 +550,9 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
                         };
                         let mut it = f.split('|');
                         let mut f = it.next().expect("could not get field").to_string();
+                        if f == "" {
+                            bail!("keyless identifiers cannot be converted");
+                        }
                         if seen.contains(&f) {
                             collect = false;
                         }
@@ -608,6 +611,9 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
                     };
                     let mut it = f.split('|');
                     let mut f = it.next().expect("could not get field").to_string();
+                    if f == "" {
+                        bail!("keyless identifiers cannot be converted");
+                    }
                     if seen.contains(&f) {
                         collect = false;
                     }
