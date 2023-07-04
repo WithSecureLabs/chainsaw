@@ -260,6 +260,19 @@ impl Match for String {
     }
 }
 
+// NOTE: We list the supported ones, so if any new ones appear we don't silently error.
+lazy_static::lazy_static! {
+    static ref SUPPORTED_MODIFIERS: HashSet<String> = {
+        let mut set = HashSet::new();
+        set.insert("all".to_owned());
+        set.insert("contains".to_owned());
+        set.insert("endswith".to_owned());
+        set.insert("startswith".to_owned());
+        set.insert("re".to_owned());
+        set
+    };
+}
+
 fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
     let v = match value {
         Yaml::Mapping(m) => {
@@ -277,6 +290,15 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
             Yaml::Sequence(scratch)
         }
         Yaml::String(s) => {
+            let mut unsupported: Vec<String> = modifiers
+                .difference(&*SUPPORTED_MODIFIERS)
+                .cloned()
+                .collect();
+            if unsupported.len() > 0 {
+                unsupported.sort();
+                return Err(anyhow!(unsupported.join(", ")).context("unsupported modifiers"));
+            }
+
             if modifiers.contains("contains") {
                 Yaml::String(s.as_contains())
             } else if modifiers.contains("endswith") {
