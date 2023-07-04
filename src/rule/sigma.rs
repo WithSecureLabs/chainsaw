@@ -5,6 +5,7 @@ use std::io::prelude::*;
 use std::path::Path;
 
 use anyhow::Result;
+use base64::Engine;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_yaml::{Mapping, Sequence, Value as Yaml};
@@ -265,6 +266,8 @@ lazy_static::lazy_static! {
     static ref SUPPORTED_MODIFIERS: HashSet<String> = {
         let mut set = HashSet::new();
         set.insert("all".to_owned());
+        set.insert("base64".to_owned());
+        set.insert("base64offset".to_owned());
         set.insert("contains".to_owned());
         set.insert("endswith".to_owned());
         set.insert("startswith".to_owned());
@@ -274,6 +277,15 @@ lazy_static::lazy_static! {
 }
 
 fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
+    let mut unsupported: Vec<String> = modifiers
+        .difference(&*SUPPORTED_MODIFIERS)
+        .cloned()
+        .collect();
+    if unsupported.len() > 0 {
+        unsupported.sort();
+        return Err(anyhow!(unsupported.join(", ")).context("unsupported modifiers"));
+    }
+
     let v = match value {
         Yaml::Mapping(m) => {
             let mut scratch = Mapping::new();
@@ -285,21 +297,40 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
         Yaml::Sequence(s) => {
             let mut scratch = vec![];
             for s in s {
-                scratch.push(parse_identifier(s, modifiers)?);
+                let value = parse_identifier(s, modifiers)?;
+                match value {
+                    Yaml::Sequence(s) => scratch.extend(s),
+                    _ => scratch.push(value),
+                }
             }
             Yaml::Sequence(scratch)
         }
         Yaml::String(s) => {
-            let mut unsupported: Vec<String> = modifiers
-                .difference(&*SUPPORTED_MODIFIERS)
-                .cloned()
-                .collect();
-            if unsupported.len() > 0 {
-                unsupported.sort();
-                return Err(anyhow!(unsupported.join(", ")).context("unsupported modifiers"));
-            }
-
-            if modifiers.contains("contains") {
+            if modifiers.contains("base64") {
+                let mut remaining = modifiers.clone();
+                let _ = remaining.remove("base64");
+                let encoded = base64::engine::general_purpose::STANDARD.encode(s.to_owned());
+                parse_identifier(&Yaml::String(encoded), &remaining)?
+            } else if modifiers.contains("base64offset") {
+                let mut remaining = modifiers.clone();
+                let _ = remaining.remove("base64offset");
+                let mut scratch = Vec::with_capacity(3);
+                for i in 0..3 {
+                    let mut value = (0..i).fold("".to_owned(), |mut s, _| {
+                        s.push_str(" ");
+                        s
+                    });
+                    value.push_str(s);
+                    let encoded =
+                        base64::engine::general_purpose::STANDARD.encode(value.to_owned());
+                    static S: [usize; 3] = [0, 2, 3];
+                    static E: [usize; 3] = [0, 3, 2];
+                    let len = value.len();
+                    let trimmed = encoded[S[i]..encoded.len() - E[len % 3]].to_owned();
+                    scratch.push(parse_identifier(&Yaml::String(trimmed), &remaining)?);
+                }
+                Yaml::Sequence(scratch)
+            } else if modifiers.contains("contains") {
                 Yaml::String(s.as_contains())
             } else if modifiers.contains("endswith") {
                 Yaml::String(s.as_endswith())
