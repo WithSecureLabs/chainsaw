@@ -19,7 +19,7 @@ impl Parser {
     pub fn load(file: &Path) -> crate::Result<Self> {
         let settings = ParserSettings::default()
             .separate_json_attributes(true)
-            .num_threads(0);
+            .num_threads(rayon::current_num_threads());
         let parser = EvtxParser::from_path(file)?.with_configuration(settings);
         Ok(Self { inner: parser })
     }
