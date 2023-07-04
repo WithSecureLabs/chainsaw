@@ -93,13 +93,18 @@ enum Command {
         rule: Option<Vec<PathBuf>>,
 
         /// Cache results to disk to reduce memory usage at the cost of performance.
-        #[arg(short = 'c', long = "cache-to-disk", requires("jsonl"))]
+        #[arg(
+            short = 'c',
+            long = "cache-to-disk",
+            requires = "jsonl",
+            conflicts_with = "json"
+        )]
         cache: bool,
         /// Set the column width for the tabular output.
         #[arg(long = "column-width", conflicts_with = "json")]
         column_width: Option<u32>,
         /// Print the output in csv format.
-        #[arg(group = "format", long = "csv", requires("output"))]
+        #[arg(group = "format", long = "csv", requires = "output")]
         csv: bool,
         /// Only hunt through files with the provided extension.
         #[arg(long = "extension", number_of_values = 1)]
@@ -145,7 +150,12 @@ enum Command {
         #[arg(short = 'q')]
         quiet: bool,
         /// A path containing Sigma rules to hunt with.
-        #[arg(short = 's', long = "sigma", number_of_values = 1, requires("mapping"))]
+        #[arg(
+            short = 's',
+            long = "sigma",
+            number_of_values = 1,
+            requires = "mapping"
+        )]
         sigma: Option<Vec<PathBuf>>,
         /// Continue to hunt when an error is encountered.
         #[arg(long = "skip-errors")]
