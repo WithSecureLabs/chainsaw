@@ -463,8 +463,10 @@ fn run() -> Result<()> {
             if csv {
                 if let Some(path) = &output {
                     if path.is_file() {
-                        let mut writer = Writer::default();
-                        writer.quiet = quiet;
+                        let writer = Writer {
+                            quiet,
+                            ..Default::default()
+                        };
                         set_writer(writer).expect("could not set writer");
                         if !args.no_banner {
                             print_title();

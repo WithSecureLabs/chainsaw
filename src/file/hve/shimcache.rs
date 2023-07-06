@@ -38,20 +38,20 @@ pub struct ShimcacheEntry {
 
 #[derive(Debug, Serialize)]
 pub enum CPUArchitecture {
-    AMD64,
-    ARM,
+    Amd64,
+    Arm,
     I386,
-    IA64,
+    Ia64,
     Unknown(u16),
 }
 
 impl CPUArchitecture {
     fn from_u16(num: u16) -> CPUArchitecture {
         match num {
-            34404 => CPUArchitecture::AMD64,
-            452 => CPUArchitecture::ARM,
+            34404 => CPUArchitecture::Amd64,
+            452 => CPUArchitecture::Arm,
             332 => CPUArchitecture::I386,
-            512 => CPUArchitecture::IA64,
+            512 => CPUArchitecture::Ia64,
             num => CPUArchitecture::Unknown(num),
         }
     }
@@ -834,10 +834,7 @@ mod windows8_cache {
 mod windows_vista_win2k3_win2k8_cache {
     use super::ShimcacheEntry;
 
-    pub fn parse(
-        _shimcache_bytes: &Vec<u8>,
-        _controlset: u32,
-    ) -> crate::Result<Vec<ShimcacheEntry>> {
+    pub fn parse(_shimcache_bytes: &[u8], _controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
         bail!("Windows Vista shimcache parsing not supported!");
     }
 }
@@ -845,10 +842,7 @@ mod windows_vista_win2k3_win2k8_cache {
 mod windows_xp_cache {
     use super::ShimcacheEntry;
 
-    pub fn parse(
-        _shimcache_bytes: &Vec<u8>,
-        _controlset: u32,
-    ) -> crate::Result<Vec<ShimcacheEntry>> {
+    pub fn parse(_shimcache_bytes: &[u8], _controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
         bail!("Windows XP shimcache parsing not supported!");
     }
 }

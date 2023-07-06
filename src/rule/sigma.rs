@@ -281,7 +281,7 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
         .difference(&*SUPPORTED_MODIFIERS)
         .cloned()
         .collect();
-    if unsupported.len() > 0 {
+    if !unsupported.is_empty() {
         unsupported.sort();
         return Err(anyhow!(unsupported.join(", ")).context("unsupported modifiers"));
     }
@@ -309,7 +309,7 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
             if modifiers.contains("base64") {
                 let mut remaining = modifiers.clone();
                 let _ = remaining.remove("base64");
-                let encoded = base64::engine::general_purpose::STANDARD.encode(s.to_owned());
+                let encoded = base64::engine::general_purpose::STANDARD.encode(s);
                 parse_identifier(&Yaml::String(encoded), &remaining)?
             } else if modifiers.contains("base64offset") {
                 let mut remaining = modifiers.clone();
@@ -317,12 +317,11 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
                 let mut scratch = Vec::with_capacity(3);
                 for i in 0..3 {
                     let mut value = (0..i).fold("".to_owned(), |mut s, _| {
-                        s.push_str(" ");
+                        s.push(' ');
                         s
                     });
                     value.push_str(s);
-                    let encoded =
-                        base64::engine::general_purpose::STANDARD.encode(value.to_owned());
+                    let encoded = base64::engine::general_purpose::STANDARD.encode(&value);
                     static S: [usize; 3] = [0, 2, 3];
                     static E: [usize; 3] = [0, 3, 2];
                     let len = value.len();

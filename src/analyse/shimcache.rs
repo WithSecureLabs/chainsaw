@@ -102,7 +102,7 @@ impl ShimcacheAnalyzer {
         }
 
         /// Gets the indices of timeline entities which have a timestamp of the type Exact
-        fn get_exact_ts_indices(timeline_entities: &Vec<TimelineEntity>) -> Vec<usize> {
+        fn get_exact_ts_indices(timeline_entities: &[TimelineEntity]) -> Vec<usize> {
             let mut indices: Vec<usize> = Vec::new();
             for (i, entity) in timeline_entities.iter().enumerate() {
                 if let Some(TimelineTimestamp::Exact(_ts, _type)) = &entity.timestamp {
@@ -114,7 +114,7 @@ impl ShimcacheAnalyzer {
 
         /// Sets timestamp ranges for timeline entities based on shimcache entry order and indices
         fn set_timestamp_ranges(
-            range_indices: &Vec<usize>,
+            range_indices: &[usize],
             timeline_entities: &mut Vec<TimelineEntity>,
         ) {
             let first_index = if let Some(index) = range_indices.first() {
@@ -260,7 +260,7 @@ impl ShimcacheAnalyzer {
 
             if ts_near_pair_matching {
                 // Find near Amcache and Shimcache timestamp pairs
-                const MAX_TIME_DIFFERENCE: i64 = 1 * 60 * 1000; // 1 min
+                const MAX_TIME_DIFFERENCE: i64 = 60 * 1000; // 1 min
                 let mut near_timestamps_count = 0;
                 let mut pattern_match_overlap_count = 0;
                 for mut entity in &mut timeline_entities {

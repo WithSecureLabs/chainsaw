@@ -966,14 +966,14 @@ pub fn print_json(
                     } => {
                         let _ = f.seek(SeekFrom::Start(*offset as u64));
                         let mut buf = vec![0u8; *size];
-                        let _ = f.read_exact(&mut buf).expect("could not read cached data");
+                        f.read_exact(&mut buf).expect("could not read cached data");
                         let data = String::from_utf8(buf).expect("could not convert cached data");
                         let raw =
                             RawValue::from_string(data).expect("could not serialize cached data");
                         let kind = Kind::Cached {
                             document: crate::hunt::RawDocument {
                                 kind: document.kind.clone(),
-                                path: document.path.clone(),
+                                path: document.path,
                                 data: Some(&*raw),
                             },
                             offset: *offset,
@@ -981,13 +981,13 @@ pub fn print_json(
                         };
 
                         cs_print_json!(&Detection {
-                            authors: &det.authors,
-                            group: &det.group,
+                            authors: det.authors,
+                            group: det.group,
                             kind: &kind,
-                            level: &det.level,
-                            name: &det.name,
+                            level: det.level,
+                            name: det.name,
                             source: det.source,
-                            status: &det.status,
+                            status: det.status,
                             timestamp: det.timestamp,
                             sigma: det.sigma,
                         })?;

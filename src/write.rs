@@ -10,16 +10,12 @@ pub static mut WRITER: Writer = Writer {
     quiet: false,
 };
 
+#[derive(Default)]
 pub enum Format {
+    #[default]
     Std,
     Csv,
     Json,
-}
-
-impl Default for Format {
-    fn default() -> Self {
-        Format::Std
-    }
 }
 
 pub struct Writer {
