@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use aho_corasick::AhoCorasickBuilder;
+use aho_corasick::{AhoCorasickBuilder, AhoCorasickKind};
 use serde::de;
 use serde_yaml::Value as Yaml;
 use tau_engine::core::parser::{
@@ -228,8 +228,9 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
                     Box::new(
                         AhoCorasickBuilder::new()
                             .ascii_case_insensitive(true)
-                            .dfa(true)
-                            .build(vec![c.clone()]),
+                            .kind(Some(AhoCorasickKind::DFA))
+                            .build(vec![c.clone()])
+                            .expect("could not build dfa"),
                     ),
                     vec![MatchType::Contains(c)],
                     identifier.ignore_case,
@@ -246,8 +247,9 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
                     Box::new(
                         AhoCorasickBuilder::new()
                             .ascii_case_insensitive(true)
-                            .dfa(true)
-                            .build(vec![c.clone()]),
+                            .kind(Some(AhoCorasickKind::DFA))
+                            .build(vec![c.clone()])
+                            .expect("could not build dfa"),
                     ),
                     vec![MatchType::EndsWith(c)],
                     identifier.ignore_case,
@@ -264,8 +266,9 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
                     Box::new(
                         AhoCorasickBuilder::new()
                             .ascii_case_insensitive(true)
-                            .dfa(true)
-                            .build(vec![c.clone()]),
+                            .kind(Some(AhoCorasickKind::DFA))
+                            .build(vec![c.clone()])
+                            .expect("could not build dfa"),
                     ),
                     vec![MatchType::Exact(c)],
                     identifier.ignore_case,
@@ -282,8 +285,9 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
                     Box::new(
                         AhoCorasickBuilder::new()
                             .ascii_case_insensitive(true)
-                            .dfa(true)
-                            .build(vec![c.clone()]),
+                            .kind(Some(AhoCorasickKind::DFA))
+                            .build(vec![c.clone()])
+                            .expect("could not build dfa"),
                     ),
                     vec![MatchType::StartsWith(c)],
                     identifier.ignore_case,

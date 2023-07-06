@@ -793,7 +793,7 @@ impl Hunter {
                                             cs_eyellowln!(
                                                 "failed to parse timestamp '{}' - {}",
                                                 timestamp,
-                                                e,
+                                                e
                                             );
                                             return None;
                                         } else {

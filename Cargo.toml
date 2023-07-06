@@ -10,7 +10,7 @@ edition = "2021"
 
 
 [dependencies]
-aho-corasick = "0.7"
+aho-corasick = "1.0"
 anyhow = "1.0"
 base64 = "0.21"
 bincode = "1.3"
@@ -18,7 +18,7 @@ bytesize = "1.0"
 chrono = "0.4"
 chrono-tz = { version = "0.8", features = ["serde"] }
 clap = { version = "4.0", features = ["derive"] }
-colour = "0.6"
+crossterm = "0.26"
 evtx = "0.8"
 indicatif = "0.17"
 lazy_static = "1.4.0"
@@ -26,7 +26,7 @@ mft = "0.6"
 notatin = { git = "https://github.com/strozfriedberg/notatin", rev = "9783169f4649c8df92f94b8c20421df8f4aa070a" }
 once_cell = "1.0"
 prettytable-rs = "0.10"
-quick-xml = { version = "0.27", features = ["serialize"] }
+quick-xml = { version = "0.29", features = ["serialize"] }
 rayon = "1.5"
 regex = "1.6"
 rustc-hash = "1.0"

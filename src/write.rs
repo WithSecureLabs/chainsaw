@@ -191,7 +191,14 @@ macro_rules! cs_greenln {
                     f.write_all(b"\n").expect("could not write to file");
                 }
                 None => {
-                    colour::unnamed::write(Some(colour::unnamed::Colour::Green), &format!($($arg)*), true);
+                    let _ = std::io::stderr().lock();
+                    crossterm::execute!(
+                        std::io::stdout(),
+                        crossterm::style::SetForegroundColor(crossterm::style::Color::Green),
+                        crossterm::style::Print(format!($($arg)*)),
+                        crossterm::style::ResetColor
+                    ).expect("failed to write line");
+                    println!()
                 }
             }
         }
@@ -203,7 +210,14 @@ macro_rules! cs_egreenln {
     ($($arg:tt)*) => {
         unsafe {
             if !$crate::WRITER.quiet {
-                colour::unnamed::ewrite(Some(colour::unnamed::Colour::Green), &format!($($arg)*), true);
+                let _ = std::io::stderr().lock();
+                crossterm::execute!(
+                    std::io::stderr(),
+                    crossterm::style::SetForegroundColor(crossterm::style::Color::Green),
+                    crossterm::style::Print(format!($($arg)*)),
+                    crossterm::style::ResetColor
+                ).expect("failed to write line");
+                eprintln!()
             }
         }
     };
@@ -214,7 +228,14 @@ macro_rules! cs_eyellowln {
     ($($arg:tt)*) => {
         unsafe {
             if !$crate::WRITER.quiet {
-                colour::unnamed::ewrite(Some(colour::unnamed::Colour::Yellow), &format!($($arg)*), true);
+                let _ = std::io::stderr().lock();
+                crossterm::execute!(
+                    std::io::stderr(),
+                    crossterm::style::SetForegroundColor(crossterm::style::Color::Yellow),
+                    crossterm::style::Print(format!($($arg)*)),
+                    crossterm::style::ResetColor
+                ).expect("failed to write line");
+                eprintln!()
             }
         }
     };
@@ -225,7 +246,14 @@ macro_rules! cs_eredln {
     ($($arg:tt)*) => {
         unsafe {
             if !$crate::WRITER.quiet {
-                colour::unnamed::ewrite(Some(colour::unnamed::Colour::Red), &format!($($arg)*), true);
+                let _ = std::io::stderr().lock();
+                crossterm::execute!(
+                    std::io::stderr(),
+                    crossterm::style::SetForegroundColor(crossterm::style::Color::Red),
+                    crossterm::style::Print(format!($($arg)*)),
+                    crossterm::style::ResetColor
+                ).expect("failed to write line");
+                eprintln!()
             }
         }
     };
