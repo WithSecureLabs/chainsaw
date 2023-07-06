@@ -670,13 +670,12 @@ fn run() -> Result<()> {
                 hits += scratch.iter().map(|d| d.hits.len()).sum::<usize>();
                 documents += scratch.len();
                 if jsonl {
-                    cli::print_json(
+                    cli::print_jsonl(
                         &scratch,
                         hunter.hunts(),
                         hunter.rules(),
                         local,
                         timezone,
-                        jsonl,
                         cache,
                     )?;
                 } else {
@@ -691,15 +690,7 @@ fn run() -> Result<()> {
                 if output.is_some() {
                     cs_eprintln!("[+] Writing results to output file...");
                 }
-                cli::print_json(
-                    &detections,
-                    hunter.hunts(),
-                    hunter.rules(),
-                    local,
-                    timezone,
-                    jsonl,
-                    None,
-                )?;
+                cli::print_json(&detections, hunter.hunts(), hunter.rules(), local, timezone)?;
             } else if jsonl {
                 // Work already done
             } else if log {

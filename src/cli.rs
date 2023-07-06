@@ -889,8 +889,6 @@ pub fn print_json(
     rules: &BTreeMap<Uuid, Rule>,
     local: bool,
     timezone: Option<Tz>,
-    jsonl: bool,
-    cache: Option<fs::File>,
 ) -> crate::Result<()> {
     let hunts: HashMap<_, _> = hunts.iter().map(|h| (&h.id, h)).collect();
     let mut detections = detections
@@ -954,62 +952,174 @@ pub fn print_json(
         })
         .collect::<Vec<Detection>>();
     detections.sort_by(|x, y| x.timestamp.cmp(&y.timestamp));
-    if jsonl {
-        if let Some(cache) = cache.as_ref() {
-            let mut f = BufReader::new(cache);
-            for det in detections {
-                match det.kind {
-                    Kind::Cached {
-                        document,
-                        offset,
-                        size,
-                    } => {
-                        let _ = f.seek(SeekFrom::Start(*offset as u64));
-                        let mut buf = vec![0u8; *size];
-                        f.read_exact(&mut buf).expect("could not read cached data");
-                        let data = String::from_utf8(buf).expect("could not convert cached data");
-                        let raw =
-                            RawValue::from_string(data).expect("could not serialize cached data");
-                        let kind = Kind::Cached {
-                            document: crate::hunt::RawDocument {
-                                kind: document.kind.clone(),
-                                path: document.path,
-                                data: Some(&*raw),
-                            },
-                            offset: *offset,
-                            size: *size,
-                        };
-
-                        cs_print_json!(&Detection {
-                            authors: det.authors,
-                            group: det.group,
-                            kind: &kind,
-                            level: det.level,
-                            name: det.name,
-                            source: det.source,
-                            status: det.status,
-                            timestamp: det.timestamp,
-                            sigma: det.sigma,
-                        })?;
-                    }
-                    _ => {
-                        cs_print_json!(&det)?;
-                    }
-                }
-                cs_println!();
-            }
-        } else {
-            for det in detections {
-                cs_print_json!(&det)?;
-                cs_println!();
-            }
-        }
-    } else {
-        cs_print_json!(&detections)?;
-    }
+    cs_print_json!(&detections)?;
     Ok(())
 }
 
+pub fn print_jsonl(
+    detections: &[Detections],
+    hunts: &[Hunt],
+    rules: &BTreeMap<Uuid, Rule>,
+    local: bool,
+    timezone: Option<Tz>,
+    cache: Option<fs::File>,
+) -> crate::Result<()> {
+    let hunts: HashMap<_, _> = hunts.iter().map(|h| (&h.id, h)).collect();
+    let mut hits: HashMap<_, _> = HashMap::new();
+    let mut timestamps: Vec<(_, _, _)> = detections
+        .iter()
+        .flat_map(|d| {
+            let mut scratch = Vec::with_capacity(d.hits.len());
+            for hit in &d.hits {
+                let id = Uuid::new_v4();
+                let localised = if let Some(timezone) = timezone {
+                    timezone
+                        .from_local_datetime(&hit.timestamp)
+                        .single()
+                        .expect("failed to localise timestamp")
+                        .to_rfc3339()
+                } else if local {
+                    Utc.from_local_datetime(&hit.timestamp)
+                        .single()
+                        .expect("failed to localise timestamp")
+                        .to_rfc3339()
+                } else {
+                    DateTime::<Utc>::from_utc(hit.timestamp, Utc).to_rfc3339()
+                };
+                hits.insert(id.clone(), hit);
+                scratch.push((localised, id, d));
+            }
+            scratch
+        })
+        .collect();
+    timestamps.sort_by(|x, y| x.0.cmp(&y.0));
+    // TODO: Dedupe, maybe just macro it...
+    if let Some(cache) = cache.as_ref() {
+        let mut f = BufReader::new(cache);
+        for (localised, id, d) in timestamps {
+            let hit = hits.get(&id).expect("could not get hit!");
+            let hunt = hunts.get(&hit.hunt).expect("could not get rule!");
+            let rule = rules.get(&hit.rule).expect("could not get rule!");
+            let det = match rule {
+                Rule::Chainsaw(c) => Detection {
+                    authors: &c.authors,
+                    group: &hunt.group,
+                    kind: &d.kind,
+                    level: &c.level,
+                    name: &c.name,
+                    source: RuleKind::Chainsaw,
+                    status: &c.status,
+                    timestamp: localised,
+
+                    sigma: None,
+                },
+                Rule::Sigma(s) => {
+                    let sigma = Sigma {
+                        falsepositives: &s.falsepositives,
+                        id: &s.id,
+                        logsource: &s.logsource,
+                        references: &s.references,
+                        tags: &s.tags,
+                    };
+                    Detection {
+                        authors: &s.authors,
+                        group: &hunt.group,
+                        kind: &d.kind,
+                        level: &s.level,
+                        name: &s.name,
+                        source: RuleKind::Sigma,
+                        status: &s.status,
+                        timestamp: localised,
+
+                        sigma: Some(sigma),
+                    }
+                }
+            };
+            match det.kind {
+                Kind::Cached {
+                    document,
+                    offset,
+                    size,
+                } => {
+                    let _ = f.seek(SeekFrom::Start(*offset as u64));
+                    let mut buf = vec![0u8; *size];
+                    f.read_exact(&mut buf).expect("could not read cached data");
+                    let data = String::from_utf8(buf).expect("could not convert cached data");
+                    let raw = RawValue::from_string(data).expect("could not serialize cached data");
+                    let kind = Kind::Cached {
+                        document: crate::hunt::RawDocument {
+                            kind: document.kind.clone(),
+                            path: document.path,
+                            data: Some(&*raw),
+                        },
+                        offset: *offset,
+                        size: *size,
+                    };
+
+                    cs_print_json!(&Detection {
+                        authors: det.authors,
+                        group: det.group,
+                        kind: &kind,
+                        level: det.level,
+                        name: det.name,
+                        source: det.source,
+                        status: det.status,
+                        timestamp: det.timestamp,
+                        sigma: det.sigma,
+                    })?;
+                }
+                _ => {
+                    cs_print_json!(&det)?;
+                }
+            }
+            cs_println!();
+        }
+    } else {
+        for (localised, id, d) in timestamps {
+            let hit = hits.get(&id).expect("could not get hit!");
+            let hunt = hunts.get(&hit.hunt).expect("could not get rule!");
+            let rule = rules.get(&hit.rule).expect("could not get rule!");
+            let det = match rule {
+                Rule::Chainsaw(c) => Detection {
+                    authors: &c.authors,
+                    group: &hunt.group,
+                    kind: &d.kind,
+                    level: &c.level,
+                    name: &c.name,
+                    source: RuleKind::Chainsaw,
+                    status: &c.status,
+                    timestamp: localised,
+
+                    sigma: None,
+                },
+                Rule::Sigma(s) => {
+                    let sigma = Sigma {
+                        falsepositives: &s.falsepositives,
+                        id: &s.id,
+                        logsource: &s.logsource,
+                        references: &s.references,
+                        tags: &s.tags,
+                    };
+                    Detection {
+                        authors: &s.authors,
+                        group: &hunt.group,
+                        kind: &d.kind,
+                        level: &s.level,
+                        name: &s.name,
+                        source: RuleKind::Sigma,
+                        status: &s.status,
+                        timestamp: localised,
+
+                        sigma: Some(sigma),
+                    }
+                }
+            };
+            cs_print_json!(&det)?;
+            cs_println!();
+        }
+    }
+    Ok(())
+}
 pub fn tau_to_json(tau: Tau) -> Json {
     match tau {
         Tau::Null => Json::Null,
