@@ -17,6 +17,7 @@ use serde::{
     Deserialize, Serialize,
 };
 use serde_json::{value::RawValue, Value as Json};
+use smallvec::SmallVec;
 use tau_engine::{
     core::parser::{Expression, ModSym, Pattern},
     Document as TauDocument, Value as Tau,
@@ -74,7 +75,7 @@ pub struct Hit {
 }
 
 pub struct Detections<'a> {
-    pub hits: Vec<Hit>,
+    pub hits: SmallVec<[Hit; 1]>,
     pub kind: Kind<'a>,
 }
 
@@ -750,7 +751,7 @@ impl Hunter {
                     File::Mft(mft) => (FileKind::Mft, mft.into()),
                     File::Xml(xml) => (FileKind::Xml, xml.into()),
                 };
-                let mut hits = vec![];
+                let mut hits = smallvec::smallvec![];
                 for hunt in &self.inner.hunts {
                     if hunt.file != kind {
                         continue;
@@ -993,7 +994,7 @@ impl Hunter {
                     }
                     timestamps.sort();
                     detections.push(Detections {
-                        hits: vec![Hit {
+                        hits: smallvec::smallvec![Hit {
                             hunt: hid,
                             rule: rid,
                             timestamp: timestamps

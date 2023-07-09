@@ -304,6 +304,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "smallvec",
  "tau-engine",
  "tempfile",
  "term_size",
