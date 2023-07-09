@@ -965,13 +965,11 @@ pub fn print_jsonl(
     cache: Option<fs::File>,
 ) -> crate::Result<()> {
     let hunts: HashMap<_, _> = hunts.iter().map(|h| (&h.id, h)).collect();
-    let mut hits: HashMap<_, _> = HashMap::new();
-    let mut timestamps: Vec<(_, _, _)> = detections
+    let mut hits: Vec<(_, _, _)> = detections
         .iter()
         .flat_map(|d| {
             let mut scratch = Vec::with_capacity(d.hits.len());
             for hit in &d.hits {
-                let id = Uuid::new_v4();
                 let localised = if let Some(timezone) = timezone {
                     timezone
                         .from_local_datetime(&hit.timestamp)
@@ -986,18 +984,16 @@ pub fn print_jsonl(
                 } else {
                     DateTime::<Utc>::from_utc(hit.timestamp, Utc).to_rfc3339()
                 };
-                hits.insert(id.clone(), hit);
-                scratch.push((localised, id, d));
+                scratch.push((localised, hit, d));
             }
             scratch
         })
         .collect();
-    timestamps.sort_by(|x, y| x.0.cmp(&y.0));
+    hits.sort_by(|x, y| x.0.cmp(&y.0));
     // TODO: Dedupe, maybe just macro it...
     if let Some(cache) = cache.as_ref() {
         let mut f = BufReader::new(cache);
-        for (localised, id, d) in timestamps {
-            let hit = hits.get(&id).expect("could not get hit!");
+        for (localised, hit, d) in hits {
             let hunt = hunts.get(&hit.hunt).expect("could not get rule!");
             let rule = rules.get(&hit.rule).expect("could not get rule!");
             let det = match rule {
@@ -1075,8 +1071,7 @@ pub fn print_jsonl(
             cs_println!();
         }
     } else {
-        for (localised, id, d) in timestamps {
-            let hit = hits.get(&id).expect("could not get hit!");
+        for (localised, hit, d) in hits {
             let hunt = hunts.get(&hit.hunt).expect("could not get rule!");
             let rule = rules.get(&hit.rule).expect("could not get rule!");
             let det = match rule {
