@@ -166,7 +166,12 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
     // NOTE: This is pinched from tau-engine as it is not exposed, we then slightly tweak it to
     // handle casting in a slightly different way :O
     // FIXME: The tau-engine is not able to cast string expressions, I need to fix this upstream :/
-    let identifier = value.to_owned().into_identifier()?;
+    let identifier = if let Some(v) = value.strip_prefix("!") {
+        not = true;
+        v.to_owned().into_identifier()?
+    } else {
+        value.to_owned().into_identifier()?
+    };
     let expression = match identifier.pattern {
         Pattern::Equal(i) => Expression::BooleanExpression(
             Box::new(field),
