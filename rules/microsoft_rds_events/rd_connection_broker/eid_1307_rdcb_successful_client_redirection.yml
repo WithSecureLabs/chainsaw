@@ -1,0 +1,35 @@
+---
+title: RD Connection Broker - Successfully redirected the user to the endpoint 
+group: Microsoft RDS Events - RD Connection Broker
+description: The RD Connection Broker successfully redirected the user to the endpoint
+date: 2023-07-03
+version: 1.0
+authors:
+  - Catarina de Faria
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to : Event.System.Channel
+  - name: Computer
+    to: Event.System.Computer
+  - name: Information
+    to: Event.UserData.EventXML
+
+filter:
+  condition: rdcb_success_client_redirect and session_broker_channel 
+
+  rdcb_success_client_redirect:
+    Event.System.EventID: 1307
+  session_broker_channel:
+    Event.System.Channel: Microsoft-Windows-TerminalServices-SessionBroker-Client/Operational
+
+

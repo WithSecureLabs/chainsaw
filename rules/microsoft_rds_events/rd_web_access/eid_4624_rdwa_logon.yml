@@ -1,0 +1,43 @@
+---
+title: RD Web Access - An account was successfully logged on
+group: Microsoft RDS Events - RD Web Access Successful Logon
+description: An account was successfully logged on at the RD Web Access server
+date: 2023-07-03
+version: 1.0
+authors:
+  - Catarina de Faria
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to : Event.System.Channel
+  - name: Computer
+    to: Event.System.Computer
+  - name: IpAddress
+    to: Event.EventData.IpAddress
+  - name: LogonType
+    to: Event.EventData.LogonType
+  - name: TargetUserName
+    to: Event.EventData.TargetUserName
+  - name: WorkstationName
+    to: Event.EventData.WorkstationName
+
+filter:
+  condition: successful_logon and security_channel and rd_web_access 
+
+  successful_logon:
+    Event.System.EventID: 4624
+  security_channel:
+    Event.System.Channel: Security
+  rd_web_access:
+    Event.EventData.SubjectUserName: RDWebAccess
+
+

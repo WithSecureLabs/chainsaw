@@ -1,0 +1,32 @@
+---
+title: RD Gateway - RD CAP requirements met
+group: Microsoft RDS Events - RD Gateway
+description: The Resource Authorization Policy requirements were met, the user was authorized to connect to the resource
+date: 2023-07-03
+version: 1.0
+authors: 
+  - Catarina de Faria
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to : Event.System.Channel
+  - name: Computer
+    to: Event.System.Computer
+  - name: Information
+    to: Event.UserData.EventInfo
+
+filter:
+  condition: rd_cap
+
+  rd_cap:
+      Event.System.EventID: 200
+      Event.System.Channel: Microsoft-Windows-TerminalServices-Gateway/Operational

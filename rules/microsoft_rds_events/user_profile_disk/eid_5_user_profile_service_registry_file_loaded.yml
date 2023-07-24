@@ -1,0 +1,33 @@
+---
+title: User Profile Disk - Registry file loaded
+group: Microsoft RDS Events - User Profile Disk
+description: User Profile Disk - Registry file loaded
+authors:
+  - Catarina de Faria
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to : Event.System.Channel
+  - name: Computer
+    to: Event.System.Computer
+  - name: Information
+    to: Event.EventData.File
+
+filter:
+  condition: upd_registry_file_loaded and upd_channel 
+
+  upd_registry_file_loaded:
+    Event.System.EventID: 5
+  upd_channel:
+    Event.System.Channel: Microsoft-Windows-User Profile Service/Operational
+
+
