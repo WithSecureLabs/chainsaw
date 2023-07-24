@@ -1,0 +1,32 @@
+---
+title: RDS - File Explorer shell start notification received
+group: RDP Events
+description: The Explorer shell has been successfully started (the Windows desktop appears in the user’s RDP session).
+authors:
+  - Catarina de Faria
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to : Event.System.Channel
+  - name: Computer
+    to: Event.System.Computer
+  - name: Information
+    to: Event.UserData.EventXML
+
+filter:
+  condition: desktop_appeared and not local
+
+  desktop_appeared:
+    Event.System.EventID: 22
+    Event.System.Channel: Microsoft-Windows-TerminalServices-LocalSessionManager/Operational
+  local:
+    Event.UserData.EventXML.Address: "LOCAL"
