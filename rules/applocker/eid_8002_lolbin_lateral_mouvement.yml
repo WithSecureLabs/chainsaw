@@ -1,0 +1,38 @@
+---
+title: AppLocker - LOLBin allowed (Lateral Mouvement)
+group: AppLocker Allowed
+description: AppLocker - LOLBin allowed to run (Lateral Mouvement)
+date: 2023-07-03
+version: 1.0
+authors:
+  - Catarina de Faria
+
+
+kind: evtx
+level: medium
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to : Event.System.Channel
+  - name: Computer
+    to: Event.System.Computer
+  - name: TargetUser
+    to: Event.UserData.RuleAndFileData.TargetUser
+  - name: FullFilePath
+    to: Event.UserData.RuleAndFileData.FullFilePath
+
+
+filter:
+  condition: applocker_exe_dll and lolbin
+
+  applocker_exe_dll:
+    Event.System.EventID: 8002
+    Event.System.Channel: Microsoft-Windows-AppLocker/EXE and DLL
+  lolbin:
+    Event.UserData.RuleAndFileData.FullFilePath:
+      - C:\Windows\System32\mstsc.exe

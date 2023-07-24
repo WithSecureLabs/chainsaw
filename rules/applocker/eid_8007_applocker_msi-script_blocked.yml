@@ -1,0 +1,35 @@
+---
+title: AppLocker - MSI/Script blocked
+group: AppLocker Blocked
+description: AppLocker - MSI/Script prevented from running
+date: 2023-07-03
+version: 1.0
+authors:
+  - Catarina de Faria
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to : Event.System.Channel
+  - name: Computer
+    to: Event.System.Computer
+  - name: TargetUser
+    to: Event.UserData.RuleAndFileData.TargetUser
+  - name: FullFilePath
+    to: Event.UserData.RuleAndFileData.FullFilePath
+    
+
+filter:
+  condition: applocker_msi_scripts_blocked
+
+  applocker_msi_scripts_blocked:
+    Event.System.EventID: 8007
+    Event.System.Channel: Microsoft-Windows-AppLocker/MSI and Script
