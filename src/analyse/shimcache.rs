@@ -220,7 +220,7 @@ impl ShimcacheAnalyzer {
             // Match shimcache and amcache file entries
             for file_entry in amcache.file_entries.into_iter() {
                 let file_entry = Rc::new(file_entry);
-                for mut entity in &mut timeline_entities {
+                for entity in &mut timeline_entities {
                     let shimcache_entry = if let Some(entry) = &entity.shimcache_entry {
                         entry
                     } else {
@@ -237,7 +237,7 @@ impl ShimcacheAnalyzer {
             // Match shimcache and amcache program entries
             for program_entry in amcache.program_entries.into_iter() {
                 let program_entry = Rc::new(program_entry);
-                for mut entity in &mut timeline_entities {
+                for entity in &mut timeline_entities {
                     let shimcache_entry = if let Some(entry) = &entity.shimcache_entry {
                         entry
                     } else {
@@ -263,7 +263,7 @@ impl ShimcacheAnalyzer {
                 const MAX_TIME_DIFFERENCE: i64 = 60 * 1000; // 1 min
                 let mut near_timestamps_count = 0;
                 let mut pattern_match_overlap_count = 0;
-                for mut entity in &mut timeline_entities {
+                for entity in &mut timeline_entities {
                     if let (Some(shimcache_entry), Some(amcache_entry)) =
                         (&entity.shimcache_entry, &entity.amcache_file)
                     {
@@ -302,7 +302,7 @@ impl ShimcacheAnalyzer {
 
             // Find amcache entries whose timestamp corresponds to entity ts range
             let mut ts_match_count = 0;
-            for mut entity in &mut timeline_entities {
+            for entity in &mut timeline_entities {
                 let shimcache_entry = if let Some(entry) = &entity.shimcache_entry {
                     entry
                 } else {

@@ -334,6 +334,7 @@ impl HunterBuilder {
                 let x = (i / 255) as u8;
                 let y = (i % 255) as u8;
                 let mut bytes = Vec::with_capacity(x as usize + 1);
+                #[allow(clippy::same_item_push)]
                 for _ in 0..x {
                     bytes.push(255);
                 }
@@ -354,7 +355,7 @@ impl HunterBuilder {
                             mut aggregate,
                             mut filter,
                         } => {
-                            if let Some(mut a) = aggregate.as_mut() {
+                            if let Some(a) = aggregate.as_mut() {
                                 a.fields = a
                                     .fields
                                     .iter()
@@ -397,7 +398,7 @@ impl HunterBuilder {
                 .map(|(i, r)| {
                     let r = match r {
                         Rule::Chainsaw(mut c) => {
-                            if let Some(mut a) = c.aggregate.as_mut() {
+                            if let Some(a) = c.aggregate.as_mut() {
                                 a.fields = a
                                     .fields
                                     .iter()
@@ -418,7 +419,7 @@ impl HunterBuilder {
                             Rule::Chainsaw(c)
                         }
                         Rule::Sigma(mut s) => {
-                            if let Some(mut a) = s.aggregate.as_mut() {
+                            if let Some(a) = s.aggregate.as_mut() {
                                 a.fields = a
                                     .fields
                                     .iter()
@@ -720,8 +721,10 @@ impl Hunter {
     ) -> crate::Result<Vec<Detections>> {
         let mut reader = Reader::load(file, self.inner.load_unknown, self.inner.skip_errors)?;
         let kind = reader.kind();
-        let aggregates: Mutex<FxHashMap<(Uuid, Uuid), (&Aggregate, FxHashMap<u64, Vec<Uuid>>)>> =
-            Mutex::new(FxHashMap::default());
+        #[allow(clippy::type_complexity)]
+        let aggregates: Mutex<
+            FxHashMap<(Uuid, Uuid), (&Aggregate, FxHashMap<u64, Vec<Uuid>>)>,
+        > = Mutex::new(FxHashMap::default());
         let files: Mutex<FxHashMap<Uuid, (Value, NaiveDateTime)>> =
             Mutex::new(FxHashMap::default());
         let offset = Mutex::new(0);

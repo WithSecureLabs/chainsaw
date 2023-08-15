@@ -230,6 +230,7 @@ pub fn print_log(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn print_detections(
     detections: &[Detections],
     hunts: &[Hunt],
