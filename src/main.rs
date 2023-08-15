@@ -1,6 +1,5 @@
 #[macro_use]
 extern crate chainsaw;
-extern crate term_size;
 
 use std::fs::{self, File};
 use std::io::BufRead;
@@ -300,9 +299,9 @@ fn print_title() {
 }
 
 fn resolve_col_width() -> Option<u32> {
-    // Get windows size and return a rough mapping for sutiable col width
-    match term_size::dimensions() {
-        Some((w, _h)) => match w {
+    use terminal_size::{terminal_size, Width};
+    if let Some((Width(w), _)) = terminal_size() {
+        match w {
             50..=120 => Some(20),
             121..=239 => Some(30),
             240..=340 => Some(50),
@@ -310,8 +309,9 @@ fn resolve_col_width() -> Option<u32> {
             431..=550 => Some(130),
             551.. => Some(160),
             _ => None,
-        },
-        None => None,
+        }
+    } else {
+        None
     }
 }
 

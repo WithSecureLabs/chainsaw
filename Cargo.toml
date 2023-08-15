@@ -36,7 +36,7 @@ serde_yaml = "0.9"
 smallvec = "1.11"
 tau-engine = { version = "1.0", features = ["core", "json", "sync"] }
 tempfile = "3.2"
-term_size = "0.3"
+terminal_size = "0.2"
 uuid = { version = "1.1", features = ["serde", "v4"] }
 
 
