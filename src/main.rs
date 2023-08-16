@@ -415,7 +415,7 @@ fn run() -> Result<()> {
                     cs_print_json_pretty!(&value)?;
                 } else if jsonl {
                     cs_print_json!(&value)?;
-                    println!();
+                    cs_println!();
                 } else {
                     cs_println!("---");
                     cs_print_yaml!(&value)?;
@@ -743,7 +743,7 @@ fn run() -> Result<()> {
                                         continue;
                                     }
                                 };
-                                println!("{}", yaml);
+                                cs_println!("{}", yaml);
                             }
                         }
                     }
@@ -900,7 +900,7 @@ fn run() -> Result<()> {
                         cs_print_json!(&hit)?;
                     } else if jsonl {
                         cs_print_json!(&hit)?;
-                        println!();
+                        cs_println!();
                     } else {
                         cs_println!("---");
                         cs_print_yaml!(&hit)?;
