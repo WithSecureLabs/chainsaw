@@ -23,7 +23,7 @@ evtx = "0.8"
 indicatif = "0.17"
 lazy_static = "1.4.0"
 mft = "0.6"
-notatin = { git = "https://github.com/strozfriedberg/notatin", tag = "v1.0.0" }
+notatin = "1.0"
 once_cell = "1.0"
 prettytable-rs = "0.10"
 quick-xml = { version = "0.30", features = ["serialize"] }

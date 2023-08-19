@@ -1128,8 +1128,9 @@ checksum = "61807f77802ff30975e01f4f071c8ba10c022052f98b3294119f3e615d13e5be"
 
 [[package]]
 name = "notatin"
-version = "1.0.0"
-source = "git+https://github.com/strozfriedberg/notatin?tag=v1.0.0#f07fddb498d5dfc8a61e1988ced0a28a2c8f253c"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "394a6bb8a521ac6140cf95b0a3b1c9a35c3ebccde7a0b13b7a3deb7039220024"
 dependencies = [
  "bitflags 2.4.0",
  "blake3",
