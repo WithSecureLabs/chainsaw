@@ -1,0 +1,37 @@
+---
+title: Microsoft Remote Access VPN - Server - User logon
+group: Microsoft Remote Access VPN
+description: Microsoft Remote Access VPN - Server - User logon successful EID 20250 followed by EID 20274
+authors: 
+  - Théo Letailleur
+  - Synacktiv
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to: Event.System.Channel
+  - name: Provider
+    to: Event.System.Provider
+  - name: Computer
+    to: Event.System.Computer
+  - name: Data
+    to: Event.EventData.Data
+
+filter:
+  condition: auth_success or ip_user_connected
+
+  auth_success:
+      Event.System.EventID: 20250
+      Event.System.Channel: System
+      Event.System.Provider: RemoteAccess
+  ip_user_connected:
+      Event.System.EventID: 20274
+      Event.System.Channel: System
+      Event.System.Provider: RemoteAccess

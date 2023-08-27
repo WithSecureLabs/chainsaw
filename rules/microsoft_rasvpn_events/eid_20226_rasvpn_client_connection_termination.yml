@@ -1,0 +1,33 @@
+---
+title: Microsoft Remote Access VPN - Client - Connection termination
+group: Microsoft Remote Access VPN
+description: Microsoft Remote Access VPN - Client - Connection termination. EID 20226
+authors: 
+  - Théo Letailleur
+  - Synacktiv
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to: Event.System.Channel
+  - name: Provider
+    to: Event.System.Provider
+  - name: Computer
+    to: Event.System.Computer
+  - name: Data
+    to: Event.EventData.Data
+
+filter:
+  condition: rasconnection_terminated
+
+  rasconnection_terminated:
+      Event.System.EventID: 20226
+      Event.System.Channel: Application
+      Event.System.Provider: RasClient
