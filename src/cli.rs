@@ -8,6 +8,7 @@ use chrono::{DateTime, NaiveDateTime, SecondsFormat, TimeZone, Utc};
 use chrono_tz::Tz;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use prettytable::{cell, format, Row, Table};
+use rustc_hash::FxHashMap;
 use serde::Serialize;
 use serde_json::{value::RawValue, Map, Number, Value as Json};
 use tau_engine::{Document, Value as Tau};
@@ -114,6 +115,86 @@ pub struct Hit<'a> {
     rule: &'a Rule,
 }
 
+// HACK: Don't do this at home... its mega slow, but due to prior abstractions and optimisations, this
+// is the only way to consolidate aggregates for now
+fn agg_to_doc<'a>(
+    hunts: &[&Hunt],
+    documents: &[crate::hunt::Document<'a>],
+) -> crate::Result<crate::hunt::Document<'a>> {
+    let mut scratch: HashMap<String, HashSet<String>> = HashMap::default();
+    for hunt in hunts {
+        let fields = hunt.mapper.fields();
+        for document in documents {
+            let data: Value;
+            let wrapper;
+            let mapped = match &document.kind {
+                FileKind::Evtx => {
+                    data = bincode::deserialize::<Value>(&document.data)?;
+                    wrapper = crate::evtx::Wrapper(&data);
+                    hunt.mapper.mapped(&wrapper)
+                }
+                FileKind::Hve
+                | FileKind::Json
+                | FileKind::Jsonl
+                | FileKind::Mft
+                | FileKind::Xml => {
+                    data = bincode::deserialize::<Value>(&document.data)?;
+                    hunt.mapper.mapped(&data)
+                }
+                FileKind::Unknown => continue,
+            };
+            for field in fields {
+                if field.visible {
+                    if let Some(value) = mapped.find(&field.from) {
+                        let entry = scratch
+                            .entry(field.from.clone())
+                            .or_insert(HashSet::with_capacity(documents.len()));
+                        match value.to_string() {
+                            Some(v) => {
+                                entry.insert(v);
+                            }
+                            None => {
+                                entry.insert("<see raw event>".to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let first = documents.first().expect("missing document");
+    let mut doc: FxHashMap<String, Value> = FxHashMap::default();
+    for (k, v) in scratch {
+        let mut v = v.iter().cloned().collect::<Vec<_>>();
+        v.sort();
+        // NOTE: Lazy way of re-nesting object...
+        let mut parts = k.split('.').peekable();
+        let mut entry = doc
+            .entry(parts.next().expect("missing key").to_owned())
+            .or_insert(Value::Object(FxHashMap::default()));
+        while let Some(part) = parts.next() {
+            if let Value::Object(o) = entry {
+                if parts.peek().is_none() {
+                    o.insert(part.to_owned(), Value::String(v.join(", ")));
+                    break;
+                } else {
+                    entry = o
+                        .entry(part.to_owned())
+                        .or_insert(Value::Object(FxHashMap::default()));
+                }
+            } else {
+                break;
+            }
+        }
+    }
+    Ok(crate::hunt::Document {
+        kind: first.kind.clone(),
+        path: first.path.clone(),
+        data: bincode::serialize(&Value::Object(doc))
+            .expect("could not serialise collated documents"),
+    })
+}
+
 pub fn print_log(
     detections: &[Detections],
     hunts: &[Hunt],
@@ -158,6 +239,7 @@ pub fn print_log(
         };
         columns.push(localised.to_string());
 
+        let agg;
         let count;
         let document = match kind {
             Kind::Individual { document } => {
@@ -166,7 +248,8 @@ pub fn print_log(
             }
             Kind::Aggregate { documents } => {
                 count = documents.len();
-                documents.first().expect("could not get document")
+                agg = agg_to_doc(&[hunt], documents)?;
+                &agg
             }
             _ => unimplemented!(),
         };
@@ -181,8 +264,6 @@ pub fn print_log(
                 &rule.name
             }
         };
-        //columns.push(format!("{: <width$}", name, width = rule_width - 1));
-        //columns.push(format!("{: >6}", count));
         columns.push(name.to_string());
         columns.push(format!("{}", count));
 
@@ -344,8 +425,7 @@ pub fn print_detections(
 
                 localised = format_time(localised);
 
-                // NOTE: Currently we don't do any fancy outputting for aggregates so we can cut some
-                // corners here!
+                let agg;
                 let count;
                 let document = match grouping.kind {
                     Kind::Individual { document } => {
@@ -354,7 +434,9 @@ pub fn print_detections(
                     }
                     Kind::Aggregate { documents } => {
                         count = documents.len();
-                        documents.first().expect("could not get document")
+                        let hunts = grouping.hits.iter().map(|h| h.hunt).collect::<Vec<_>>();
+                        agg = agg_to_doc(&hunts, documents).expect("could not collate aggregates");
+                        &agg
                     }
                     _ => unimplemented!(),
                 };
@@ -746,8 +828,7 @@ pub fn print_csv(
                     DateTime::<Utc>::from_utc(*grouping.timestamp, Utc).to_rfc3339()
                 };
 
-                // NOTE: Currently we don't do any fancy outputting for aggregates so we can cut some
-                // corners here!
+                let agg;
                 let count;
                 let document = match grouping.kind {
                     Kind::Individual { document } => {
@@ -756,7 +837,9 @@ pub fn print_csv(
                     }
                     Kind::Aggregate { documents } => {
                         count = documents.len();
-                        documents.first().expect("could not get document")
+                        let hunts = grouping.hits.iter().map(|h| h.hunt).collect::<Vec<_>>();
+                        agg = agg_to_doc(&hunts, documents)?;
+                        &agg
                     }
                     _ => unimplemented!(),
                 };
