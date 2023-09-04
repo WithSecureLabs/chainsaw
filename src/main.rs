@@ -507,17 +507,17 @@ fn run() -> Result<()> {
             let kinds: Option<HashSet<RuleKind>> = if kind.is_empty() {
                 None
             } else {
-                Some(HashSet::from_iter(kind.into_iter()))
+                Some(HashSet::from_iter(kind))
             };
             let levels: Option<HashSet<RuleLevel>> = if level.is_empty() {
                 None
             } else {
-                Some(HashSet::from_iter(level.into_iter()))
+                Some(HashSet::from_iter(level))
             };
             let statuses: Option<HashSet<RuleStatus>> = if status.is_empty() {
                 None
             } else {
-                Some(HashSet::from_iter(status.into_iter()))
+                Some(HashSet::from_iter(status))
             };
             let mut failed = 0;
             let mut count = 0;
