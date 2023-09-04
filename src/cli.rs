@@ -268,37 +268,29 @@ pub fn print_log(
         columns.push(format!("{}", count));
 
         let mut values = vec![];
+        let data: Value;
+        let wrapper;
+        let mapped = match &document.kind {
+            FileKind::Evtx => {
+                data = bincode::deserialize::<Value>(&document.data)?;
+                wrapper = crate::evtx::Wrapper(&data);
+                hunt.mapper.mapped(&wrapper)
+            }
+            FileKind::Hve | FileKind::Json | FileKind::Jsonl | FileKind::Mft | FileKind::Xml => {
+                data = bincode::deserialize::<Value>(&document.data)?;
+                hunt.mapper.mapped(&data)
+            }
+            FileKind::Unknown => continue,
+        };
         for field in hunt.mapper.fields() {
             if field.visible {
-                let data: Value;
-                let wrapper;
-                let mapped = match &document.kind {
-                    FileKind::Evtx => {
-                        data = bincode::deserialize::<Value>(&document.data)?;
-                        wrapper = crate::evtx::Wrapper(&data);
-                        hunt.mapper.mapped(&wrapper)
-                    }
-                    FileKind::Hve
-                    | FileKind::Json
-                    | FileKind::Jsonl
-                    | FileKind::Mft
-                    | FileKind::Xml => {
-                        data = bincode::deserialize::<Value>(&document.data)?;
-                        hunt.mapper.mapped(&data)
-                    }
-                    FileKind::Unknown => continue,
-                };
-                let fields: HashMap<_, _> =
-                    hunt.mapper.fields().iter().map(|f| (&f.name, f)).collect();
-                if let Some(field) = fields.get(&field.name) {
-                    if let Some(value) = mapped.find(&field.from) {
-                        match value.to_string() {
-                            Some(v) => {
-                                values.push(v);
-                            }
-                            None => {
-                                values.push("<see raw event>".to_string());
-                            }
+                if let Some(value) = mapped.find(&field.from) {
+                    match value.to_string() {
+                        Some(v) => {
+                            values.push(v);
+                        }
+                        None => {
+                            values.push("<see raw event>".to_string());
                         }
                     }
                 }
