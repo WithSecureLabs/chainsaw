@@ -243,10 +243,18 @@ jobs:
       - name: Create ZIP File
         run: zip -r chainsaw_all_platforms+rules+examples.zip chainsaw/
 
+      - name: Remove Samples
+        run: rm -rf chainsaw/EVTX-ATTACK-SAMPLES/
+          
+      - name: Create ZIP File
+        run: zip -r chainsaw_all_platforms+rules.zip chainsaw/
+
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: chainsaw_all_platforms+rules+examples.zip
+          files: |
+            chainsaw_all_platforms+rules.zip 
+            chainsaw_all_platforms+rules+examples.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
