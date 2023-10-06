@@ -15,7 +15,8 @@ use clap::{Parser, Subcommand};
 
 use chainsaw::{
     cli, get_files, lint as lint_rule, load as load_rule, set_writer, Document, Filter, Format,
-    Hunter, Reader, RuleKind, RuleLevel, RuleStatus, Searcher, ShimcacheAnalyzer, Writer,
+    Hunter, Reader, RuleKind, RuleLevel, RuleStatus, Searcher, ShimcacheAnalyser, SrumAnalyser,
+    Writer,
 };
 
 #[derive(Parser)]
@@ -248,7 +249,7 @@ enum Command {
         to: Option<NaiveDateTime>,
     },
 
-    /// Perform various analyses on artifacts
+    /// Perform various analyses on artefacts
     Analyse {
         #[command(subcommand)]
         cmd: AnalyseCommand,
@@ -259,7 +260,7 @@ enum Command {
 enum AnalyseCommand {
     /// Create an execution timeline from the shimcache with optional amcache enrichments
     Shimcache {
-        /// The path to the shimcache artifact (SYSTEM registry file)
+        /// The path to the shimcache artefact (SYSTEM registry file)
         shimcache: PathBuf,
         /// A string or regular expression for detecting shimcache entries whose timestamp matches their insertion time
         #[arg(
@@ -275,12 +276,23 @@ enum AnalyseCommand {
         /// The path to output the result csv file
         #[arg(short = 'o', long = "output")]
         output: Option<PathBuf>,
-        /// The path to the amcache artifact (Amcache.hve) for timeline enrichment
+        /// The path to the amcache artefact (Amcache.hve) for timeline enrichment
         #[arg(short = 'a', long = "amcache")]
         amcache: Option<PathBuf>,
         /// Enable near timestamp pair detection between shimcache and amcache for finding additional insertion timestamps for shimcache entries
         #[arg(short = 'p', long = "tspair", requires = "amcache")]
         ts_near_pair_matching: bool,
+    },
+    /// Analyse the SRUM database
+    Srum {
+        /// The path to the SRUM database
+        srum_path: PathBuf,
+        /// The path to the SOFTWARE hive
+        #[arg(short = 's', long = "software")]
+        software_hive_path: PathBuf,
+        /// Save the output to a json file
+        #[arg(short = 'o', long = "output")]
+        output: Option<PathBuf>,
     },
 }
 
@@ -293,7 +305,7 @@ fn print_title() {
 ██║     ██╔══██║██╔══██║██║██║╚██╗██║╚════██║██╔══██║██║███╗██║
 ╚██████╗██║  ██║██║  ██║██║██║ ╚████║███████║██║  ██║╚███╔███╔╝
  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝
-    By Countercept (@FranticTyping, @AlexKornitzer)
+    By WithSecure Countercept (@FranticTyping, @AlexKornitzer)
 "
     );
 }
@@ -404,7 +416,8 @@ fn run() -> Result<()> {
                     Document::Hve(json)
                     | Document::Json(json)
                     | Document::Xml(json)
-                    | Document::Mft(json) => json,
+                    | Document::Mft(json)
+                    | Document::Esedb(json) => json,
                 };
                 if json {
                     if first {
@@ -927,7 +940,7 @@ fn run() -> Result<()> {
                         print_title();
                     }
                     init_writer(output.clone(), true, false, false)?;
-                    let shimcache_analyzer = ShimcacheAnalyzer::new(shimcache, amcache);
+                    let shimcache_analyser = ShimcacheAnalyser::new(shimcache, amcache);
 
                     // Load regex
                     let mut regex_patterns: Vec<String> = Vec::new();
@@ -938,7 +951,7 @@ fn run() -> Result<()> {
                         cs_eprintln!(
                             "[+] Regex file with {} pattern(s) loaded from {:?}",
                             file_regex_patterns.len(),
-                            fs::canonicalize(&regex_file).expect("cloud not get absolute path")
+                            fs::canonicalize(&regex_file).expect("could not get absolute path")
                         );
                         regex_patterns.append(&mut file_regex_patterns);
                     }
@@ -947,7 +960,7 @@ fn run() -> Result<()> {
                     }
 
                     // Do analysis
-                    let timeline = shimcache_analyzer
+                    let timeline = shimcache_analyser
                         .amcache_shimcache_timeline(&regex_patterns, ts_near_pair_matching)?;
                     cli::print_shimcache_analysis_csv(&timeline)?;
 
@@ -957,6 +970,36 @@ fn run() -> Result<()> {
                             std::fs::canonicalize(output_path)
                                 .expect("could not get absolute path")
                         );
+                    }
+                }
+                AnalyseCommand::Srum {
+                    srum_path,
+                    software_hive_path,
+                    output,
+                } => {
+                    if !args.no_banner {
+                        print_title();
+                    }
+                    init_writer(output.clone(), false, true, false)?;
+                    let srum_analyser = SrumAnalyser::new(srum_path, software_hive_path);
+                    match srum_analyser.parse_srum_database() {
+                        Ok(json) => {
+                            cs_eprintln!("[+] SRUM database parsed successfully");
+                            if let Some(output_path) = output {
+                                cs_eprintln!(
+                                    "[+] Saving output to {:?}",
+                                    std::fs::canonicalize(&output_path)
+                                        .expect("could not get absolute path")
+                                );
+                                cs_print_json!(&json)?;
+                                cs_eprintln!(
+                                    "[+] Saved output to {:?}",
+                                    std::fs::canonicalize(&output_path)
+                                        .expect("could not get absolute path")
+                                );
+                            }
+                        }
+                        Err(err) => cs_eredln!("[!] Error parsing SRUM database: {:?}", err),
                     }
                 }
             }

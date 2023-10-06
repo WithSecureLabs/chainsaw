@@ -3,7 +3,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use chrono::NaiveDateTime;
 use notatin::{
     parser::{Parser as HveParser, ParserIterator},
     parser_builder::ParserBuilder,
@@ -12,6 +11,7 @@ use serde_json::Value as Json;
 
 pub mod amcache;
 pub mod shimcache;
+pub mod srum;
 
 pub type Hve = Json;
 
@@ -27,8 +27,7 @@ impl Parser {
             .parent()
             .ok_or(anyhow!("Could not get registry hive parent directory!"))?;
         let hive_file_name = path.file_name();
-        let parent_dir_files = fs::read_dir(parent_dir)?
-            .collect::<Result<Vec<_>, _>>()?;
+        let parent_dir_files = fs::read_dir(parent_dir)?.collect::<Result<Vec<_>, _>>()?;
         for dir_entry in parent_dir_files {
             let path = dir_entry.path();
             if path.file_stem() == hive_file_name {
@@ -43,9 +42,18 @@ impl Parser {
 
         // Build parser
         let mut parser_builder = ParserBuilder::from_path(PathBuf::from(path));
-        parser_builder.recover_deleted(true);
-        for log_file in transaction_log_files {
-            parser_builder.with_transaction_log(log_file);
+
+        if transaction_log_files.is_empty() {
+            parser_builder.recover_deleted(false);
+        } else {
+            parser_builder.recover_deleted(true);
+            cs_eprintln!(
+                "[+] Loading the hive {:?} with the transaction logs...",
+                fs::canonicalize(path).expect("could not get the absolute path")
+            );
+            for log_file in transaction_log_files {
+                parser_builder.with_transaction_log(log_file);
+            }
         }
 
         let parser = match parser_builder.build() {
@@ -72,9 +80,4 @@ impl Parser {
                 Err(e) => bail!(e),
             })
     }
-}
-
-fn win32_ts_to_datetime(ts_win32: u64) -> crate::Result<NaiveDateTime> {
-    let ts_unix = (ts_win32 / 10_000) as i64 - 11644473600000;
-    NaiveDateTime::from_timestamp_millis(ts_unix).ok_or(anyhow!("Timestamp out of range!"))
 }

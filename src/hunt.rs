@@ -248,6 +248,7 @@ impl HunterBuilder {
                         FileKind::Jsonl => FileKind::Json,
                         FileKind::Mft => FileKind::Mft,
                         FileKind::Xml => FileKind::Xml,
+                        FileKind::Esedb => FileKind::Esedb,
                         FileKind::Unknown => unreachable!(),
                     };
                     hunts.push(Hunt {
@@ -753,6 +754,7 @@ impl Hunter {
                     File::Json(json) => (FileKind::Json, json.into()),
                     File::Mft(mft) => (FileKind::Mft, mft.into()),
                     File::Xml(xml) => (FileKind::Xml, xml.into()),
+                    File::Esedb(esedb) => (FileKind::Esedb, esedb.into()),
                 };
                 let mut hits = smallvec::smallvec![];
                 for hunt in &self.inner.hunts {

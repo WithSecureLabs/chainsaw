@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use regex::Regex;
 
 use crate::file::hve::{
-    amcache::{AmcacheArtifact, FileEntry, ProgramEntry},
+    amcache::{AmcacheArtefact, FileEntry, ProgramEntry},
     shimcache::{EntryType, ShimcacheEntry},
     Parser as HveParser,
 };
@@ -47,12 +47,12 @@ impl TimelineEntity {
     }
 }
 
-pub struct ShimcacheAnalyzer {
+pub struct ShimcacheAnalyser {
     amcache_path: Option<PathBuf>,
     shimcache_path: PathBuf,
 }
 
-impl ShimcacheAnalyzer {
+impl ShimcacheAnalyser {
     pub fn new(shimcache_path: PathBuf, amcache_path: Option<PathBuf>) -> Self {
         Self {
             amcache_path,
@@ -83,7 +83,7 @@ impl ShimcacheAnalyzer {
         );
 
         // Load amcache
-        let amcache: Option<AmcacheArtifact> = if let Some(amcache_path) = &self.amcache_path {
+        let amcache: Option<AmcacheArtefact> = if let Some(amcache_path) = &self.amcache_path {
             let mut amcache_parser = HveParser::load(amcache_path)?;
             cs_eprintln!(
                 "[+] Amcache hive file loaded from {:?}",

@@ -2,14 +2,19 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
+use chrono::NaiveDateTime;
+
+use self::esedb::{Esedb, Parser as EsedbParser};
 use self::evtx::{Evtx, Parser as EvtxParser};
 use self::hve::{Hve, Parser as HveParser};
 use self::json::{lines::Parser as JsonlParser, Json, Parser as JsonParser};
 use self::mft::{Mft, Parser as MftParser};
 use self::xml::{Parser as XmlParser, Xml};
 
+pub mod esedb;
 pub mod evtx;
 pub mod hve;
 pub mod json;
@@ -23,6 +28,7 @@ pub enum Document {
     Json(Json),
     Mft(Mft),
     Xml(Xml),
+    Esedb(Esedb),
 }
 
 pub struct Documents<'a> {
@@ -38,6 +44,7 @@ pub enum Kind {
     Jsonl,
     Mft,
     Xml,
+    Esedb,
     Unknown,
 }
 
@@ -50,6 +57,7 @@ impl Kind {
             Kind::Jsonl => Some(vec!["jsonl".to_string()]),
             Kind::Mft => Some(vec!["mft".to_string(), "bin".to_string()]),
             Kind::Xml => Some(vec!["xml".to_string()]),
+            Kind::Esedb => Some(vec!["dat".to_string(), "edb".to_string()]),
             Kind::Unknown => None,
         }
     }
@@ -79,6 +87,7 @@ pub enum Parser {
     Jsonl(JsonlParser),
     Mft(MftParser),
     Xml(XmlParser),
+    Esedb(EsedbParser),
     Unknown,
 }
 
@@ -224,6 +233,28 @@ impl Reader {
                         parser: Parser::Hve(parser),
                     })
                 }
+                "dat" | "edb" => {
+                    let parser = match EsedbParser::load(file) {
+                        Ok(parser) => parser,
+                        Err(e) => {
+                            if skip_errors {
+                                cs_eyellowln!(
+                                    "[!] failed to load file '{}' - {}\n",
+                                    file.display(),
+                                    e
+                                );
+                                return Ok(Self {
+                                    parser: Parser::Unknown,
+                                });
+                            } else {
+                                anyhow::bail!(e);
+                            }
+                        }
+                    };
+                    Ok(Self {
+                        parser: Parser::Esedb(parser),
+                    })
+                }
                 _ => {
                     if load_unknown {
                         if let Ok(parser) = EvtxParser::load(file) {
@@ -241,6 +272,14 @@ impl Reader {
                         } else if let Ok(parser) = XmlParser::load(file) {
                             return Ok(Self {
                                 parser: Parser::Xml(parser),
+                            });
+                        } else if let Ok(parser) = HveParser::load(file) {
+                            return Ok(Self {
+                                parser: Parser::Hve(parser),
+                            });
+                        } else if let Ok(parser) = EsedbParser::load(file) {
+                            return Ok(Self {
+                                parser: Parser::Esedb(parser),
                             });
                         }
                         if skip_errors {
@@ -286,6 +325,10 @@ impl Reader {
                         return Ok(Self {
                             parser: Parser::Hve(parser),
                         });
+                    } else if let Ok(parser) = EsedbParser::load(file) {
+                        return Ok(Self {
+                            parser: Parser::Esedb(parser),
+                        });
                     }
                     // NOTE: We don't support the JSONL parser as it is too generic, maybe we are
                     // happy to use it as the fallback...?
@@ -327,6 +370,18 @@ impl Reader {
                 as Box<dyn Iterator<Item = crate::Result<Document>> + Send + Sync + 'a>,
             Parser::Xml(parser) => Box::new(parser.parse().map(|r| r.map(Document::Xml)))
                 as Box<dyn Iterator<Item = crate::Result<Document>> + Send + Sync + 'a>,
+            Parser::Esedb(parser) => Box::new(
+                parser
+                    .parse()
+                    .map(|r| {
+                        r.and_then(|v| {
+                            serde_json::to_value(v)
+                                .with_context(|| "Unexpected JSON serialization error")
+                        })
+                    })
+                    .map(|r| r.map(Document::Esedb)),
+            )
+                as Box<dyn Iterator<Item = crate::Result<Document>> + Send + Sync + 'a>,
             Parser::Unknown => Box::new(Unknown)
                 as Box<dyn Iterator<Item = crate::Result<Document>> + Send + Sync + 'a>,
         };
@@ -341,6 +396,7 @@ impl Reader {
             Parser::Jsonl(_) => Kind::Jsonl,
             Parser::Mft(_) => Kind::Mft,
             Parser::Xml(_) => Kind::Xml,
+            Parser::Esedb(_) => Kind::Esedb,
             Parser::Unknown => Kind::Unknown,
         }
     }
@@ -405,4 +461,9 @@ pub fn get_files(
         anyhow::bail!("Specified event log path is invalid - {}", path.display());
     }
     Ok(files)
+}
+
+pub fn win32_ts_to_datetime(ts_win32: u64) -> crate::Result<NaiveDateTime> {
+    let ts_unix = (ts_win32 / 10_000) as i64 - 11644473600000;
+    NaiveDateTime::from_timestamp_millis(ts_unix).ok_or(anyhow!("Timestamp out of range!"))
 }

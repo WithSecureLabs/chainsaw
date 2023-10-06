@@ -2,7 +2,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use notatin::cell_key_node::CellKeyNode;
 use serde::Serialize;
 
-use crate::file::hve::win32_ts_to_datetime;
+use crate::file::win32_ts_to_datetime;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct FileEntry {
@@ -28,14 +28,14 @@ pub struct ProgramEntry {
 }
 
 #[derive(Debug)]
-pub struct AmcacheArtifact {
+pub struct AmcacheArtefact {
     pub is_new_format: bool,
     pub file_entries: Vec<FileEntry>,
     pub program_entries: Vec<ProgramEntry>,
 }
 
 impl super::Parser {
-    pub fn parse_amcache(&mut self) -> crate::Result<AmcacheArtifact> {
+    pub fn parse_amcache(&mut self) -> crate::Result<AmcacheArtefact> {
         /// A helper function for getting string values from registry keys
         fn string_value_from_key(
             key: &CellKeyNode,
@@ -132,16 +132,14 @@ impl super::Parser {
                 };
 
                 // FileId is the SHA-1 hash of the file with "0000" prepended. Discard prefix
-                let sha1_hash = file_id
-                    .as_ref()
-                    .and_then(|id| {
-                        if id.len() == 44 && &id[..4] == "0000" {
-                            Some(String::from(&id[4..]))
-                        } else {
-                            // In case unexpected value
-                            None
-                        }
-                    });
+                let sha1_hash = file_id.as_ref().and_then(|id| {
+                    if id.len() == 44 && &id[..4] == "0000" {
+                        Some(String::from(&id[4..]))
+                    } else {
+                        // In case unexpected value
+                        None
+                    }
+                });
 
                 let key_last_modified_ts = key.last_key_written_date_and_time();
                 let file_entry = FileEntry {
@@ -253,16 +251,14 @@ impl super::Parser {
                     };
 
                     // FileId is the SHA-1 hash of the file with "0000" prepended. Discard prefix
-                    let sha1_hash = file_id
-                        .as_ref()
-                        .and_then(|id| {
-                            if id.len() == 44 && &id[..4] == "0000" {
-                                Some(String::from(&id[4..]))
-                            } else {
-                                // In case unexpected value
-                                None
-                            }
-                        });
+                    let sha1_hash = file_id.as_ref().and_then(|id| {
+                        if id.len() == 44 && &id[..4] == "0000" {
+                            Some(String::from(&id[4..]))
+                        } else {
+                            // In case unexpected value
+                            None
+                        }
+                    });
 
                     let key_last_modified_ts = key_file.last_key_written_date_and_time();
                     let file_entry = FileEntry {
@@ -279,7 +275,7 @@ impl super::Parser {
             }
         }
 
-        Ok(AmcacheArtifact {
+        Ok(AmcacheArtefact {
             file_entries,
             program_entries,
             is_new_format,
