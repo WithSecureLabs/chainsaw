@@ -1,7 +1,7 @@
 [package]
 name = "chainsaw"
 version = "2.7.3"
-repository = "https://github.com/countercept/chainsaw"
+repository = "https://github.com/WithSecureLabs/chainsaw"
 description = "Rapidly Search and Hunt Through Windows Forensic Artefacts"
 authors = ["James Dorgan <james@dorgan.io>","Alex Kornitzer <alex.kornitzer@withsecure.com>"]
 readme = "README.md"
@@ -20,8 +20,10 @@ chrono-tz = { version = "0.8", features = ["serde"] }
 clap = { version = "4.0", features = ["derive"] }
 crossterm = "0.27"
 evtx = "0.8"
+hex = "0.4.3"
 indicatif = "0.17"
 lazy_static = "1.4.0"
+libesedb = "0.2.4"
 mft = "0.6"
 notatin = "1.0"
 once_cell = "1.0"

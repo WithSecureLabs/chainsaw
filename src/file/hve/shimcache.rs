@@ -109,7 +109,7 @@ impl std::fmt::Display for ShimcacheVersion {
 }
 
 #[derive(Debug)]
-pub struct ShimcacheArtifact {
+pub struct ShimcacheArtefact {
     pub entries: Vec<ShimcacheEntry>,
     pub last_update_ts: DateTime<Utc>,
     pub version: ShimcacheVersion,
@@ -134,7 +134,7 @@ impl Display for ShimcacheEntry {
 }
 
 impl super::Parser {
-    pub fn parse_shimcache(&mut self) -> crate::Result<ShimcacheArtifact> {
+    pub fn parse_shimcache(&mut self) -> crate::Result<ShimcacheArtefact> {
         // Find current ControlSet
         let current_controlset_key = self
             .inner
@@ -271,7 +271,7 @@ impl super::Parser {
             )
         })?;
 
-        Ok(ShimcacheArtifact {
+        Ok(ShimcacheArtefact {
             entries: shimcache_entries,
             last_update_ts: shimcache_last_update_ts,
             version: shimcache_version,
@@ -296,7 +296,7 @@ fn utf16_to_string(bytes: &[u8]) -> crate::Result<String> {
 
 mod windows_10_cache {
     use super::{utf16_to_string, CPUArchitecture, EntryType, ShimcacheEntry};
-    use crate::file::hve::win32_ts_to_datetime;
+    use crate::file::win32_ts_to_datetime;
     use chrono::{DateTime, Utc};
     use lazy_static::lazy_static;
     use regex::Regex;
@@ -463,7 +463,7 @@ mod windows_10_cache {
 
 mod windows7x64_windows2008r2_cache {
     use super::{utf16_to_string, EntryType, InsertFlag, ShimcacheEntry};
-    use crate::file::hve::win32_ts_to_datetime;
+    use crate::file::win32_ts_to_datetime;
     use chrono::{DateTime, Utc};
 
     pub fn parse(shimcache_bytes: &Vec<u8>, controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
@@ -589,7 +589,7 @@ mod windows7x64_windows2008r2_cache {
 
 mod windows7x86_cache {
     use super::{utf16_to_string, EntryType, InsertFlag, ShimcacheEntry};
-    use crate::file::hve::win32_ts_to_datetime;
+    use crate::file::win32_ts_to_datetime;
     use chrono::{DateTime, Utc};
 
     pub fn parse(shimcache_bytes: &Vec<u8>, controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
@@ -713,7 +713,7 @@ mod windows7x86_cache {
 
 mod windows8_cache {
     use super::{utf16_to_string, EntryType, InsertFlag, ShimcacheEntry};
-    use crate::file::hve::win32_ts_to_datetime;
+    use crate::file::win32_ts_to_datetime;
     use chrono::{DateTime, Utc};
 
     pub fn parse(shimcache_bytes: &Vec<u8>, controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {

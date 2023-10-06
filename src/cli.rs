@@ -137,7 +137,8 @@ fn agg_to_doc<'a>(
                 | FileKind::Json
                 | FileKind::Jsonl
                 | FileKind::Mft
-                | FileKind::Xml => {
+                | FileKind::Xml
+                | FileKind::Esedb => {
                     data = bincode::deserialize::<Value>(&document.data)?;
                     hunt.mapper.mapped(&data)
                 }
@@ -276,7 +277,12 @@ pub fn print_log(
                 wrapper = crate::evtx::Wrapper(&data);
                 hunt.mapper.mapped(&wrapper)
             }
-            FileKind::Hve | FileKind::Json | FileKind::Jsonl | FileKind::Mft | FileKind::Xml => {
+            FileKind::Hve
+            | FileKind::Json
+            | FileKind::Jsonl
+            | FileKind::Mft
+            | FileKind::Xml
+            | FileKind::Esedb => {
                 data = bincode::deserialize::<Value>(&document.data)?;
                 hunt.mapper.mapped(&data)
             }
@@ -458,6 +464,7 @@ pub fn print_detections(
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
                             FileKind::Hve
+                            | FileKind::Esedb
                             | FileKind::Json
                             | FileKind::Jsonl
                             | FileKind::Mft
@@ -857,6 +864,7 @@ pub fn print_csv(
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
                             FileKind::Hve
+                            | FileKind::Esedb
                             | FileKind::Json
                             | FileKind::Jsonl
                             | FileKind::Mft
