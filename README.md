@@ -144,7 +144,7 @@ A massive thank you to [@AlexKornitzer](https://twitter.com/AlexKornitzer?lang=e
               --json            Print the output in json format
               --load-unknown    Allow chainsaw to try and load files it cannot identify
               --local           Output the timestamp using the local machine's timestamp
-          -q                    Supress informational output
+          -q                    Suppress informational output
               --skip-errors     Continue to search when an error is encountered
           -V, --version         Prints version information
 
@@ -191,7 +191,7 @@ A massive thank you to [@AlexKornitzer](https://twitter.com/AlexKornitzer?lang=e
               --local           Output the timestamp using the local machine's timestamp
               --log             Print the output in log like format
               --metadata        Display additional metadata in the tablar output
-          -q                    Supress informational output
+          -q                    Suppress informational output
               --skip-errors     Continue to hunt when an error is encountered
           -V, --version         Prints version information
 
@@ -384,7 +384,9 @@ The SRUM parser implemented in Chainsaw differs from other parsers because it do
 
     OPTIONS:
         -s, --software <SOFTWARE_HIVE_PATH>      The path to the SOFTWARE hive
-        -o, --output <OUTPUT>                    Save the output to a json file
+            --stats-only                         Only output details about the SRUM database
+        -q                                       Suppress informational output
+        -o, --output <OUTPUT>                    Save the output to a file
         -h, --help                               Print help
 
 ##### Command Example
@@ -445,7 +447,7 @@ The SRUM parser implemented in Chainsaw differs from other parsers because it do
         [+] Saved output to "/home/user/Documents/output.json"
 
 ##### Insights
-The information listed below is the result of a research project about the inner workings of SRUM, presented at the SANS DFIR Summit Europe 2023 on October 1, 2023. A [WithSecure Labs](https://labs.withsecure.com/publications) article will soon be published containing more information about it. The research was conducted by members of the incident response team at WithSecure: [Catarina de Faria Cristas](https://twitter.com/c_defaria), Lucas Echard and [Diego Fuschini](https://twitter.com/FuschiniDiego).
+The information listed below is the result of a research project about the inner workings of SRUM, presented at the [SANS DFIR Summit Europe 2023](https://www.sans.org/cyber-security-training-events/dfir-europe-2023/) on October 1, 2023. A [WithSecure Labs](https://labs.withsecure.com/publications) article will soon be published containing more information about it. The research was conducted by members of the incident response team at WithSecure: [Catarina de Faria Cristas](https://twitter.com/c_defaria), Lucas Echard and [Diego Fuschini](https://twitter.com/FuschiniDiego).
 
 In recent versions of Windows, SRUM no longer uses the registry to store temporarily database records. Nowadays, SRUM relies on 2 types of storage:
 - A **Tier1 store**, which is in memory and is updated every **Tier1Period (60 seconds by default)** with the data from the SRUM extensions.
@@ -483,7 +485,7 @@ Forensic insights about the DLLs investigated during the research can be found b
             --jsonl             Print the output in jsonl format
             --load-unknown      Allow chainsaw to try and load files it cannot identify
         -o, --output <OUTPUT>   A path to output results to
-        -q                      Supress informational output
+        -q                      Suppress informational output
             --skip-errors       Continue to hunt when an error is encountered
         -h, --help              Print help
 
@@ -500,3 +502,4 @@ Forensic insights about the DLLs investigated during the research can be found b
  - [EVTX parser](https://github.com/omerbenamram/evtx) library by [@OBenamram](https://twitter.com/obenamram?lang=en)
  - [TAU Engine](https://github.com/WithSecureLabs/tau-engine) Library by [@AlexKornitzer](https://twitter.com/AlexKornitzer?lang=en)
  - Shimcache analysis feature developed as a part of [CC-Driver](https://www.ccdriver-h2020.com/) project, funded by the European Union’s Horizon 2020 Research and Innovation Programme under Grant Agreement No. 883543
+ - [DFIRArtifactMuseum](https://github.com/AndrewRathbun/DFIRArtifactMuseum) by Andrew Rathbun ([@bunsofwrath12](https://twitter.com/bunsofwrath12))
