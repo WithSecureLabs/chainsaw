@@ -60,7 +60,7 @@ impl super::Parser {
                         .with_context(|| "unable to get IdBlob from SruDbIdMapTableEntry")?,
                 )
                 .with_context(|| {
-                    "Unable to convert IdBlob from SruDbIdMapTable into a valid UTF-8 string"
+                    "unable to convert IdBlob from SruDbIdMapTable into a valid UTF-8 string"
                 })?
                 .replace('\u{0000}', "");
                 sru_db_id_map_table_entry.id_blob_as_string = Some(s);

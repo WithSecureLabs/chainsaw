@@ -376,7 +376,7 @@ impl Reader {
                     .map(|r| {
                         r.and_then(|v| {
                             serde_json::to_value(v)
-                                .with_context(|| "Unexpected JSON serialization error")
+                                .with_context(|| "unexpected JSON serialization error")
                         })
                     })
                     .map(|r| r.map(Document::Esedb)),
