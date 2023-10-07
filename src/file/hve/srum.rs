@@ -108,7 +108,7 @@ impl super::Parser {
                     CellValue::Binary(reg_data) => {
                         extensions[&reg_value_uppercase][key_value.get_pretty_name()] =
                             serde_json::to_value(reg_data).with_context(|| {
-                                "Unable to store a binary entry from the SRUM registry values"
+                                "unable to store a binary entry from the SRUM registry values"
                             })?;
                     }
                     CellValue::U32(reg_data) => {
@@ -134,7 +134,7 @@ impl super::Parser {
                     CellValue::MultiString(reg_data) => {
                         extensions[&reg_value_uppercase][key_value.get_pretty_name()] =
                             serde_json::to_value(reg_data).with_context(|| {
-                                "Unable to store a MultiString entry from the SRUM registry values"
+                                "unable to store a MultiString entry from the SRUM registry values"
                             })?;
                     }
                     CellValue::None | CellValue::Error => {
