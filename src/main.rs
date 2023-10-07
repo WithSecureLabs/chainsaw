@@ -69,7 +69,7 @@ enum Command {
         /// A path to output results to.
         #[arg(short = 'o', long = "output")]
         output: Option<PathBuf>,
-        /// Supress informational output.
+        /// Suppress informational output.
         #[arg(short = 'q')]
         quiet: bool,
         /// Continue to hunt when an error is encountered.
@@ -146,7 +146,7 @@ enum Command {
         /// (BETA) Enable preprocessing, which can result in increased performance.
         #[arg(long = "preprocess")]
         preprocess: bool,
-        /// Supress informational output.
+        /// Suppress informational output.
         #[arg(short = 'q')]
         quiet: bool,
         /// A path containing Sigma rules to hunt with.
@@ -228,7 +228,7 @@ enum Command {
         /// The path to output results to.
         #[arg(short = 'o', long = "output")]
         output: Option<PathBuf>,
-        /// Supress informational output.
+        /// Suppress informational output.
         #[arg(short = 'q')]
         quiet: bool,
         /// Continue to search when an error is encountered.
@@ -290,7 +290,13 @@ enum AnalyseCommand {
         /// The path to the SOFTWARE hive
         #[arg(short = 's', long = "software")]
         software_hive_path: PathBuf,
-        /// Save the output to a json file
+        /// Only output details about the SRUM database
+        #[arg(long = "stats-only")]
+        stats_only: bool,
+        /// Suppress informational output.
+        #[arg(short = 'q')]
+        quiet: bool,
+        /// Save the output to a file
         #[arg(short = 'o', long = "output")]
         output: Option<PathBuf>,
     },
@@ -975,28 +981,51 @@ fn run() -> Result<()> {
                 AnalyseCommand::Srum {
                     srum_path,
                     software_hive_path,
+                    stats_only,
+                    quiet,
                     output,
                 } => {
+                    init_writer(output.clone(), false, true, quiet)?;
                     if !args.no_banner {
                         print_title();
                     }
-                    init_writer(output.clone(), false, true, false)?;
                     let srum_analyser = SrumAnalyser::new(srum_path, software_hive_path);
                     match srum_analyser.parse_srum_database() {
-                        Ok(json) => {
-                            cs_eprintln!("[+] SRUM database parsed successfully");
-                            if let Some(output_path) = output {
+                        Ok(srum_db_info) => {
+                            if stats_only {
                                 cs_eprintln!(
-                                    "[+] Saving output to {:?}",
-                                    std::fs::canonicalize(&output_path)
-                                        .expect("could not get absolute path")
+                                    "[+] Details about the tables related to the SRUM extensions:"
                                 );
-                                cs_print_json!(&json)?;
+                                cs_println!(
+                                    "{}",
+                                    srum_db_info
+                                        .table_details
+                                        .to_string()
+                                        .trim_end_matches('\n')
+                                );
+                            } else {
                                 cs_eprintln!(
-                                    "[+] Saved output to {:?}",
-                                    std::fs::canonicalize(&output_path)
-                                        .expect("could not get absolute path")
+                                    "[+] Details about the tables related to the SRUM extensions:\n{}",
+                                    srum_db_info.table_details.to_string().trim_end_matches('\n')
                                 );
+
+                                let json = srum_db_info.db_content;
+                                cs_eprintln!("[+] SRUM database parsed successfully");
+                                if let Some(output_path) = output {
+                                    cs_eprintln!(
+                                        "[+] Saving output to {:?}",
+                                        std::fs::canonicalize(&output_path)
+                                            .expect("could not get absolute path")
+                                    );
+                                    cs_print_json!(&json)?;
+                                    cs_eprintln!(
+                                        "[+] Saved output to {:?}",
+                                        std::fs::canonicalize(&output_path)
+                                            .expect("could not get absolute path")
+                                    );
+                                } else {
+                                    cs_print_json!(&json)?;
+                                }
                             }
                         }
                         Err(err) => cs_eredln!("[!] Error parsing SRUM database: {:?}", err),
