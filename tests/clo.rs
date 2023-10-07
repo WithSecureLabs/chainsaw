@@ -92,3 +92,54 @@ fn hunt_r_any_logon() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[test]
+fn analyse_srum_database_table_details() -> Result<(), Box<dyn std::error::Error>> {
+    let root = env!("CARGO_MANIFEST_DIR");
+    let sample_path = Path::new(root).join("tests/srum").join("SRUDB.dat");
+    let software_hive_path = Path::new(root).join("tests/srum").join("SOFTWARE");
+    let sample_expected_output_path = Path::new(root)
+        .join("tests/srum")
+        .join("analysis_srum_database_table_details.txt");
+    let mut cmd = Command::cargo_bin("chainsaw")?;
+
+    cmd.arg("analyse")
+        .arg("srum")
+        .arg("--software")
+        .arg(software_hive_path)
+        .arg(sample_path)
+        .arg("--stats-only")
+        .arg("-q");
+    cmd.assert().success().stdout(
+        predicate::path::eq_file(sample_expected_output_path)
+            .utf8()
+            .unwrap(),
+    );
+
+    Ok(())
+}
+
+#[test]
+fn analyse_srum_database_json() -> Result<(), Box<dyn std::error::Error>> {
+    let root = env!("CARGO_MANIFEST_DIR");
+    let sample_path = Path::new(root).join("tests/srum").join("SRUDB.dat");
+    let software_hive_path = Path::new(root).join("tests/srum").join("SOFTWARE");
+    let sample_expected_output_path = Path::new(root)
+        .join("tests/srum")
+        .join("analysis_srum_database_json.txt");
+    let mut cmd = Command::cargo_bin("chainsaw")?;
+
+    cmd.arg("analyse")
+        .arg("srum")
+        .arg("--software")
+        .arg(software_hive_path)
+        .arg(sample_path)
+        .arg("-q");
+    cmd.assert().success().stdout(
+        predicate::path::eq_file(sample_expected_output_path)
+            .utf8()
+            .unwrap(),
+    );
+
+    Ok(())
+}
