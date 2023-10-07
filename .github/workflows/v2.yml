@@ -50,51 +50,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build-linux-static:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          submodules: recursive
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-          target: x86_64-unknown-linux-musl
-
-      - name: Create artifacts directory
-        run: mkdir chainsaw
-
-      - name: Build
-        run: cargo build --all --release --target x86_64-unknown-linux-musl && strip target/x86_64-unknown-linux-musl/release/chainsaw
-
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: linux-static-binary
-          path: target/x86_64-unknown-linux-musl/release/chainsaw
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Move files to artifacts
-        run: mv target/x86_64-unknown-linux-musl/release/chainsaw mappings LICENCE README.md chainsaw/
-
-      - name: Create ZIP File
-        run: tar -czf chainsaw_x86_64-unknown-linux-musl.tar.gz chainsaw/*
-
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: chainsaw_x86_64-unknown-linux-musl.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   build-win:
     runs-on: windows-latest
 
@@ -186,7 +141,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-complete:
-    needs: [build-linux, build-linux-static, build-win, build-mac]
+    needs: [build-linux, build-win, build-mac]
     runs-on: ubuntu-latest
 
     steps:
@@ -219,12 +174,6 @@ jobs:
           name: linux-binary
           path: ./chainsaw-linux
 
-      - name: Download build-linux-static binary
-        uses: actions/download-artifact@v3
-        with:
-          name: linux-static-binary
-          path: ./chainsaw-linux-static
-
       - name: Download build-win binary
         uses: actions/download-artifact@v3
         with:
@@ -238,14 +187,14 @@ jobs:
           path: ./chainsaw-mac
 
       - name: build zip file content
-        run: mv ./chainsaw-linux/chainsaw ./chainsaw/chainsaw_x86_64-unknown-linux-gnu; mv ./chainsaw-linux-static/chainsaw ./chainsaw/chainsaw_x86_64-unknown-linux-mus; mv ./chainsaw-win/chainsaw.exe ./chainsaw/chainsaw_x86_64-pc-windows-msvc.exe; mv ./chainsaw-mac/chainsaw ./chainsaw/chainsaw_x86_64-apple-darwin ; mv ./chainsaw-root/mappings ./chainsaw-root/LICENCE ./chainsaw-root/README.md ./chainsaw-root/rules/ ./chainsaw/
+        run: mv ./chainsaw-linux/chainsaw ./chainsaw/chainsaw_x86_64-unknown-linux-gnu; mv ./chainsaw-win/chainsaw.exe ./chainsaw/chainsaw_x86_64-pc-windows-msvc.exe; mv ./chainsaw-mac/chainsaw ./chainsaw/chainsaw_x86_64-apple-darwin ; mv ./chainsaw-root/mappings ./chainsaw-root/LICENCE ./chainsaw-root/README.md ./chainsaw-root/rules/ ./chainsaw/
 
       - name: Create ZIP File
         run: zip -r chainsaw_all_platforms+rules+examples.zip chainsaw/
 
       - name: Remove Samples
         run: rm -rf chainsaw/EVTX-ATTACK-SAMPLES/
-          
+
       - name: Create ZIP File
         run: zip -r chainsaw_all_platforms+rules.zip chainsaw/
 
@@ -254,7 +203,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            chainsaw_all_platforms+rules.zip 
+            chainsaw_all_platforms+rules.zip
             chainsaw_all_platforms+rules+examples.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
