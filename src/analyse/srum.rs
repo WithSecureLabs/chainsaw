@@ -9,7 +9,7 @@ use std::io::stderr;
 use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Error};
-use chrono::{DateTime, SecondsFormat, Utc};
+use chrono::{DateTime, SecondsFormat, TimeZone, Utc};
 use prettytable::{Cell, Row, Table};
 use serde_json::json;
 use serde_json::Value as Json;
@@ -364,7 +364,7 @@ impl SrumAnalyser {
                                 let naive = win32_ts_to_datetime(integer as u64).with_context(
                                     || "Unable to convert Windows timestamp column value to DateTime",
                                 )?;
-                                let datetime = DateTime::<Utc>::from_utc(naive, Utc);
+                                let datetime = Utc.from_utc_datetime(&naive);
                                 let datetime_form =
                                     datetime.to_rfc3339_opts(SecondsFormat::Secs, true);
 

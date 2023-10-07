@@ -296,10 +296,12 @@ fn utf16_to_string(bytes: &[u8]) -> crate::Result<String> {
 
 mod windows_10_cache {
     use super::{utf16_to_string, CPUArchitecture, EntryType, ShimcacheEntry};
-    use crate::file::win32_ts_to_datetime;
-    use chrono::{DateTime, Utc};
+
+    use chrono::{TimeZone, Utc};
     use lazy_static::lazy_static;
     use regex::Regex;
+
+    use crate::file::win32_ts_to_datetime;
 
     pub fn parse(shimcache_bytes: &Vec<u8>, controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
         let mut shimcache_entries: Vec<ShimcacheEntry> = Vec::new();
@@ -435,8 +437,7 @@ mod windows_10_cache {
             };
             let last_modified_ts = if last_modified_time_utc_win32 != 0 {
                 let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;
-                let last_modified_date_time =
-                    DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
+                let last_modified_date_time = Utc.from_utc_datetime(&last_modified_time_utc);
                 Some(last_modified_date_time)
             } else {
                 None
@@ -463,8 +464,10 @@ mod windows_10_cache {
 
 mod windows7x64_windows2008r2_cache {
     use super::{utf16_to_string, EntryType, InsertFlag, ShimcacheEntry};
+
+    use chrono::{TimeZone, Utc};
+
     use crate::file::win32_ts_to_datetime;
-    use chrono::{DateTime, Utc};
 
     pub fn parse(shimcache_bytes: &Vec<u8>, controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
         let mut shimcache_entries: Vec<ShimcacheEntry> = Vec::new();
@@ -555,8 +558,7 @@ mod windows7x64_windows2008r2_cache {
             );
             let last_modified_ts = if last_modified_time_utc_win32 != 0 {
                 let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;
-                let last_modified_date_time =
-                    DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
+                let last_modified_date_time = Utc.from_utc_datetime(&last_modified_time_utc);
                 Some(last_modified_date_time)
             } else {
                 None
@@ -589,8 +591,10 @@ mod windows7x64_windows2008r2_cache {
 
 mod windows7x86_cache {
     use super::{utf16_to_string, EntryType, InsertFlag, ShimcacheEntry};
+
+    use chrono::{TimeZone, Utc};
+
     use crate::file::win32_ts_to_datetime;
-    use chrono::{DateTime, Utc};
 
     pub fn parse(shimcache_bytes: &Vec<u8>, controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
         let mut shimcache_entries: Vec<ShimcacheEntry> = Vec::new();
@@ -679,8 +683,7 @@ mod windows7x86_cache {
             );
             let last_modified_ts = if last_modified_time_utc_win32 != 0 {
                 let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;
-                let last_modified_date_time =
-                    DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
+                let last_modified_date_time = Utc.from_utc_datetime(&last_modified_time_utc);
                 Some(last_modified_date_time)
             } else {
                 None
@@ -713,8 +716,10 @@ mod windows7x86_cache {
 
 mod windows8_cache {
     use super::{utf16_to_string, EntryType, InsertFlag, ShimcacheEntry};
+
+    use chrono::{TimeZone, Utc};
+
     use crate::file::win32_ts_to_datetime;
-    use chrono::{DateTime, Utc};
 
     pub fn parse(shimcache_bytes: &Vec<u8>, controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
         let mut shimcache_entries: Vec<ShimcacheEntry> = Vec::new();
@@ -805,8 +810,7 @@ mod windows8_cache {
                 Some(insert_flags & InsertFlag::Executed as u32 == InsertFlag::Executed as u32);
             let last_modified_ts = if last_modified_time_utc_win32 != 0 {
                 let last_modified_time_utc = win32_ts_to_datetime(last_modified_time_utc_win32)?;
-                let last_modified_date_time =
-                    DateTime::<Utc>::from_utc(last_modified_time_utc, Utc);
+                let last_modified_date_time = Utc.from_utc_datetime(&last_modified_time_utc);
                 Some(last_modified_date_time)
             } else {
                 None

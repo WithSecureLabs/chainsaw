@@ -119,7 +119,7 @@ impl<'a> Iterator for Iter<'a> {
                         }
                     }
                 } else {
-                    DateTime::<Utc>::from_utc(timestamp, Utc)
+                    Utc.from_utc_datetime(&timestamp)
                 };
                 // Check if event is older than start date marker
                 if let Some(sd) = self.searcher.from {
@@ -226,14 +226,14 @@ impl SearcherBuilder {
             inner: SearcherInner {
                 regex,
 
-                from: self.from.map(|d| DateTime::from_utc(d, Utc)),
+                from: self.from.map(|d| Utc.from_utc_datetime(&d)),
                 load_unknown,
                 local,
                 skip_errors,
                 tau,
                 timestamp: self.timestamp,
                 timezone: self.timezone,
-                to: self.to.map(|d| DateTime::from_utc(d, Utc)),
+                to: self.to.map(|d| Utc.from_utc_datetime(&d)),
             },
         })
     }

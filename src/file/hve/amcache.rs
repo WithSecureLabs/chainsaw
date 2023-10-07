@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use notatin::cell_key_node::CellKeyNode;
 use serde::Serialize;
 
@@ -66,7 +66,7 @@ impl super::Parser {
             /// A helper function for converting registry timestamp strings to DateTime
             fn win_reg_str_ts_to_date_time(ts_str: &str) -> crate::Result<DateTime<Utc>> {
                 let naive = NaiveDateTime::parse_from_str(ts_str, "%m/%d/%Y %H:%M:%S")?;
-                Ok(DateTime::<Utc>::from_utc(naive, Utc))
+                Ok(Utc.from_utc_datetime(&naive))
             }
 
             // Get and parse data from InventoryApplication
@@ -170,7 +170,7 @@ impl super::Parser {
                         }
                         let naive = NaiveDateTime::from_timestamp_opt(num as i64, 0)
                             .expect("unix timestamp our of range");
-                        Some(DateTime::<Utc>::from_utc(naive, Utc))
+                        Some(Utc.from_utc_datetime(&naive))
                     }
                     notatin::cell_value::CellValue::U64(num) => {
                         if num == 0 {
@@ -178,7 +178,7 @@ impl super::Parser {
                         }
                         let naive = NaiveDateTime::from_timestamp_opt(num as i64, 0)
                             .expect("unix timestamp our of range");
-                        Some(DateTime::<Utc>::from_utc(naive, Utc))
+                        Some(Utc.from_utc_datetime(&naive))
                     }
                     _ => bail!(
                         "Value \"{}\" in key \"{}\" was not of type U32 or U64!",
@@ -242,7 +242,7 @@ impl super::Parser {
                             value.get_content()
                         {
                             let naive = win32_ts_to_datetime(ts)?;
-                            Some(DateTime::<Utc>::from_utc(naive, Utc))
+                            Some(Utc.from_utc_datetime(&naive))
                         } else {
                             None
                         }

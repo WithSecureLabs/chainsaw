@@ -236,7 +236,7 @@ pub fn print_log(
                 .expect("failed to localise timestamp")
                 .to_rfc3339()
         } else {
-            DateTime::<Utc>::from_utc(hit.timestamp, Utc).to_rfc3339()
+            Utc.from_utc_datetime(&hit.timestamp).to_rfc3339()
         };
         columns.push(localised.to_string());
 
@@ -418,7 +418,7 @@ pub fn print_detections(
                         .expect("failed to localise timestamp")
                         .to_rfc3339()
                 } else {
-                    DateTime::<Utc>::from_utc(*grouping.timestamp, Utc).to_rfc3339()
+                    Utc.from_utc_datetime(grouping.timestamp).to_rfc3339()
                 };
 
                 localised = format_time(localised);
@@ -824,7 +824,7 @@ pub fn print_csv(
                         .expect("failed to localise timestamp")
                         .to_rfc3339()
                 } else {
-                    DateTime::<Utc>::from_utc(*grouping.timestamp, Utc).to_rfc3339()
+                    Utc.from_utc_datetime(grouping.timestamp).to_rfc3339()
                 };
 
                 let agg;
@@ -994,7 +994,7 @@ pub fn print_json(
                         .expect("failed to localise timestamp")
                         .to_rfc3339()
                 } else {
-                    DateTime::<Utc>::from_utc(hit.timestamp, Utc).to_rfc3339()
+                    Utc.from_utc_datetime(&hit.timestamp).to_rfc3339()
                 };
                 match rule {
                     Rule::Chainsaw(c) => detections.push(Detection {
@@ -1066,7 +1066,7 @@ pub fn print_jsonl(
                         .expect("failed to localise timestamp")
                         .to_rfc3339()
                 } else {
-                    DateTime::<Utc>::from_utc(hit.timestamp, Utc).to_rfc3339()
+                    Utc.from_utc_datetime(&hit.timestamp).to_rfc3339()
                 };
                 scratch.push((localised, hit, d));
             }

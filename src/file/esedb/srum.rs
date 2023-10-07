@@ -50,7 +50,7 @@ impl super::Parser {
 
             // Not a Windows SID
             if sru_db_id_map_table_entry.id_type != 3
-                && !sru_db_id_map_table_entry.id_blob.clone().is_none()
+                && sru_db_id_map_table_entry.id_blob.clone().is_some()
             {
                 // Convert the Vec<u8> to a string
                 let s = String::from_utf8(
