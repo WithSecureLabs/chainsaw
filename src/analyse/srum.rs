@@ -4,8 +4,7 @@
 /// The information is stored in a ESE database, located by default at %SystemRoot%\System32\sru\SRUDB.dat.
 
 /// The SRUM parser will analyse the SRUM database and provide insights
-use std::collections::HashMap;
-use std::io::stderr;
+use std::collections::BTreeMap;
 use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Error};
@@ -25,6 +24,11 @@ struct TableDetails {
     from: Option<DateTime<Utc>>,
     to: Option<DateTime<Utc>>,
     retention_time_days: Option<f64>,
+}
+
+pub struct SrumDbInfo {
+    pub table_details: Table,
+    pub db_content: Json,
 }
 
 pub struct SrumAnalyser {
@@ -92,7 +96,7 @@ impl SrumAnalyser {
         }
     }
 
-    pub fn parse_srum_database(&self) -> Result<Json, Error> {
+    pub fn parse_srum_database(&self) -> Result<SrumDbInfo, Error> {
         // Load the SRUM ESE database
         let mut ese_db_parser = EsedbParser::load(&self.srum_path)
             .with_context(|| "unable to load the ESE database")?;
@@ -123,7 +127,7 @@ impl SrumAnalyser {
             .as_object_mut()
             .with_context(|| "the SRUM extension listed in the registry should be JSON objects")?;
 
-        let mut table_data_details = HashMap::new();
+        let mut table_data_details = BTreeMap::new();
 
         // Global SRUM parameters
         for (table_guid, extension) in srum_extensions_reg.iter() {
@@ -362,7 +366,7 @@ impl SrumAnalyser {
                             // Check if it's an integer
                             if let Some(integer) = win_ts.as_i64() {
                                 let naive = win32_ts_to_datetime(integer as u64).with_context(
-                                    || "Unable to convert Windows timestamp column value to DateTime",
+                                    || "unable to convert Windows timestamp column value to DateTime",
                                 )?;
                                 let datetime = Utc.from_utc_datetime(&naive);
                                 let datetime_form =
@@ -380,8 +384,6 @@ impl SrumAnalyser {
                 Err(e) => bail!(e),
             }
         }
-
-        cs_eprintln!("[+] Details about the tables related to the SRUM extensions:");
 
         let mut std_table_details = Table::new();
         std_table_details.add_row(Row::new(vec![
@@ -410,13 +412,9 @@ impl SrumAnalyser {
             ]));
         }
 
-        let stderr = stderr();
-        let mut stderr_handle = stderr.lock();
-
-        std_table_details
-            .print(&mut stderr_handle)
-            .with_context(|| "Unable to print the details about the SRUM extensions")?;
-
-        Ok(json!(result))
+        Ok(SrumDbInfo {
+            table_details: std_table_details,
+            db_content: json!(result),
+        })
     }
 }
