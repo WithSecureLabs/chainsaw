@@ -20,7 +20,7 @@ Chainsaw provides a powerful ‘first-response’ capability to quickly identify
  - :arrow_down: Dump the raw content of forensic artefacts (MFT, registry hives, ESE databases)
  - :zap: Lightning fast, written in rust, wrapping the [EVTX parser](https://github.com/omerbenamram/evtx) library by [@OBenamram](https://twitter.com/obenamram?lang=en)
  - :feather: Clean and lightweight execution and output formats without unnecessary bloat
- - :fire: Document tagging (detection logic matching) provided by the [TAU Engine](https://github.com/countercept/tau-engine) Library
+ - :fire: Document tagging (detection logic matching) provided by the [TAU Engine](https://github.com/WithSecureLabs/tau-engine) Library
  - :bookmark_tabs: Output results in a variety of formats, such as ASCII table format, CSV format, and JSON format
  - :computer: Can be run on MacOS, Linux and Windows
 ---
@@ -371,7 +371,7 @@ A massive thank you to [@AlexKornitzer](https://twitter.com/AlexKornitzer?lang=e
     ./chainsaw analyse shimcache ./SYSTEM --regexfile ./analysis/shimcache_patterns.txt
 
 #### SRUM (System Resource Usage Monitor)
-The SRUM parser implemented in Chainsaw differs from other parsers because it does not rely on hardcoded values about the tables. The information is extracted directly from the SOFTWARE hive, which is mandatory. The goal is to avoid errors related to unknown tables.
+The SRUM database parser implemented in Chainsaw differs from other parsers because it does not rely on hardcoded values about the tables. The information is extracted directly from the SOFTWARE hive, which is a mandatory argument. The goal is to avoid errors related to unknown tables.
 
     COMMAND:
         analyse srum                             Analyse the SRUM database
@@ -446,30 +446,8 @@ The SRUM parser implemented in Chainsaw differs from other parsers because it do
         [+] Saving output to "/home/user/Documents/output.json"
         [+] Saved output to "/home/user/Documents/output.json"
 
-##### Insights
-The information listed below is the result of a research project about the inner workings of SRUM, presented at the [SANS DFIR Summit Europe 2023](https://www.sans.org/cyber-security-training-events/dfir-europe-2023/) on October 1, 2023. A [WithSecure Labs](https://labs.withsecure.com/publications) article will soon be published containing more information about it. The research was conducted by members of the incident response team at WithSecure: [Catarina de Faria Cristas](https://twitter.com/c_defaria), Lucas Echard and [Diego Fuschini](https://twitter.com/FuschiniDiego).
-
-In recent versions of Windows, SRUM no longer uses the registry to store temporarily database records. Nowadays, SRUM relies on 2 types of storage:
-- A **Tier1 store**, which is in memory and is updated every **Tier1Period (60 seconds by default)** with the data from the SRUM extensions.
-- A **Tier2 store**, which is the SRUM database on disk and is updated every **Tier2Period (1 hour by default)** with the content of the Tier1 store.
-
-The **retention period** in the SRUM database is **60 days by default**. It becomes **5 years** for **long term tables**, i.e., tables ending with **"\}LT"**. 
-
-The SRUM parser will output to stderr a [table](#output-1) containing details about the database, including the DLL associated with each SRUM extension. 
-
-Forensic insights about the DLLs investigated during the research can be found below:
- - **nduprov.dll: Network Data Usage Provider DLL**
-    - Populates the Network Data Usage Provider table in the SRUM database. As a forensic artefact, the information in that table can be used to prove **data exfiltration**.
-    - There is **continuous monitoring** of the network traffic because of the **Ndu.sys driver**, which relies on the **Windows Filtering Platform (WFP)**. No exceptions were found so if network traffic was generated on a host, it will appear in the Network Data Usage Provider table.
-    - The **bytes in/out** available in the table include the **size of the frames** (from the layer 2 of the OSI model).
-    - If the network traffic goes through a **VPN**, then all the **bytes in/out** will be **associated with the VPN process/service**.
-- **eeprov.dll: Energy Estimator Provider DLL**
-    - Populates the tables Tagged Energy Provider, Energy Estimation Provider and App Timeline Provider.
-    - **App Timeline Provider**
-        - As a forensic artefact, the information in the App Timeline Provider table can be used to prove **execution**.
-        - The data in the table is the result of a query to the **Windows energy tracker**, using the syscall **NtPowerInformation(EnergyTrackerQuery, ...)**, every Tier1Period.
-        - A process appears in the table if it is **running** when the **Tier1 store** is updated.
-        - The retention period in the SRUM database for that provider is usually **7 days**.
+##### Forensic insights
+Information about the new forensic insights related to this artefact can be found in the wiki: https://github.com/WithSecureLabs/chainsaw/wiki/SRUM-Analysis.
 
 
 ### Dumping
