@@ -233,10 +233,11 @@ impl SrumAnalyser {
                     if let Some(app_id_str) =
                         srum_entry.get("AppId").map(|app_id| app_id.to_string())
                     {
-                        let app_map = sru_db_id_map_table_info
-                            .get(&app_id_str)
-                            .with_context(|| "unable to get SruDbIdMapTableEntry structure")?;
-                        let app_name = app_map.id_blob_as_string.clone();
+                        let mut app_name: Option<String> = None;
+
+                        if let Some(app_map) = sru_db_id_map_table_info.get(&app_id_str) {
+                            app_name = app_map.id_blob_as_string.clone();
+                        }
 
                         if let Some(app_name) = app_name {
                             srum_entry.insert("AppName".to_string(), json!(app_name));
@@ -247,13 +248,14 @@ impl SrumAnalyser {
                     if let Some(user_id_str) =
                         srum_entry.get("UserId").map(|user_id| user_id.to_string())
                     {
-                        let user_map = sru_db_id_map_table_info
-                            .get(&user_id_str)
-                            .with_context(|| "unable to get SruDbIdMapTableEntry structure")?;
-                        let user_id_sid = &user_map.id_blob.clone();
+                        let mut user_id_sid: Option<Vec<u8>> = None;
+
+                        if let Some(user_map) = sru_db_id_map_table_info.get(&user_id_str) {
+                            user_id_sid = user_map.id_blob.clone();
+                        }
 
                         if let Some(user_id_sid) = user_id_sid {
-                            if let Some(sid) = bytes_to_sid_string(user_id_sid) {
+                            if let Some(sid) = bytes_to_sid_string(&user_id_sid) {
                                 srum_entry.insert("UserSID".to_string(), Json::String(sid.clone()));
 
                                 let content_user = srum_reg_info.user_info[sid].clone();
