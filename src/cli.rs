@@ -190,7 +190,7 @@ fn agg_to_doc<'a>(
     }
     Ok(crate::hunt::Document {
         kind: first.kind.clone(),
-        path: first.path.clone(),
+        path: first.path,
         data: bincode::serialize(&Value::Object(doc))
             .expect("could not serialise collated documents"),
     })
@@ -368,12 +368,12 @@ pub fn print_detections(
         for hit in &detection.hits {
             let hunt = &hunts.get(&hit.hunt).expect("could not get hunt");
             let rule = &rules.get(&hit.rule).expect("could not get rule");
-            let hits = hits.entry((&hunt.group, &hit.timestamp)).or_insert(vec![]);
+            let hits = hits.entry((&hunt.group, &hit.timestamp)).or_default();
             (*hits).push(Hit { hunt, rule });
         }
         for ((group, timestamp), mut hits) in hits {
             hits.sort_by(|x, y| x.rule.name().cmp(y.rule.name()));
-            let groups = groups.entry(group).or_insert(vec![]);
+            let groups = groups.entry(group).or_default();
             (*groups).push(Grouping {
                 kind: &detection.kind,
                 timestamp,
@@ -523,7 +523,7 @@ pub fn print_detections(
                         if !seen.contains_key(&id) {
                             rows.push((id, cells));
                         }
-                        let rules = seen.entry(id).or_insert(vec![]);
+                        let rules = seen.entry(id).or_default();
                         (*rules).push(hit.rule);
                     }
                 }
@@ -774,12 +774,12 @@ pub fn print_csv(
         for hit in &detection.hits {
             let hunt = &hunts.get(&hit.hunt).expect("could not get hunt");
             let rule = &rules.get(&hit.rule).expect("could not get rule");
-            let hits = hits.entry((&hunt.group, &hit.timestamp)).or_insert(vec![]);
+            let hits = hits.entry((&hunt.group, &hit.timestamp)).or_default();
             (*hits).push(Hit { hunt, rule });
         }
         for ((group, timestamp), mut hits) in hits {
             hits.sort_by(|x, y| x.rule.name().cmp(y.rule.name()));
-            let groups = groups.entry(group).or_insert(vec![]);
+            let groups = groups.entry(group).or_default();
             (*groups).push(Grouping {
                 kind: &detection.kind,
                 timestamp,
@@ -911,7 +911,7 @@ pub fn print_csv(
                         if !seen.contains_key(&id) {
                             rows.push((id, cells));
                         }
-                        let rules = seen.entry(id).or_insert(vec![]);
+                        let rules = seen.entry(id).or_default();
                         (*rules).push(hit.rule);
                     }
                 }

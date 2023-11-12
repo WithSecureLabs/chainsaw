@@ -876,7 +876,7 @@ impl Hunter {
                                         let aggregates = aggregates
                                             .entry((hunt.id, *rid))
                                             .or_insert((aggregate, FxHashMap::default()));
-                                        let docs = aggregates.1.entry(id).or_insert(vec![]);
+                                        let docs = aggregates.1.entry(id).or_default();
                                         docs.push(document_id);
                                     } else {
                                         hits.push(Hit {
@@ -922,7 +922,7 @@ impl Hunter {
                                     let aggregates = aggregates
                                         .entry((hunt.id, hunt.id))
                                         .or_insert((aggregate, FxHashMap::default()));
-                                    let docs = aggregates.1.entry(id).or_insert(vec![]);
+                                    let docs = aggregates.1.entry(id).or_default();
                                     docs.push(document_id);
                                 } else {
                                     hits.push(Hit {

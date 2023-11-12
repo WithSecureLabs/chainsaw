@@ -129,7 +129,6 @@ impl SrumAnalyser {
 
         // Global SRUM parameters
         for (table_guid, extension) in srum_extensions_reg.iter() {
-            let table_guid = table_guid;
             let table_name = extension["(default)"]
                 .as_str()
                 .with_context(|| "unable to get the data of the (default) registry value")?;
