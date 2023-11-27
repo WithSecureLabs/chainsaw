@@ -66,7 +66,7 @@ extensions:
     - for:
         logsource.service: certificateservicesclient-lifecycle-system
       filter:
-        Provider: Microsoft-Windows-CertificateServicesClient-Lifecycle-System  
+        Provider: Microsoft-Windows-CertificateServicesClient-Lifecycle-System
     - for:
         logsource.service: ntlm
       filter:
@@ -134,7 +134,7 @@ extensions:
     - for:
         logsource.service: dns-server
       filter:
-        Provider: Microsoft-Windows-DNS-Server-Service   
+        Provider: Microsoft-Windows-DNS-Server-Service
     - for:
         logsource.service: appxpackaging-om
       filter:
@@ -146,9 +146,9 @@ extensions:
     - for:
         id: 4a3a2b96-d7fc-4cb9-80e4-4a545fe95f46 #Remote Service Creation Rule
       filter:
-        - Provider: Microsoft-Windows-Security-Auditing 
-        - Provider: System 
-        
+        - Provider: Microsoft-Windows-Security-Auditing
+        - Provider: System
+
 groups:
   - name: Sigma
     timestamp: Event.System.TimeCreated
@@ -459,10 +459,10 @@ groups:
         to: Event.EventData.Properties
         visible: false
       - from: ProviderName
-        to: Event.EventData.ProviderName
+        to: Event.System.Provider
         visible: false
       - from: Provider_Name
-        to: Event.EventData.Provider_Name
+        to: Event.System.Provider
         visible: false
       - from: QNAME
         to: Event.EventData.QNAME
