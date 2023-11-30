@@ -79,7 +79,7 @@ Maybe could be useful to have the Sigma repo (a huge quantitative if rules) orga
 
 For that you simply run the script 
 ```
-python3 sigma.organizer.py
+python3 sigma_organizer.py
 ```
 Then you will have the Sigma rules organized in the folder `../chainsaw/sigma/rules/mitre`.
 
