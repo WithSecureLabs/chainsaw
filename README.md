@@ -74,6 +74,17 @@ Using the `--sigma` and `--mapping` parameters you can specify a directory conta
 
 See the mapping file for the full list of fields that are used for rule detection, and feel free to extend it to your needs.
 
+#### Sigma Rule Organizer
+Maybe could be useful to have the Sigma repo (a huge quantitative if rules) organized by Mitre ATT&CK tactics and techniques. 
+
+For that you simply run the script 
+```
+python3 sigma.organizer.py
+```
+Then you will have the Sigma rules organized in the folder `../chainsaw/sigma/rules/mitre`.
+
+Remind, it's mandatory to have the SigmaHQ repo cloned before.
+
 ### Chainsaw Detection Rules
 In addition to supporting sigma rules, Chainsaw also supports a custom rule format. In the repository you will find a `rules` directory that contains various Chainsaw rules that allows users to:
 
