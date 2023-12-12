@@ -54,7 +54,7 @@ impl Iterator for ParserIter {
 
 impl Searchable for Json {
     fn matches(&self, regex: &RegexSet) -> bool {
-        regex.is_match(&self.to_string())
+        regex.is_match(&self.to_string().replace(r"\\", r"\"))
     }
 }
 

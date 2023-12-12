@@ -65,6 +65,6 @@ impl<'a> Document for WrapperLegacy<'a> {
 
 impl Searchable for SerializedEvtxRecord<Json> {
     fn matches(&self, regex: &RegexSet) -> bool {
-        regex.is_match(&self.data.to_string())
+        regex.is_match(&self.data.to_string().replace(r"\\", r"\"))
     }
 }
