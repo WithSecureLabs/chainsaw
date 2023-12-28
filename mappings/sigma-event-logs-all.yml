@@ -24,13 +24,130 @@ exclusions:
 extensions:
   preconditions:
     - for:
-        logsource.service: windefend
+        logsource.category: process_creation
       filter:
-        Provider: Microsoft-Windows-Windows Defender
+        - Provider: Microsoft-Windows-Sysmon
+        - Provider: Microsoft-Windows-Security-Auditing
+    - for:
+        logsource.category: network_connection
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 3
+    - for:
+        logsource.category: sysmon_status
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+    - for:
+        logsource.category: driver_load
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 6
+    - for:
+        logsource.category: image_load
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 7
+    - for:
+        logsource.category: create_remote_thread
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 8
+    - for:
+        logsource.category: raw_access_thread
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 9
+    - for:
+        logsource.category: process_access
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 10
+    - for:
+        logsource.category: file_event
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 11
+    - for:
+        logsource.category: registry_event
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+    - for:
+        logsource.category: registry_add
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 12
+    - for:
+        logsource.category: registry_delete
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 12
+    - for:
+        logsource.category: registry_set
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 13
+    - for:
+        logsource.category: create_stream_hash
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 15
+    - for:
+        logsource.category: pipe_created
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+    - for:
+        logsource.category: wmi_event
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+    - for:
+        logsource.category: dns_query
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 22
+    - for:
+        logsource.category: file_delete
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 23
+    - for:
+        logsource.category: process_tampering
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 25
+    - for:
+        logsource.category: file_delete_detected
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 26
     - for:
         logsource.category: file_block
       filter:
         Provider: Microsoft-Windows-Sysmon
+        int(EventID): 27
+    - for:
+        logsource.category: file_block_executable
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 27
+    - for:
+        logsource.category: file_block_shredding
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 28
+    - for:
+        logsource.category: file_executable_detected
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 29
+    - for:
+        logsource.category: sysmon_error
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 255
+    - for:
+        logsource.service: windefend
+      filter:
+        Provider: Microsoft-Windows-Windows Defender
     - for:
         logsource.service: sysmon
       filter:
@@ -143,6 +260,22 @@ extensions:
         logsource.service: lsa-server
       filter:
         Provider: LsaSrv
+    - for:
+        logsource.service: kernel-shimengine
+      filter:
+        Provider: Microsoft-Windows-Kernel-ShimEngine
+    - for:
+        logsource.service: application-experience
+      filter:
+        Provider: Microsoft-Windows-Application-Experience
+    - for:
+        logsource.service: ntfs
+      filter:
+        Provider: Microsoft-Windows-Ntfs
+    - for:
+        logsource.service: hyper-v-worker
+      filter:
+        Provider: Microsoft-Windows-Hyper-V-Worker
     - for:
         id: 4a3a2b96-d7fc-4cb9-80e4-4a545fe95f46 #Remote Service Creation Rule
       filter:
