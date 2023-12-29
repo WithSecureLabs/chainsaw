@@ -241,6 +241,10 @@ extensions:
       filter:
         Provider: OpenSSH
     - for:
+        logsource.service: ldap
+      filter:
+        Provider: Microsoft-Windows-LDAP-Client
+    - for:
         logsource.service: ldap_debug
       filter:
         Provider: Microsoft-Windows-LDAP-Client
@@ -276,6 +280,14 @@ extensions:
         logsource.service: hyper-v-worker
       filter:
         Provider: Microsoft-Windows-Hyper-V-Worker
+    - for:
+        logsource.service: driver-framework
+      filter:
+        Provider: Microsoft-Windows-DriverFrameworks-UserMode
+    - for:
+        logsource.service: msexchange-management
+      filter:
+        Provider: MSExchange CmdletLogs
     - for:
         id: 4a3a2b96-d7fc-4cb9-80e4-4a545fe95f46 #Remote Service Creation Rule
       filter:
