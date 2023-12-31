@@ -1,0 +1,42 @@
+---
+title: KrbRelayUp Service Installation
+group: Service Installation 
+description: A KrbRelayUp Service Was Installed - a universal no-fix local privilege escalation in windows domain environments where LDAP signing is not enforced (the default settings).
+authors:
+  - reece394
+
+
+kind: evtx
+level: critical
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: Service Name
+    to: Event.EventData.ServiceName
+  - name: Service File Name
+    to: Event.EventData.ImagePath
+  - name: Service Type
+    to: Event.EventData.ServiceType
+  - name: Service Start Type
+    to: Event.EventData.StartType  
+  - name: Service Account
+    to: Event.EventData.AccountName  
+
+filter:
+  condition: service_control_manager and service_name
+
+  service_control_manager:
+    Event.System.Provider: Service Control Manager
+    Event.System.EventID: 7045
+
+  service_name:
+    Event.EventData.ServiceName:
+      - 'i*KrbSCM*'

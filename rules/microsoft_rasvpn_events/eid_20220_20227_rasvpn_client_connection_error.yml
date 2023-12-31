@@ -28,7 +28,7 @@ filter:
   condition: invalid_server_cert or rasconnection_failed
 
   invalid_server_cert:
-      Event.System.EventID: 20227
+      Event.System.EventID: 20220
       Event.System.Channel: Application
       Event.System.Provider: RasClient
 
