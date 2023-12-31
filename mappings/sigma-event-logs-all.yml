@@ -27,7 +27,9 @@ extensions:
         logsource.category: process_creation
       filter:
         - Provider: Microsoft-Windows-Sysmon
+          int(EventID): 1
         - Provider: Microsoft-Windows-Security-Auditing
+          int(EventID): 4688
     - for:
         logsource.category: network_connection
       filter:
@@ -37,6 +39,14 @@ extensions:
         logsource.category: sysmon_status
       filter:
         Provider: Microsoft-Windows-Sysmon
+        int(EventID):
+        - 4
+        - 16
+    - for:
+        logsource.category: process_termination
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 5
     - for:
         logsource.category: driver_load
       filter:
@@ -71,6 +81,10 @@ extensions:
         logsource.category: registry_event
       filter:
         Provider: Microsoft-Windows-Sysmon
+        int(EventID):
+        - 12
+        - 13
+        - 14
     - for:
         logsource.category: registry_add
       filter:
@@ -87,6 +101,11 @@ extensions:
         Provider: Microsoft-Windows-Sysmon
         int(EventID): 13
     - for:
+        logsource.category: registry_rename
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 14
+    - for:
         logsource.category: create_stream_hash
       filter:
         Provider: Microsoft-Windows-Sysmon
@@ -95,10 +114,17 @@ extensions:
         logsource.category: pipe_created
       filter:
         Provider: Microsoft-Windows-Sysmon
+        int(EventID):
+        - 17
+        - 18
     - for:
         logsource.category: wmi_event
       filter:
         Provider: Microsoft-Windows-Sysmon
+        int(EventID):
+        - 19
+        - 20
+        - 21
     - for:
         logsource.category: dns_query
       filter:
@@ -109,6 +135,11 @@ extensions:
       filter:
         Provider: Microsoft-Windows-Sysmon
         int(EventID): 23
+    - for:
+        logsource.category: clipboard_change
+      filter:
+        Provider: Microsoft-Windows-Sysmon
+        int(EventID): 24
     - for:
         logsource.category: process_tampering
       filter:
