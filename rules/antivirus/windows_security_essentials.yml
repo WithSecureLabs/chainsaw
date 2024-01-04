@@ -20,7 +20,7 @@ fields:
   - name: Computer
     to: Event.System.Computer
   - name: User
-    to: Event.EventData.Detection User
+    to: Event.EventData.Data[19]
   - name: Threat Name
     to: Event.EventData.Data[7]
   - name: Threat Path
