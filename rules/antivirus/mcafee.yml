@@ -1,0 +1,31 @@
+---
+title: McAfee and Trellix Endpoint
+group: Antivirus
+description: Events from McAfee and Trellix Endpoint Security.
+authors:
+  - Reece394
+
+
+kind: evtx
+level: critical
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: Threat Name
+    to: Event.EventData.Data
+
+filter:
+  Event.System.Provider:
+    - McAfee Endpoint Security
+    - Trellix Endpoint Security
+  Event.System.EventID:
+  - 2 # Warning
+  - 3 # Error

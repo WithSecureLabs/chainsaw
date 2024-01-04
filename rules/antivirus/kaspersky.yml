@@ -29,3 +29,4 @@ filter:
   Event.System.Provider:
     - Real-time file protection
     - OnDemandScan
+    - avp
