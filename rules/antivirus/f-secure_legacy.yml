@@ -1,0 +1,33 @@
+---
+title: F-Secure Antivirus Legacy
+group: Antivirus
+description: Events from F-Secure Client Security. Version 11 and 12 Tested
+authors:
+  - Reece394
+
+
+kind: evtx
+level: critical
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: User
+    to: Event.EventData.UserName 
+  - name: Threat Name
+    to: Event.EventData.MessageText
+  - name: Threat Path
+    to: Event.EventData.Data
+
+filter:
+  Event.System.Provider:
+    - FSecure-FSecure-F-Secure Anti-Virus
+    - FSecure-FSecure Application-F-Secure Anti-Virus
+    - FSecure-FSecure-F-Secure DeepGuard
