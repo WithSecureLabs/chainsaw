@@ -1,0 +1,35 @@
+---
+title: Kerberos service ticket requested for Administrator
+group: Credential Access
+description: A kerberos service ticket targeting the Administator account was requested, which could be related to a kerberoasting attack. This is suspicious since domain administrators should not be used as service accounts and therefore should not have SPNs assigned.
+authors:
+  - Lucas Echard
+
+
+kind: evtx
+level: critical
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Computer
+    to: Event.System.Computer
+  - name: User
+    to: Event.EventData.TargetUserName
+  - name: Service Name
+    to: Event.EventData.ServiceName
+  - name: IP Address
+    to: Event.EventData.IpAddress
+
+
+filter:
+  condition: kerberos_ticket
+
+  kerberos_ticket:
+    Event.System.EventID: 4769
+    Event.System.Channel: "Security"
+    Event.EventData.ServiceSid: "*-500"
+    Event.EventData.Status: "0x0"

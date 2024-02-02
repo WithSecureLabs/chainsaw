@@ -1,0 +1,37 @@
+---
+title: Weak Kerberos ticket encryption algorithm
+group: Credential Access
+description: A weak ticket encryption type was used and could indicate either an insecure configuration or a kerberoasting attack.
+authors:
+  - Lucas Echard
+
+
+kind: evtx
+level: high
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Computer
+    to: Event.System.Computer
+  - name: User
+    to: Event.EventData.TargetUserName
+  - name: Service Name
+    to: Event.EventData.ServiceName
+  - name: IP Address
+    to: Event.EventData.IpAddress
+
+
+filter:
+  condition: weak_kerberos_ticket
+
+  weak_kerberos_ticket:
+    Event.System.EventID: 4769
+    Event.System.Channel: "Security"
+    Event.EventData.TicketEncryptionType:
+      - "0x17"
+      - "0x18"
+    Event.EventData.Status: "0x0"
