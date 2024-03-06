@@ -225,6 +225,9 @@ enum Command {
         /// Output the timestamp using the local machine's timestamp.
         #[arg(long = "local", group = "tz")]
         local: bool,
+        /// Require all provided patterns to be found to constitute a match.
+        #[arg(long = "match_all", requires = "additional_pattern")]
+        match_all: bool,
         /// The path to output results to.
         #[arg(short = 'o', long = "output")]
         output: Option<PathBuf>,
@@ -801,6 +804,7 @@ fn run() -> Result<()> {
             jsonl,
             load_unknown,
             local,
+            match_all,
             output,
             quiet,
             skip_errors,
@@ -874,7 +878,8 @@ fn run() -> Result<()> {
                 .ignore_case(ignore_case)
                 .load_unknown(load_unknown)
                 .local(local)
-                .skip_errors(skip_errors);
+                .skip_errors(skip_errors)
+                .match_all(match_all);
             if let Some(patterns) = additional_pattern {
                 searcher = searcher.patterns(patterns);
             } else if let Some(pattern) = pattern {

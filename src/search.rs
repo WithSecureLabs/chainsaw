@@ -146,7 +146,7 @@ impl<'a> Iterator for Iter<'a> {
                             return Some(Ok(evtx.data));
                         }
                     }
-                    if evtx.matches(&self.searcher.regex) {
+                    if evtx.matches(&self.searcher.regex, &self.searcher.match_all) {
                         return Some(Ok(evtx.data));
                     }
                 }
@@ -163,7 +163,7 @@ impl<'a> Iterator for Iter<'a> {
                             return Some(Ok(json));
                         }
                     }
-                    if json.matches(&self.searcher.regex) {
+                    if json.matches(&self.searcher.regex, &self.searcher.match_all) {
                         return Some(Ok(json));
                     }
                 }
@@ -174,7 +174,7 @@ impl<'a> Iterator for Iter<'a> {
 }
 
 pub trait Searchable {
-    fn matches(&self, regex: &RegexSet) -> bool;
+    fn matches(&self, regex: &RegexSet, match_all: &bool) -> bool;
 }
 
 #[derive(Default)]
@@ -185,6 +185,7 @@ pub struct SearcherBuilder {
     ignore_case: Option<bool>,
     load_unknown: Option<bool>,
     local: Option<bool>,
+    match_all: Option<bool>,
     skip_errors: Option<bool>,
     tau: Option<Vec<String>>,
     timestamp: Option<String>,
@@ -201,6 +202,7 @@ impl SearcherBuilder {
         let ignore_case = self.ignore_case.unwrap_or_default();
         let load_unknown = self.load_unknown.unwrap_or_default();
         let local = self.local.unwrap_or_default();
+        let match_all = self.match_all.unwrap_or_default();
         let patterns = self.patterns.unwrap_or_default();
         let skip_errors = self.skip_errors.unwrap_or_default();
         let tau = match self.tau {
@@ -229,6 +231,7 @@ impl SearcherBuilder {
                 from: self.from.map(|d| Utc.from_utc_datetime(&d)),
                 load_unknown,
                 local,
+                match_all,
                 skip_errors,
                 tau,
                 timestamp: self.timestamp,
@@ -255,6 +258,11 @@ impl SearcherBuilder {
 
     pub fn local(mut self, local: bool) -> Self {
         self.local = Some(local);
+        self
+    }
+
+    pub fn match_all(mut self, match_all: bool) -> Self {
+        self.match_all = Some(match_all);
         self
     }
 
@@ -294,6 +302,7 @@ pub struct SearcherInner {
 
     load_unknown: bool,
     local: bool,
+    match_all: bool,
     from: Option<DateTime<Utc>>,
     skip_errors: bool,
     tau: Option<Expression>,
