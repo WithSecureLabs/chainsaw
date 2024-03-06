@@ -66,14 +66,14 @@ impl<'a> Document for WrapperLegacy<'a> {
 impl Searchable for SerializedEvtxRecord<Json> {
     fn matches(&self, regex: &RegexSet, match_all: &bool) -> bool {
         if *match_all {
-            return regex
+            regex
                 .matches(&self.data.to_string().replace(r"\\", r"\"))
                 .into_iter()
                 .collect::<Vec<_>>()
                 .len()
-                == regex.len();
+                == regex.len()
         } else {
-            return regex.is_match(&self.data.to_string().replace(r"\\", r"\"));
+            regex.is_match(&self.data.to_string().replace(r"\\", r"\"))
         }
     }
 }
