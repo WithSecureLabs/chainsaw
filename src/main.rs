@@ -55,7 +55,7 @@ enum Command {
     /// Dump an artefact into a different format.
     Dump {
         /// The path to an artefact to dump.
-        path: PathBuf,
+        path: Vec<PathBuf>,
 
         /// Dump in json format.
         #[arg(group = "format", short = 'j', long = "json")]
@@ -66,6 +66,8 @@ enum Command {
         /// Allow chainsaw to try and load files it cannot identify.
         #[arg(long = "load-unknown")]
         load_unknown: bool,
+        #[arg(long = "file-type", short = 't')]
+        file_type: Option<String>,
         /// A path to output results to.
         #[arg(short = 'o', long = "output")]
         output: Option<PathBuf>,
@@ -389,6 +391,7 @@ fn run() -> Result<()> {
             json,
             jsonl,
             load_unknown,
+            file_type,
             output,
             quiet,
             skip_errors,
@@ -397,51 +400,81 @@ fn run() -> Result<()> {
             if !args.no_banner {
                 print_title();
             }
-            let mut reader = Reader::load(&path, load_unknown, skip_errors)?;
             cs_eprintln!(
-                "[+] Dumping the contents of forensic artefact - {}...",
-                path.display()
+                "[+] Dumping the contents of forensic artefacts from: {} (extensions: {})",
+                path
+                    .iter()
+                    .map(|r| r.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                file_type.clone().unwrap_or("*".to_string())
             );
+
             if json {
                 cs_print!("[");
             }
+
+            let mut files = vec![];
+            let mut size = ByteSize::mb(0);
+            let mut extensions: Option<HashSet<String>> = None;
+            if let Some(file_type) = file_type {
+                extensions = Some(HashSet::from([file_type]));
+            }
+            for path in &path {
+                let res = get_files(path, &extensions, skip_errors)?;
+                for i in &res {
+                    size += i.metadata()?.len();
+                }
+                files.extend(res);
+            }
+            if files.is_empty() {
+                return Err(anyhow::anyhow!(
+                    "No compatible files were found in the provided paths",
+                ));
+            } else {
+                cs_eprintln!("[+] Loaded {} forensic artefacts ({})", files.len(), size);
+            }
+
             let mut first = true;
-            for result in reader.documents() {
-                let document = match result {
-                    Ok(document) => document,
-                    Err(e) => {
-                        if skip_errors {
-                            cs_eyellowln!(
-                                "[!] failed to parse document '{}' - {}\n",
-                                path.display(),
-                                e
-                            );
-                            continue;
+            for path in &files {
+                let mut reader = Reader::load(path, load_unknown, skip_errors)?;
+                for result in reader.documents() {
+                    let document = match result {
+                        Ok(document) => document,
+                        Err(e) => {
+                            if skip_errors {
+                                cs_eyellowln!(
+                                    "[!] failed to parse document '{}' - {}\n",
+                                    path.display(),
+                                    e
+                                );
+                                continue;
+                            }
+                            return Err(e);
                         }
-                        return Err(e);
-                    }
-                };
-                let value = match document {
-                    Document::Evtx(evtx) => evtx.data,
-                    Document::Hve(json)
-                    | Document::Json(json)
-                    | Document::Xml(json)
-                    | Document::Mft(json)
-                    | Document::Esedb(json) => json,
-                };
-                if json {
-                    if first {
-                        first = false;
+                    };
+                    let value = match document {
+                        Document::Evtx(evtx) => evtx.data,
+                        Document::Hve(json)
+                        | Document::Json(json)
+                        | Document::Xml(json)
+                        | Document::Mft(json)
+                        | Document::Esedb(json) => json,
+                    };
+                    if json {
+                        if first {
+                            first = false;
+                        } else {
+                            cs_println!(",");
+                        }
+                        cs_print_json_pretty!(&value)?;
+                    } else if jsonl {
+                        cs_print_json!(&value)?;
+                        cs_println!();
                     } else {
-                        cs_println!(",");
+                        cs_println!("---");
+                        cs_print_yaml!(&value)?;
                     }
-                    cs_print_json_pretty!(&value)?;
-                } else if jsonl {
-                    cs_print_json!(&value)?;
-                    cs_println!();
-                } else {
-                    cs_println!("---");
-                    cs_print_yaml!(&value)?;
                 }
             }
             if json {
