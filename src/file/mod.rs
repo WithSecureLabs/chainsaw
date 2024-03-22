@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 
 use self::esedb::{Esedb, Parser as EsedbParser};
 use self::evtx::{Evtx, Parser as EvtxParser};
@@ -463,7 +463,7 @@ pub fn get_files(
     Ok(files)
 }
 
-pub fn win32_ts_to_datetime(ts_win32: u64) -> crate::Result<NaiveDateTime> {
+pub fn win32_ts_to_datetime(ts_win32: u64) -> crate::Result<DateTime<Utc>> {
     let ts_unix = (ts_win32 / 10_000) as i64 - 11644473600000;
-    NaiveDateTime::from_timestamp_millis(ts_unix).ok_or(anyhow!("Timestamp out of range!"))
+    DateTime::from_timestamp_millis(ts_unix).ok_or(anyhow!("Timestamp out of range!"))
 }
