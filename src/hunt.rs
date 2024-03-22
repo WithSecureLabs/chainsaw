@@ -438,19 +438,60 @@ impl HunterBuilder {
                 .collect();
         }
 
+        let mut from = None;
+        let mut to = None;
+        if let Some(timestamp) = self.from {
+            if let Some(timezone) = self.timezone {
+                let local = match timezone.from_local_datetime(&timestamp).single() {
+                    Some(l) => l,
+                    None => {
+                        anyhow::bail!("failed to localise timestamp");
+                    }
+                };
+                from = Some(local.with_timezone(&Utc));
+            } else if local {
+                from = Some(match Utc.from_local_datetime(&timestamp).single() {
+                    Some(l) => l,
+                    None => {
+                        anyhow::bail!("failed to localise timestamp");
+                    }
+                });
+            } else {
+                from = Some(Utc.from_utc_datetime(&timestamp));
+            }
+        }
+        if let Some(timestamp) = self.to {
+            if let Some(timezone) = self.timezone {
+                let local = match timezone.from_local_datetime(&timestamp).single() {
+                    Some(l) => l,
+                    None => {
+                        anyhow::bail!("failed to localise timestamp");
+                    }
+                };
+                to = Some(local.with_timezone(&Utc));
+            } else if local {
+                to = Some(match Utc.from_local_datetime(&timestamp).single() {
+                    Some(l) => l,
+                    None => {
+                        anyhow::bail!("failed to localise timestamp");
+                    }
+                });
+            } else {
+                to = Some(Utc.from_utc_datetime(&timestamp));
+            }
+        }
+
         Ok(Hunter {
             inner: HunterInner {
                 hunts,
                 fields,
                 rules,
 
-                from: self.from.map(|d| Utc.from_utc_datetime(&d)),
+                from,
                 load_unknown,
-                local,
                 preprocess,
                 skip_errors,
-                timezone: self.timezone,
-                to: self.to.map(|d| Utc.from_utc_datetime(&d)),
+                to,
             },
         })
     }
@@ -698,11 +739,9 @@ pub struct HunterInner {
     rules: BTreeMap<Uuid, Rule>,
 
     load_unknown: bool,
-    local: bool,
     preprocess: bool,
     from: Option<DateTime<Utc>>,
     skip_errors: bool,
-    timezone: Option<Tz>,
     to: Option<DateTime<Utc>>,
 }
 
@@ -1040,35 +1079,7 @@ impl Hunter {
 
     fn skip(&self, timestamp: NaiveDateTime) -> crate::Result<bool> {
         if self.inner.from.is_some() || self.inner.to.is_some() {
-            // TODO: Not sure if this is correct...
-            let localised = if let Some(timezone) = self.inner.timezone {
-                let local = match timezone.from_local_datetime(&timestamp).single() {
-                    Some(l) => l,
-                    None => {
-                        if self.inner.skip_errors {
-                            cs_eyellowln!("failed to localise timestamp");
-                            return Ok(true);
-                        } else {
-                            anyhow::bail!("failed to localise timestamp");
-                        }
-                    }
-                };
-                local.with_timezone(&Utc)
-            } else if self.inner.local {
-                match Utc.from_local_datetime(&timestamp).single() {
-                    Some(l) => l,
-                    None => {
-                        if self.inner.skip_errors {
-                            cs_eyellowln!("failed to localise timestamp");
-                            return Ok(true);
-                        } else {
-                            anyhow::bail!("failed to localise timestamp");
-                        }
-                    }
-                }
-            } else {
-                Utc.from_utc_datetime(&timestamp)
-            };
+            let localised = Utc.from_utc_datetime(&timestamp);
             // Check if event is older than start date marker
             if let Some(sd) = self.inner.from {
                 if localised <= sd {

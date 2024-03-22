@@ -4,7 +4,7 @@ use std::hash::{Hash, Hasher};
 use std::io::*;
 use std::time::Duration;
 
-use chrono::{DateTime, NaiveDateTime, SecondsFormat, TimeZone, Utc};
+use chrono::{DateTime, Local, NaiveDateTime, SecondsFormat, TimeZone, Utc};
 use chrono_tz::Tz;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use prettytable::{cell, format, Row, Table};
@@ -225,16 +225,9 @@ pub fn print_log(
         let mut columns = vec![];
 
         let localised = if let Some(timezone) = timezone {
-            timezone
-                .from_local_datetime(&hit.timestamp)
-                .single()
-                .expect("failed to localise timestamp")
-                .to_rfc3339()
+            timezone.from_utc_datetime(&hit.timestamp).to_rfc3339()
         } else if local {
-            Utc.from_local_datetime(&hit.timestamp)
-                .single()
-                .expect("failed to localise timestamp")
-                .to_rfc3339()
+            Local.from_utc_datetime(&hit.timestamp).to_rfc3339()
         } else {
             Utc.from_utc_datetime(&hit.timestamp).to_rfc3339()
         };
@@ -407,16 +400,9 @@ pub fn print_detections(
 
             for grouping in group {
                 let mut localised = if let Some(timezone) = timezone {
-                    timezone
-                        .from_local_datetime(grouping.timestamp)
-                        .single()
-                        .expect("failed to localise timestamp")
-                        .to_rfc3339()
+                    timezone.from_utc_datetime(grouping.timestamp).to_rfc3339()
                 } else if local {
-                    Utc.from_local_datetime(grouping.timestamp)
-                        .single()
-                        .expect("failed to localise timestamp")
-                        .to_rfc3339()
+                    Local.from_utc_datetime(grouping.timestamp).to_rfc3339()
                 } else {
                     Utc.from_utc_datetime(grouping.timestamp).to_rfc3339()
                 };
@@ -813,16 +799,9 @@ pub fn print_csv(
 
             for grouping in group {
                 let localised = if let Some(timezone) = timezone {
-                    timezone
-                        .from_local_datetime(grouping.timestamp)
-                        .single()
-                        .expect("failed to localise timestamp")
-                        .to_rfc3339()
+                    timezone.from_utc_datetime(grouping.timestamp).to_rfc3339()
                 } else if local {
-                    Utc.from_local_datetime(grouping.timestamp)
-                        .single()
-                        .expect("failed to localise timestamp")
-                        .to_rfc3339()
+                    Local.from_utc_datetime(grouping.timestamp).to_rfc3339()
                 } else {
                     Utc.from_utc_datetime(grouping.timestamp).to_rfc3339()
                 };
@@ -983,16 +962,9 @@ pub fn print_json(
                 let hunt = hunts.get(&hit.hunt).expect("could not get rule!");
                 let rule = rules.get(&hit.rule).expect("could not get rule!");
                 let localised = if let Some(timezone) = timezone {
-                    timezone
-                        .from_local_datetime(&hit.timestamp)
-                        .single()
-                        .expect("failed to localise timestamp")
-                        .to_rfc3339()
+                    timezone.from_utc_datetime(&hit.timestamp).to_rfc3339()
                 } else if local {
-                    Utc.from_local_datetime(&hit.timestamp)
-                        .single()
-                        .expect("failed to localise timestamp")
-                        .to_rfc3339()
+                    Local.from_utc_datetime(&hit.timestamp).to_rfc3339()
                 } else {
                     Utc.from_utc_datetime(&hit.timestamp).to_rfc3339()
                 };
@@ -1055,16 +1027,9 @@ pub fn print_jsonl(
             let mut scratch = Vec::with_capacity(d.hits.len());
             for hit in &d.hits {
                 let localised = if let Some(timezone) = timezone {
-                    timezone
-                        .from_local_datetime(&hit.timestamp)
-                        .single()
-                        .expect("failed to localise timestamp")
-                        .to_rfc3339()
+                    timezone.from_utc_datetime(&hit.timestamp).to_rfc3339()
                 } else if local {
-                    Utc.from_local_datetime(&hit.timestamp)
-                        .single()
-                        .expect("failed to localise timestamp")
-                        .to_rfc3339()
+                    Local.from_utc_datetime(&hit.timestamp).to_rfc3339()
                 } else {
                     Utc.from_utc_datetime(&hit.timestamp).to_rfc3339()
                 };

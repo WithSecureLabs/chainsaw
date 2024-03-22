@@ -92,35 +92,7 @@ impl<'a> Iterator for Iter<'a> {
                         }
                     }
                 };
-                // TODO: Not sure if this is correct...
-                let localised = if let Some(timezone) = self.searcher.timezone {
-                    let local = match timezone.from_local_datetime(&timestamp).single() {
-                        Some(l) => l,
-                        None => {
-                            if self.searcher.skip_errors {
-                                cs_eyellowln!("failed to localise timestamp");
-                                continue;
-                            } else {
-                                return Some(Err(anyhow::anyhow!("failed to localise timestamp")));
-                            }
-                        }
-                    };
-                    local.with_timezone(&Utc)
-                } else if self.searcher.local {
-                    match Utc.from_local_datetime(&timestamp).single() {
-                        Some(l) => l,
-                        None => {
-                            if self.searcher.skip_errors {
-                                cs_eyellowln!("failed to localise timestamp");
-                                continue;
-                            } else {
-                                return Some(Err(anyhow::anyhow!("failed to localise timestamp")));
-                            }
-                        }
-                    }
-                } else {
-                    Utc.from_utc_datetime(&timestamp)
-                };
+                let localised = Utc.from_utc_datetime(&timestamp);
                 // Check if event is older than start date marker
                 if let Some(sd) = self.searcher.from {
                     if localised <= sd {
@@ -224,19 +196,60 @@ impl SearcherBuilder {
             .case_insensitive(ignore_case)
             .build()?;
 
+        let mut from = None;
+        let mut to = None;
+        if let Some(timestamp) = self.from {
+            if let Some(timezone) = self.timezone {
+                let local = match timezone.from_local_datetime(&timestamp).single() {
+                    Some(l) => l,
+                    None => {
+                        anyhow::bail!("failed to localise timestamp");
+                    }
+                };
+                from = Some(local.with_timezone(&Utc));
+            } else if local {
+                from = Some(match Utc.from_local_datetime(&timestamp).single() {
+                    Some(l) => l,
+                    None => {
+                        anyhow::bail!("failed to localise timestamp");
+                    }
+                });
+            } else {
+                from = Some(Utc.from_utc_datetime(&timestamp));
+            }
+        }
+        if let Some(timestamp) = self.to {
+            if let Some(timezone) = self.timezone {
+                let local = match timezone.from_local_datetime(&timestamp).single() {
+                    Some(l) => l,
+                    None => {
+                        anyhow::bail!("failed to localise timestamp");
+                    }
+                };
+                to = Some(local.with_timezone(&Utc));
+            } else if local {
+                to = Some(match Utc.from_local_datetime(&timestamp).single() {
+                    Some(l) => l,
+                    None => {
+                        anyhow::bail!("failed to localise timestamp");
+                    }
+                });
+            } else {
+                to = Some(Utc.from_utc_datetime(&timestamp));
+            }
+        }
+
         Ok(Searcher {
             inner: SearcherInner {
                 regex,
 
-                from: self.from.map(|d| Utc.from_utc_datetime(&d)),
+                from,
                 load_unknown,
-                local,
                 match_all,
                 skip_errors,
                 tau,
                 timestamp: self.timestamp,
-                timezone: self.timezone,
-                to: self.to.map(|d| Utc.from_utc_datetime(&d)),
+                to,
             },
         })
     }
@@ -301,13 +314,11 @@ pub struct SearcherInner {
     regex: RegexSet,
 
     load_unknown: bool,
-    local: bool,
     match_all: bool,
     from: Option<DateTime<Utc>>,
     skip_errors: bool,
     tau: Option<Expression>,
     timestamp: Option<String>,
-    timezone: Option<Tz>,
     to: Option<DateTime<Utc>>,
 }
 
