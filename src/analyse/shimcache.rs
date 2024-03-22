@@ -62,7 +62,7 @@ impl ShimcacheAnalyser {
 
     pub fn amcache_shimcache_timeline(
         &self,
-        regex_patterns: &Vec<String>,
+        regex_patterns: &[String],
         ts_near_pair_matching: bool,
     ) -> crate::Result<Vec<TimelineEntity>> {
         if regex_patterns.is_empty() {
@@ -113,10 +113,7 @@ impl ShimcacheAnalyser {
         }
 
         /// Sets timestamp ranges for timeline entities based on shimcache entry order and indices
-        fn set_timestamp_ranges(
-            range_indices: &[usize],
-            timeline_entities: &mut Vec<TimelineEntity>,
-        ) {
+        fn set_timestamp_ranges(range_indices: &[usize], timeline_entities: &mut [TimelineEntity]) {
             let first_index = if let Some(index) = range_indices.first() {
                 *index
             } else {

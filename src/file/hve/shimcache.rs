@@ -303,7 +303,7 @@ mod windows_10_cache {
 
     use crate::file::win32_ts_to_datetime;
 
-    pub fn parse(shimcache_bytes: &Vec<u8>, controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
+    pub fn parse(shimcache_bytes: &[u8], controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
         let mut shimcache_entries: Vec<ShimcacheEntry> = Vec::new();
         let mut index = u32::from_le_bytes(
             shimcache_bytes
@@ -469,7 +469,7 @@ mod windows7x64_windows2008r2_cache {
 
     use crate::file::win32_ts_to_datetime;
 
-    pub fn parse(shimcache_bytes: &Vec<u8>, controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
+    pub fn parse(shimcache_bytes: &[u8], controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
         let mut shimcache_entries: Vec<ShimcacheEntry> = Vec::new();
         let mut index = 4;
         let entry_count = u32::from_le_bytes(
@@ -596,7 +596,7 @@ mod windows7x86_cache {
 
     use crate::file::win32_ts_to_datetime;
 
-    pub fn parse(shimcache_bytes: &Vec<u8>, controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
+    pub fn parse(shimcache_bytes: &[u8], controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
         let mut shimcache_entries: Vec<ShimcacheEntry> = Vec::new();
         let mut index = 4;
         let entry_count = u32::from_le_bytes(
@@ -721,7 +721,7 @@ mod windows8_cache {
 
     use crate::file::win32_ts_to_datetime;
 
-    pub fn parse(shimcache_bytes: &Vec<u8>, controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
+    pub fn parse(shimcache_bytes: &[u8], controlset: u32) -> crate::Result<Vec<ShimcacheEntry>> {
         let mut shimcache_entries: Vec<ShimcacheEntry> = Vec::new();
         let e = || anyhow!("Shimcache byte indexing error!");
         let cache_signature = std::str::from_utf8(shimcache_bytes.get(128..132).ok_or_else(e)?)?;
