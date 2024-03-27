@@ -21,6 +21,6 @@ pub mod cli;
 mod ext;
 mod file;
 mod hunt;
-mod rule;
+pub mod rule;
 mod search;
 mod value;
