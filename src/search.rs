@@ -185,8 +185,10 @@ impl SearcherBuilder {
                 }
                 if expressions.is_empty() {
                     None
-                } else {
+                } else if match_all {
                     Some(Expression::BooleanGroup(BoolSym::And, expressions))
+                } else {
+                    Some(Expression::BooleanGroup(BoolSym::Or, expressions))
                 }
             }
             None => None,

@@ -184,7 +184,7 @@ enum Command {
         tau: bool,
     },
 
-    /// Search through forensic artefacts for keywords.
+    /// Search through forensic artefacts for keywords or patterns.
     Search {
         /// A string or regular expression pattern to search for.
         /// Not used when -e or -t is specified.
@@ -226,7 +226,7 @@ enum Command {
         #[arg(long = "local", group = "tz")]
         local: bool,
         /// Require all provided patterns to be found to constitute a match.
-        #[arg(long = "match_all", requires = "additional_pattern")]
+        #[arg(long = "match_all")]
         match_all: bool,
         /// The path to output results to.
         #[arg(short = 'o', long = "output")]
@@ -237,7 +237,8 @@ enum Command {
         /// Continue to search when an error is encountered.
         #[arg(long = "skip-errors")]
         skip_errors: bool,
-        /// Tau expressions to search with. e.g. 'Event.System.EventID: =4104'
+        /// Tau expressions to search with. e.g. 'Event.System.EventID: =4104'.
+        /// Multiple conditions are logical ORs unless the 'match_all' flag is specified
         #[arg(short = 't', long = "tau", number_of_values = 1)]
         tau: Option<Vec<String>>,
         /// The field that contains the timestamp.
