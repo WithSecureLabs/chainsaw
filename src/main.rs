@@ -225,9 +225,9 @@ enum Command {
         /// Output the timestamp using the local machine's timestamp.
         #[arg(long = "local", group = "tz")]
         local: bool,
-        /// Require all provided patterns to be found to constitute a match.
-        #[arg(long = "match_all")]
-        match_all: bool,
+        /// Require any of the provided patterns to be found to constitute a match.
+        #[arg(long = "match-any")]
+        match_any: bool,
         /// The path to output results to.
         #[arg(short = 'o', long = "output")]
         output: Option<PathBuf>,
@@ -238,7 +238,7 @@ enum Command {
         #[arg(long = "skip-errors")]
         skip_errors: bool,
         /// Tau expressions to search with. e.g. 'Event.System.EventID: =4104'.
-        /// Multiple conditions are logical ORs unless the 'match_all' flag is specified
+        /// Multiple conditions are logical ANDs unless the 'match-any' flag is specified
         #[arg(short = 't', long = "tau", number_of_values = 1)]
         tau: Option<Vec<String>>,
         /// The field that contains the timestamp.
@@ -805,7 +805,7 @@ fn run() -> Result<()> {
             jsonl,
             load_unknown,
             local,
-            match_all,
+            match_any,
             output,
             quiet,
             skip_errors,
@@ -880,7 +880,7 @@ fn run() -> Result<()> {
                 .load_unknown(load_unknown)
                 .local(local)
                 .skip_errors(skip_errors)
-                .match_all(match_all);
+                .match_any(match_any);
             if let Some(patterns) = additional_pattern {
                 searcher = searcher.patterns(patterns);
             } else if let Some(pattern) = pattern {
