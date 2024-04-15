@@ -118,7 +118,7 @@ impl<'a> Iterator for Iter<'a> {
                             return Some(Ok(evtx.data));
                         }
                     }
-                    if evtx.matches(&self.searcher.regex, &self.searcher.match_all) {
+                    if evtx.matches(&self.searcher.regex, &self.searcher.match_any) {
                         return Some(Ok(evtx.data));
                     }
                 }
@@ -135,7 +135,7 @@ impl<'a> Iterator for Iter<'a> {
                             return Some(Ok(json));
                         }
                     }
-                    if json.matches(&self.searcher.regex, &self.searcher.match_all) {
+                    if json.matches(&self.searcher.regex, &self.searcher.match_any) {
                         return Some(Ok(json));
                     }
                 }
@@ -146,7 +146,7 @@ impl<'a> Iterator for Iter<'a> {
 }
 
 pub trait Searchable {
-    fn matches(&self, regex: &RegexSet, match_all: &bool) -> bool;
+    fn matches(&self, regex: &RegexSet, match_any: &bool) -> bool;
 }
 
 #[derive(Default)]
@@ -157,7 +157,7 @@ pub struct SearcherBuilder {
     ignore_case: Option<bool>,
     load_unknown: Option<bool>,
     local: Option<bool>,
-    match_all: Option<bool>,
+    match_any: Option<bool>,
     skip_errors: Option<bool>,
     tau: Option<Vec<String>>,
     timestamp: Option<String>,
@@ -174,7 +174,7 @@ impl SearcherBuilder {
         let ignore_case = self.ignore_case.unwrap_or_default();
         let load_unknown = self.load_unknown.unwrap_or_default();
         let local = self.local.unwrap_or_default();
-        let match_all = self.match_all.unwrap_or_default();
+        let match_any = self.match_any.unwrap_or_default();
         let patterns = self.patterns.unwrap_or_default();
         let skip_errors = self.skip_errors.unwrap_or_default();
         let tau = match self.tau {
@@ -185,10 +185,10 @@ impl SearcherBuilder {
                 }
                 if expressions.is_empty() {
                     None
-                } else if match_all {
-                    Some(Expression::BooleanGroup(BoolSym::And, expressions))
-                } else {
+                } else if match_any {
                     Some(Expression::BooleanGroup(BoolSym::Or, expressions))
+                } else {
+                    Some(Expression::BooleanGroup(BoolSym::And, expressions))
                 }
             }
             None => None,
@@ -247,7 +247,7 @@ impl SearcherBuilder {
 
                 from,
                 load_unknown,
-                match_all,
+                match_any,
                 skip_errors,
                 tau,
                 timestamp: self.timestamp,
@@ -276,8 +276,8 @@ impl SearcherBuilder {
         self
     }
 
-    pub fn match_all(mut self, match_all: bool) -> Self {
-        self.match_all = Some(match_all);
+    pub fn match_any(mut self, match_any: bool) -> Self {
+        self.match_any = Some(match_any);
         self
     }
 
@@ -316,7 +316,7 @@ pub struct SearcherInner {
     regex: RegexSet,
 
     load_unknown: bool,
-    match_all: bool,
+    match_any: bool,
     from: Option<DateTime<Utc>>,
     skip_errors: bool,
     tau: Option<Expression>,
