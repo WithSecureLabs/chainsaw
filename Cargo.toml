@@ -12,11 +12,11 @@ edition = "2021"
 [dependencies]
 aho-corasick = "1.0"
 anyhow = "1.0"
-base64 = "0.21"
+base64 = "0.22"
 bincode = "1.3"
 bytesize = "1.0"
 chrono = "0.4"
-chrono-tz = { version = "0.8", features = ["serde"] }
+chrono-tz = { version = "0.9", features = ["serde"] }
 clap = { version = "4.0", features = ["derive"] }
 crossterm = "0.27"
 evtx = "0.8"
