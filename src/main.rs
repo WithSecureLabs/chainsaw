@@ -52,9 +52,9 @@ struct Args {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Dump an artefact into a different format.
+    /// Dump artefacts into a different format.
     Dump {
-        /// The path to an artefact to dump.
+        /// The paths containing files to dump.
         path: Vec<PathBuf>,
 
         /// Dump in json format.
@@ -66,6 +66,7 @@ enum Command {
         /// Allow chainsaw to try and load files it cannot identify.
         #[arg(long = "load-unknown")]
         load_unknown: bool,
+        /// Only dump files with the provided extension.
         #[arg(long = "extension")]
         extension: Option<String>,
         /// A path to output results to.
