@@ -66,8 +66,8 @@ enum Command {
         /// Allow chainsaw to try and load files it cannot identify.
         #[arg(long = "load-unknown")]
         load_unknown: bool,
-        #[arg(long = "file-type", short = 't')]
-        file_type: Option<String>,
+        #[arg(long = "extension")]
+        extension: Option<String>,
         /// A path to output results to.
         #[arg(short = 'o', long = "output")]
         output: Option<PathBuf>,
@@ -391,7 +391,7 @@ fn run() -> Result<()> {
             json,
             jsonl,
             load_unknown,
-            file_type,
+            extension,
             output,
             quiet,
             skip_errors,
@@ -407,7 +407,7 @@ fn run() -> Result<()> {
                     .map(|r| r.display().to_string())
                     .collect::<Vec<_>>()
                     .join(", "),
-                file_type.clone().unwrap_or("*".to_string())
+                extension.clone().unwrap_or("*".to_string())
             );
 
             if json {
@@ -417,8 +417,8 @@ fn run() -> Result<()> {
             let mut files = vec![];
             let mut size = ByteSize::mb(0);
             let mut extensions: Option<HashSet<String>> = None;
-            if let Some(file_type) = file_type {
-                extensions = Some(HashSet::from([file_type]));
+            if let Some(extension) = extension {
+                extensions = Some(HashSet::from([extension]));
             }
             for path in &path {
                 let res = get_files(path, &extensions, skip_errors)?;
