@@ -64,7 +64,6 @@ pub struct Mapping {
     pub extensions: Option<Extensions>,
     pub groups: Vec<Group>,
     pub kind: FileKind,
-    pub name: String,
     pub rules: RuleKind,
 }
 

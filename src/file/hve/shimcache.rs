@@ -113,7 +113,6 @@ pub struct ShimcacheArtefact {
     pub entries: Vec<ShimcacheEntry>,
     pub last_update_ts: DateTime<Utc>,
     pub version: ShimcacheVersion,
-    pub controlset: u32,
 }
 
 impl Display for ShimcacheEntry {
@@ -275,7 +274,6 @@ impl super::Parser {
             entries: shimcache_entries,
             last_update_ts: shimcache_last_update_ts,
             version: shimcache_version,
-            controlset,
         })
     }
 }

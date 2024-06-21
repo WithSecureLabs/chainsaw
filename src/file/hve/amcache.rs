@@ -29,7 +29,6 @@ pub struct ProgramEntry {
 
 #[derive(Debug)]
 pub struct AmcacheArtefact {
-    pub is_new_format: bool,
     pub file_entries: Vec<FileEntry>,
     pub program_entries: Vec<ProgramEntry>,
 }
@@ -278,7 +277,6 @@ impl super::Parser {
         Ok(AmcacheArtefact {
             file_entries,
             program_entries,
-            is_new_format,
         })
     }
 }
