@@ -11,7 +11,7 @@ use chrono_tz::Tz;
 // https://github.com/rust-lang/rust/issues/74465
 use once_cell::sync::OnceCell;
 use rayon::prelude::*;
-use rustc_hash::{FxHashMap, FxHasher};
+use rustc_hash::{FxBuildHasher, FxHashMap, FxHasher};
 use serde::{
     ser::{SerializeStruct, Serializer},
     Deserialize, Serialize,
@@ -580,10 +580,8 @@ impl Mapper {
             }
         }
         let kind = if full {
-            let mut map = FxHashMap::with_capacity_and_hasher(
-                fields.len(),
-                BuildHasherDefault::<FxHasher>::default(),
-            );
+            let mut map =
+                FxHashMap::with_capacity_and_hasher(fields.len(), FxBuildHasher::default());
             for field in &fields {
                 map.insert(
                     field.from.clone(),
@@ -596,10 +594,8 @@ impl Mapper {
             }
             MapperKind::Full(map)
         } else if fast {
-            let mut map = FxHashMap::with_capacity_and_hasher(
-                fields.len(),
-                BuildHasherDefault::<FxHasher>::default(),
-            );
+            let mut map =
+                FxHashMap::with_capacity_and_hasher(fields.len(), FxBuildHasher::default());
             for field in &fields {
                 map.insert(field.from.clone(), field.to.clone());
             }
