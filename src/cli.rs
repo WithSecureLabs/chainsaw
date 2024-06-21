@@ -165,7 +165,10 @@ fn agg_to_doc<'a>(
     }
     let first = documents.first().expect("missing document");
     let mut doc: FxHashMap<String, Value> = FxHashMap::default();
-    for (k, v) in scratch {
+    let mut keys = scratch.keys().collect::<Vec<_>>();
+    keys.sort();
+    for k in keys {
+        let v = scratch.get(k).expect("could not get value");
         let mut v = v.iter().cloned().collect::<Vec<_>>();
         v.sort();
         // NOTE: Lazy way of re-nesting object...
@@ -176,7 +179,28 @@ fn agg_to_doc<'a>(
         while let Some(part) = parts.next() {
             if let Value::Object(o) = entry {
                 if parts.peek().is_none() {
-                    o.insert(part.to_owned(), Value::String(v.join(", ")));
+                    if part.ends_with(']') && part.contains('[') {
+                        let mut ki = part.split('[');
+                        let k = ki.next().expect("missing key");
+                        let i: usize = match ki
+                            .next()
+                            .and_then(|i| i.strip_suffix(']'))
+                            .and_then(|i| i.parse::<usize>().ok())
+                        {
+                            Some(i) => i,
+                            None => break,
+                        };
+                        if let Value::Array(vec) =
+                            o.entry(k.to_owned()).or_insert(Value::Array(vec![]))
+                        {
+                            for _ in 0..(i - vec.len()) {
+                                vec.push(Value::Null);
+                            }
+                            vec.push(Value::String(v.join(", ")));
+                        }
+                    } else {
+                        o.insert(part.to_owned(), Value::String(v.join(", ")));
+                    }
                     break;
                 } else {
                     entry = o
