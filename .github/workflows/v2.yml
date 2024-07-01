@@ -138,7 +138,7 @@ jobs:
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         with:
-          name: mac-binary
+          name: mac-binary-arm
           path: target/release/chainsaw
           if-no-files-found: error
           retention-days: 1
