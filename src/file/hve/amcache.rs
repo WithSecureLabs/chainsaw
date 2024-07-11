@@ -79,17 +79,12 @@ impl super::Parser {
                 let program_id = key.key_name.clone();
                 let program_name = string_value_from_key(&key, "Name")?
                     .ok_or(anyhow!("Could not get Name for program {}", key.key_name))?;
-                let install_date = string_value_from_key(&key, "InstallDate")?.ok_or(anyhow!(
-                    "Could not get InstallDate for program {}",
-                    program_id
-                ))?;
                 let version = string_value_from_key(&key, "Version")?
                     .ok_or(anyhow!("Could not get Version for program {}", program_id))?;
 
-                let install_date = if !install_date.is_empty() {
-                    Some(win_reg_str_ts_to_date_time(install_date.as_str())?)
-                } else {
-                    None
+                let install_date = match string_value_from_key(&key, "InstallDate")?.as_deref() {
+                    Some("") | None => None,
+                    Some(v) => Some(win_reg_str_ts_to_date_time(v)?),
                 };
 
                 let root_directory_path = string_value_from_key(&key, "RootDirPath")?;
