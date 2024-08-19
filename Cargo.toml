@@ -18,7 +18,7 @@ bytesize = "1.0"
 chrono = "0.4"
 chrono-tz = { version = "0.9", features = ["serde"] }
 clap = { version = "4.0", features = ["derive"] }
-crossterm = "0.27"
+crossterm = "0.28"
 evtx = "0.8"
 hex = "0.4.3"
 indicatif = "0.17"
