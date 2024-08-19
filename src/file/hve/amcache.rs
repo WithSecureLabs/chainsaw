@@ -120,7 +120,10 @@ impl super::Parser {
                 let link_date_str = string_value_from_key(&key, "LinkDate")?
                     .ok_or(anyhow!("Could not get LinkDate for file {}", key.key_name))?;
                 let link_date = if !link_date_str.is_empty() {
-                    Some(win_reg_str_ts_to_date_time(link_date_str.as_str())?)
+                    // NOTE: Sometimes the link date is just completely invalid, in that case we
+                    // just none it rather than throwing an error. We should log this out, but for
+                    // now this is sufficient.
+                    win_reg_str_ts_to_date_time(link_date_str.as_str()).ok()
                 } else {
                     None
                 };
