@@ -651,6 +651,23 @@ impl<'a> TauDocument for Mapped<'a> {
                                             Ok(j) => Box::new(j) as Box<dyn TauDocument>,
                                             Err(_) => continue,
                                         },
+                                        Format::Kv {
+                                            ref delimiter,
+                                            ref separator,
+                                        } => {
+                                            let mut map = FxHashMap::default();
+                                            for item in s.split(delimiter) {
+                                                let mut parts = item.split(separator);
+                                                let k = parts.next();
+                                                let v = parts.next();
+                                                if let (Some(k), Some(v), None) =
+                                                    (k, v, parts.next())
+                                                {
+                                                    map.insert(k.to_owned(), v.to_owned());
+                                                }
+                                            }
+                                            Box::new(map) as Box<dyn TauDocument>
+                                        }
                                     },
                                     _ => continue,
                                 };

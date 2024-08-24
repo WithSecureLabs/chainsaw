@@ -16,8 +16,19 @@ use crate::file::Kind;
 use crate::rule::{Aggregate, Filter, Level, Status};
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "format")]
+pub enum Format {
+    Json,
+    Kv {
+        delimiter: String,
+        separator: String,
+    },
+}
+
+#[derive(Clone, Debug, Deserialize)]
 pub struct Container {
     pub field: String,
+    #[serde(flatten)]
     pub format: Format,
 }
 
@@ -135,12 +146,6 @@ impl<'de> Deserialize<'de> for Field {
         const FIELDS: &[&str] = &["container", "from", "name", "to", "visible"];
         deserializer.deserialize_struct("Field", FIELDS, FieldVisitor)
     }
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Format {
-    Json,
 }
 
 #[derive(Clone, Debug, Deserialize)]
