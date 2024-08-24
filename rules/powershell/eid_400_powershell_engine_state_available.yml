@@ -1,0 +1,100 @@
+---
+title: PowerShell - Engine state is changed from None to Available
+group: PowerShell Engine State
+description: PowerShell - Engine state is changed from None to Available
+authors: 
+  - Reece394
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to : Event.System.Channel
+  - name: Computer
+    to: Event.System.Computer
+  - name: HostName
+    container:
+     field: Event.EventData.Data[2]
+     format: kv
+     delimiter: "\r\n\t"
+     separator: '='
+    to: HostName
+    from: Event.EventData.Data[2].HostName
+  - name: HostVersion
+    container:
+     field: Event.EventData.Data[2]
+     format: kv
+     delimiter: "\r\n\t"
+     separator: '='
+    to: HostVersion
+    from: Event.EventData.Data[2].HostVersion
+  - name: HostApplication
+    container:
+     field: Event.EventData.Data[2]
+     format: kv
+     delimiter: "\r\n\t"
+     separator: '='
+    to: HostApplication
+    from: Event.EventData.Data[2].HostApplication
+  - name: PipelineId
+    container:
+     field: Event.EventData.Data[2]
+     format: kv
+     delimiter: "\r\n\t"
+     separator: '='
+    to: PipelineId
+    from: Event.EventData.Data[2].PipelineId
+  - name: CommandName
+    container:
+     field: Event.EventData.Data[2]
+     format: kv
+     delimiter: "\r\n\t"
+     separator: '='
+    to: CommandName
+    from: Event.EventData.Data[2].CommandName
+  - name: CommandType
+    container:
+     field: Event.EventData.Data[2]
+     format: kv
+     delimiter: "\r\n\t"
+     separator: '='
+    to: CommandType
+    from: Event.EventData.Data[2].CommandType
+  - name: ScriptName
+    container:
+     field: Event.EventData.Data[2]
+     format: kv
+     delimiter: "\r\n\t"
+     separator: '='
+    to: ScriptName
+    from: Event.EventData.Data[2].ScriptName
+  - name: CommandPath
+    container:
+     field: Event.EventData.Data[2]
+     format: kv
+     delimiter: "\r\n\t"
+     separator: '='
+    to: CommandPath
+    from: Event.EventData.Data[2].CommandPath
+  - name: CommandLine
+    container:
+     field: Event.EventData.Data[2]
+     format: kv
+     delimiter: "\r\n\t"
+     separator: '='
+    to: CommandLine
+    from: Event.EventData.Data[2].CommandLine
+filter:
+  condition: powershell
+
+  powershell:
+      Event.System.EventID: 400
+      Event.System.Channel: Windows PowerShell
+
