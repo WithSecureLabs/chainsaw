@@ -654,10 +654,13 @@ impl<'a> TauDocument for Mapped<'a> {
                                         Format::Kv {
                                             ref delimiter,
                                             ref separator,
+                                            trim,
                                         } => {
                                             let mut map = FxHashMap::default();
                                             for item in s.split(delimiter) {
-                                                if let Some((k, v)) = item.split_once(separator) {
+                                                let cleaned = if trim { item.trim() } else { item };
+                                                if let Some((k, v)) = cleaned.split_once(separator)
+                                                {
                                                     map.insert(k.to_owned(), v.to_owned());
                                                 }
                                             }

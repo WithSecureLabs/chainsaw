@@ -22,6 +22,8 @@ pub enum Format {
     Kv {
         delimiter: String,
         separator: String,
+        #[serde(default)]
+        trim: bool,
     },
 }
 
