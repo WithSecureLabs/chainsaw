@@ -657,12 +657,7 @@ impl<'a> TauDocument for Mapped<'a> {
                                         } => {
                                             let mut map = FxHashMap::default();
                                             for item in s.split(delimiter) {
-                                                let mut parts = item.split(separator);
-                                                let k = parts.next();
-                                                let v = parts.next();
-                                                if let (Some(k), Some(v), None) =
-                                                    (k, v, parts.next())
-                                                {
+                                                if let Some((k, v)) = item.split_once(separator) {
                                                     map.insert(k.to_owned(), v.to_owned());
                                                 }
                                             }
