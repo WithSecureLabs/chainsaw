@@ -1,6 +1,6 @@
 [package]
 name = "chainsaw"
-version = "2.10.0-beta.1"
+version = "2.10.0"
 repository = "https://github.com/WithSecureLabs/chainsaw"
 description = "Rapidly Search and Hunt Through Windows Forensic Artefacts"
 authors = ["James Dorgan <james@dorgan.io>","Alex Kornitzer <alex.kornitzer@withsecure.com>"]
