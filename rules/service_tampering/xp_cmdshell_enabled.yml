@@ -5,7 +5,7 @@ authors:
   - 0xFFaraday
 
 kind: evtx
-level: critical
+level: high
 status: stable
 timestamp: Event.System.TimeCreated
 
