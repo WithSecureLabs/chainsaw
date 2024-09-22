@@ -1,0 +1,34 @@
+title: MSSQL XP_CMDSHELL Enabled
+group: Service Tampering
+description: MSSQL being modified to allow command execution
+authors:
+  - 0xFFaraday
+
+kind: evtx
+level: high
+status: stable
+timestamp: Event.System.TimeCreated
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Username
+    to: Event.System.Provider_attributes.Name
+  - name: Computer
+    to: Event.System.Computer
+  - name: Command
+    to: Event.EventData.Data[0]
+  - name: Old Value
+    to: Event.EventData.Data[1]
+  - name: New Value
+    to: Event.EventData.Data[2]
+
+filter:
+  condition: server_configuration and command_arguments
+
+  server_configuration:
+    Event.System.EventID: 15457
+    Event.EventData.Data[0]: "xp_cmdshell"
+  command_arguments:
+    Event.EventData.Data[1]: "0"
+    Event.EventData.Data[2]: "1"
