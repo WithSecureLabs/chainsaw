@@ -50,20 +50,17 @@ impl super::Parser {
 
             // Not a Windows SID
             if sru_db_id_map_table_entry.id_type != 3
-                && sru_db_id_map_table_entry.id_blob.clone().is_some()
             {
-                // Convert the Vec<u8> to a string
-                let s = String::from_utf8(
-                    sru_db_id_map_table_entry
-                        .id_blob
-                        .clone()
-                        .with_context(|| "unable to get IdBlob from SruDbIdMapTableEntry")?,
-                )
-                .with_context(|| {
-                    "unable to convert IdBlob from SruDbIdMapTable into a valid UTF-8 string"
-                })?
-                .replace('\u{0000}', "");
-                sru_db_id_map_table_entry.id_blob_as_string = Some(s);
+                if let Some(id_blob) = &sru_db_id_map_table_entry.id_blob
+                {
+                    // Convert the Vec<u8> to a string
+                    // Using from_utf8_lossy() instead of from_utf8() to prevent decoding errors (e.g., Chinese characters)
+                    let s = String::from_utf8_lossy(
+                        &id_blob.to_vec()
+                    )
+                    .replace('\u{0000}', "");
+                    sru_db_id_map_table_entry.id_blob_as_string = Some(s);
+                }
             }
 
             mapped_table_entries.insert(
