@@ -4,7 +4,7 @@ group: Persistence
 description: The process userinit.exe launched a different process than explorer.exe which indicates the Winlogon\Shell registry value was changed.
 authors:
   - JakePeralta
-# Requires Audit process tracking to be turned on
+# Requires 'Audit process tracking' to be turned on in the GPO
 
 kind: evtx
 level: critical
