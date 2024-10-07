@@ -4,6 +4,7 @@ group: Lateral Movement
 description: SSH traffic was detected
 authors:
   - JakePeralta
+# Requires 'Audit Filtering Platform Connection' to be turned on in the GPO
 
 
 kind: evtx
