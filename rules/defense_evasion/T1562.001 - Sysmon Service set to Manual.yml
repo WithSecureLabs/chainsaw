@@ -1,5 +1,5 @@
 ---
-title: Sysmon Service set to Manual
+title: T1562.001 - Sysmon Service set to Manual
 group: Defense Evasion
 description: The Sysmon service startup has been set to manual.
 authors:
