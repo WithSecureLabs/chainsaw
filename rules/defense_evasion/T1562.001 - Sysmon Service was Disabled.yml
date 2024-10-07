@@ -1,5 +1,5 @@
 ---
-title: Sysmon Disabled
+title: T1562.001 - Sysmon Service was Disabled
 group: Defense Evasion
 description: The Sysmon service has been disabled.
 authors:
