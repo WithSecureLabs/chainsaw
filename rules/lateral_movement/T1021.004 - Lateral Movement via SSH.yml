@@ -1,0 +1,43 @@
+---
+title: T1021.004 - Lateral Movement via SSH
+group: Lateral Movement
+description: SSH traffic was detected
+authors:
+  - JakePeralta
+# Requires 'Audit Filtering Platform Connection' to be turned on in the GPO
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: Process Name
+    to: Event.EventData.Application
+  - name: Process ID
+    to: Event.EventData.ProcessID
+  - name: Interface Index
+    to: Event.EventData.InterfaceIndex
+  - name: Source Address
+    to: Event.EventData.SourceAddress
+  - name: Source Port
+    to: Event.EventData.SourcePort
+  - name: Dest Address
+    to: Event.EventData.DestAddress
+  - name: Dest Port
+    to: Event.EventData.DestPort
+
+
+filter:
+  Event.System.Channel: Security
+  Event.System.Provider: Microsoft-Windows-Security-Auditing
+  Event.System.EventID: 5156
+  Event.EventData.DestPort: '22'

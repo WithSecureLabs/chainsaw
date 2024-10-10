@@ -1,0 +1,30 @@
+---
+title: T1070.009 - Scheduled Task was Deleted
+group: Indicator Removal
+description: A scheduled task was deleted
+authors:
+  - JakePeralta
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: User Name
+    to: Event.EventData.UserName
+  - name: Scheduled Task Name
+    to: Event.EventData.TaskName
+
+
+filter:
+  Event.System.Channel: Microsoft-Windows-TaskScheduler/Operational
+  Event.System.EventID: 141

@@ -1,0 +1,30 @@
+---
+title: T1053.005 - Scheduled Task was Created
+group: Persistence
+description: A new scheduled task was created
+authors:
+  - JakePeralta
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: User Name
+    to: Event.EventData.UserContext
+  - name: Scheduled Task Name
+    to: Event.EventData.TaskName
+
+
+filter:
+  Event.System.Channel: Microsoft-Windows-TaskScheduler/Operational
+  Event.System.EventID: 106
