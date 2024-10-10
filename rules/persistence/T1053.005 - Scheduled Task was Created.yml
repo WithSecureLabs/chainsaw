@@ -7,7 +7,7 @@ authors:
 
 
 kind: evtx
-level: critical
+level: info
 status: stable
 timestamp: Event.System.TimeCreated
 
