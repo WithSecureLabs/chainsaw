@@ -7,7 +7,7 @@ authors:
 # Requires 'Audit process tracking' to be turned on in the GPO
 
 kind: evtx
-level: critical
+level: medium
 status: stable
 timestamp: Event.System.TimeCreated
 
