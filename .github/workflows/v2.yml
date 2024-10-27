@@ -64,7 +64,7 @@ jobs:
         run: mkdir chainsaw
       - name: Build
         run: CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/aarch64-linux-gnu-gcc
-          cargo build --all --release --target aarch64-unknown-linux-gnu && strip
+          cargo build --all --release --target aarch64-unknown-linux-gnu && aarch64-linux-gnu-strip
           target/aarch64-unknown-linux-gnu/release/chainsaw
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
