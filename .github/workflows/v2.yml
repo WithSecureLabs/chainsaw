@@ -195,7 +195,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   build-complete:
-    needs: [build-linux, build-win, build-mac, build-mac-arm]
+    needs:
+      - build-linux
+      - build-linux-arm
+      - build-win
+      - build-mac
+      - build-mac-arm
     runs-on: ubuntu-latest
     steps:
       - name: Create artifacts directory
