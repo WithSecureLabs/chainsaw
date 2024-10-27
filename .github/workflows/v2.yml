@@ -52,7 +52,7 @@ jobs:
         with:
           submodules: recursive
       - name: Install Target
-        run: apt install gcc-aarch64-linux-gnu
+        run: sudo apt install gcc-aarch64-linux-gnu
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
