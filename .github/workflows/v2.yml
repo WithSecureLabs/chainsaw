@@ -44,6 +44,44 @@ jobs:
           files: chainsaw_x86_64-unknown-linux-gnu.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  build-linux-arm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          target: aarch64-unknown-linux-gnu
+      - name: Create artifacts directory
+        run: mkdir chainsaw
+      - name: Build
+        run: cargo build --all --release --target aarch64-unknown-linux-gnu && strip
+          target/aarch64-unknown-linux-gnu/release/chainsaw
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-binary
+          path: target/aarch64-unknown-linux-gnu/release/chainsaw
+          if-no-files-found: error
+          retention-days: 1
+      - name: Move files to artifacts
+        run: mv target/aarch64-unknown-linux-gnu/release/chainsaw mappings LICENCE
+          README.md chainsaw/
+      - name: Create ZIP File
+        run: tar -czf chainsaw_aarch64-unknown-linux-gnu.tar.gz chainsaw/*
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: chainsaw_aarch64-unknown-linux-gnu.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   build-win:
     runs-on: windows-latest
     steps:
@@ -180,6 +218,11 @@ jobs:
         with:
           name: linux-binary
           path: ./chainsaw-linux
+      - name: Download build-linux-arm binary
+        uses: actions/download-artifact@v3
+        with:
+          name: linux-binary-arm
+          path: ./chainsaw-linux-arm
       - name: Download build-win binary
         uses: actions/download-artifact@v3
         with:
@@ -197,6 +240,7 @@ jobs:
           path: ./chainsaw-mac-arm
       - name: build zip file content
         run: mv ./chainsaw-linux/chainsaw ./chainsaw/chainsaw_x86_64-unknown-linux-gnu;
+          mv ./chainsaw-linux-arm/chainsaw ./chainsaw/chainsaw_aarch64-unknown-linux-gnu;
           mv ./chainsaw-win/chainsaw.exe ./chainsaw/chainsaw_x86_64-pc-windows-msvc.exe;
           mv ./chainsaw-mac/chainsaw ./chainsaw/chainsaw_x86_64-apple-darwin; mv ./chainsaw-mac-arm/chainsaw
           ./chainsaw/chainsaw_aarch64-apple-darwin; mv ./chainsaw-root/mappings ./chainsaw-root/LICENCE
