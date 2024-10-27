@@ -69,7 +69,7 @@ jobs:
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         with:
-          name: linux-binary
+          name: linux-binary-arm
           path: target/aarch64-unknown-linux-gnu/release/chainsaw
           if-no-files-found: error
           retention-days: 1
