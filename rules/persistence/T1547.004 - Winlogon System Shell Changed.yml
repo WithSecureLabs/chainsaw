@@ -1,0 +1,48 @@
+---
+title: T1547.004 - Winlogon System Shell Changed
+group: Persistence
+description: The process userinit.exe launched a different process than explorer.exe which indicates the Winlogon\Shell registry value was changed.
+authors:
+  - JakePeralta
+# Requires 'Audit process tracking' to be turned on in the GPO
+
+kind: evtx
+level: medium
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: Domain Name
+    to: Event.EventData.SubjectDomainName
+  - name: User Name
+    to: Event.EventData.SubjectUserName
+  - name: Logon ID
+    to: Event.EventData.SubjectLogonId
+  - name: Parent Process Name
+    to: Event.EventData.ParentProcessName
+  - name: Parent Process Command Line
+    to: Event.EventData.CommandLine
+  - name: New Process Name
+    to: Event.EventData.NewProcessName
+  - name: New Process ID
+    to: Event.EventData.NewProcessId
+
+
+filter:
+  condition: parent_process_userinit and not child_process_explorer
+  
+  parent_process_userinit:
+    Event.System.Channel: Security
+    Event.System.Provider: Microsoft-Windows-Security-Auditing
+    Event.System.EventID: 4688
+    Event.EventData.ParentProcessName: '*\userinit.exe'
+  
+  child_process_explorer:
+    Event.EventData.NewProcessName: 'C:\Windows\explorer.exe'
