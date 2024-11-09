@@ -1,7 +1,7 @@
 ---
-title: AnyDesk
+title: WinSCP
 group: MFT
-description: AnyDesk artifacts
+description: WinSCP artifacts
 authors:
   - Reece394
 
@@ -35,32 +35,16 @@ fields:
     to: HasAlternateDataStreams
 
 filter:
-  condition: anydesk and (anydesk_1 or anydesk_2 or anydesk_3 or anydesk_4 or anydesk_5 or anydesk_6)
+  condition: winscp and (winscp_1 or winscp_2)
 
-  anydesk:
+  winscp:
     FullPath:
-      - 'i*anydesk*'
+      - 'i*winscp*'
 
-  anydesk_1:
+  winscp_1:
     FullPath:
-      - 'i*.conf*'
+      - 'i*.ini*'
 
-  anydesk_2:
-    FullPath:
-      - 'i*.trace*'
-
-  anydesk_3:
-    FullPath:
-      - 'i*connection_trace.txt*'
-
-  anydesk_4:
-    FullPath:
-      - 'i*file_transfer_trace.txt*'
-
-  anydesk_5:
-    FullPath:
-      - 'i*.anydesk*'
-
-  anydesk_6:
+  winscp_2:
     FullPath:
       - 'i*.exe*'

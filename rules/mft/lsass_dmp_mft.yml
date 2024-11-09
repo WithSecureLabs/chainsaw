@@ -1,13 +1,13 @@
 ---
-title: AnyDesk
+title: LSASS Dump
 group: MFT
-description: AnyDesk artifacts
+description: LSASS memory dump creation
 authors:
   - Reece394
 
 
 kind: mft
-level: medium
+level: high
 status: stable
 timestamp: StandardInfoCreated
 
@@ -35,32 +35,16 @@ fields:
     to: HasAlternateDataStreams
 
 filter:
-  condition: anydesk and (anydesk_1 or anydesk_2 or anydesk_3 or anydesk_4 or anydesk_5 or anydesk_6)
+  condition: lsass and (lsass_1 or lsass_2)
 
-  anydesk:
+  lsass:
     FullPath:
-      - 'i*anydesk*'
+      - 'i*lsass*'
 
-  anydesk_1:
+  lsass_1:
     FullPath:
-      - 'i*.conf*'
+      - 'i*.dmp*'
 
-  anydesk_2:
+  lsass_2:
     FullPath:
-      - 'i*.trace*'
-
-  anydesk_3:
-    FullPath:
-      - 'i*connection_trace.txt*'
-
-  anydesk_4:
-    FullPath:
-      - 'i*file_transfer_trace.txt*'
-
-  anydesk_5:
-    FullPath:
-      - 'i*.anydesk*'
-
-  anydesk_6:
-    FullPath:
-      - 'i*.exe*'
+      - 'i*.txt*'
