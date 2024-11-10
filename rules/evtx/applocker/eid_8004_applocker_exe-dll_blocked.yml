@@ -1,0 +1,33 @@
+---
+title: AppLocker - EXE/DLL blocked
+group: AppLocker Blocked
+description: AppLocker - EXE/DLL prevented from running
+authors:
+  - Catarina de Faria
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to : Event.System.Channel
+  - name: Computer
+    to: Event.System.Computer
+  - name: TargetUser
+    to: Event.UserData.RuleAndFileData.TargetUser
+  - name: FullFilePath
+    to: Event.UserData.RuleAndFileData.FullFilePath
+
+
+filter:
+  condition: applocker_exe_dll_blocked
+
+  applocker_exe_dll_blocked:
+    Event.System.EventID: 8004
+    Event.System.Channel: Microsoft-Windows-AppLocker/EXE and DLL

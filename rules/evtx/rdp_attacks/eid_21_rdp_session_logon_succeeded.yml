@@ -1,0 +1,34 @@
+---
+title: RDS - Session logon succeeded
+group: RDP Events
+description: RDS - Session logon succeeded
+date: 2023-07-03
+version: 1.0
+authors:
+  - Catarina de Faria
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to : Event.System.Channel
+  - name: Computer
+    to: Event.System.Computer
+  - name: Information
+    to: Event.UserData.EventXML
+
+filter:
+  condition: logon_succeeded and not local
+
+  logon_succeeded:
+    Event.System.EventID: 21
+    Event.System.Channel: Microsoft-Windows-TerminalServices-LocalSessionManager/Operational
+  local:
+    Event.UserData.EventXML.Address: "LOCAL"

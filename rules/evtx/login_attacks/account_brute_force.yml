@@ -1,0 +1,34 @@
+---
+title: Account Brute Force
+group: Login Attacks
+description: An account that appears to have been brute forced.
+authors:
+  - FranticTyping
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: User
+    to: Event.EventData.TargetUserName
+
+
+filter:
+  condition: failed_logons and not empty
+
+  failed_logons:
+    Event.System.EventID: 4625
+  empty:
+    Event.EventData.TargetUserName: 'null'
+
+
+aggregate:
+  count: '>5'
+  fields:
+    - Event.EventData.TargetUserName

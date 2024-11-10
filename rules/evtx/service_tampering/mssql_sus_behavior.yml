@@ -1,0 +1,26 @@
+title: Potential MSSQL Suspicious Activity
+group: Service Tampering
+description: General commands that could involve threat actor behavior
+authors:
+  - 0xFFaraday
+
+kind: evtx
+level: medium
+status: stable
+timestamp: Event.System.TimeCreated
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Username
+    to: Event.System.Provider_attributes.Name
+  - name: Computer
+    to: Event.System.Computer
+  - name: Command
+    to: Event.EventData.Data
+
+filter:
+  condition: eventid
+
+  eventid:
+    Event.System.EventID: 15457

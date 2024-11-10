@@ -1,0 +1,32 @@
+---
+title: Kaspersky Antivirus
+group: Antivirus
+description: Events from Kaspersky's Antivirus products.
+authors:
+  - FranticTyping
+
+
+kind: evtx
+level: critical
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: Threat Name
+    to: Event.EventData.Data[1]
+  - name: Threat Path
+    to: Event.EventData.Data[0]
+
+
+filter:
+  Event.System.Provider:
+    - Real-time file protection
+    - OnDemandScan
+    - avp

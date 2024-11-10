@@ -1,0 +1,34 @@
+
+---
+title: RD Gateway - A user disconnected from a resource
+group: Microsoft RDS Events - RD Gateway
+description: A user disconnected from a network resource. Before the user disconnected, the number of bytes transferred/received and the client session duration were registered.
+date: 2023-07-03
+version: 1.0
+authors: 
+  - Catarina de Faria
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to : Event.System.Channel
+  - name: Computer
+    to: Event.System.Computer
+  - name: Information
+    to: Event.UserData.EventInfo
+
+filter:
+  condition: rd_rap
+
+  rd_rap:
+      Event.System.EventID: 303
+      Event.System.Channel: Microsoft-Windows-TerminalServices-Gateway/Operational
+

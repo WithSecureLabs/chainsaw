@@ -1,0 +1,35 @@
+---
+title: T1562.001 - Sysmon Service set to Manual
+group: Defense Evasion
+description: The Sysmon service startup has been set to manual.
+authors:
+  - JakePeralta
+
+
+kind: evtx
+level: critical
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: Service Name
+    to: Event.EventData.param1
+  - name: Old Startup Type
+    to: Event.EventData.param2
+  - name: Current Startup Type
+    to: Event.EventData.param3
+
+
+filter:
+  Event.System.EventID: 7040
+  Event.EventData.param1: 
+    - Sysmon
+    - Sysmon64
+  Event.EventData.param3: demand start

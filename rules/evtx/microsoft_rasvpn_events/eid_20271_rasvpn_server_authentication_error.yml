@@ -1,0 +1,33 @@
+---
+title: Microsoft Remote Access VPN - Server - Authentication error
+group: Microsoft Remote Access VPN
+description: Microsoft Remote Access VPN - Server - Authentication error EID 20271
+authors: 
+  - Théo Letailleur
+  - Synacktiv
+
+kind: evtx
+level: low
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to: Event.System.Channel
+  - name: Provider
+    to: Event.System.Provider
+  - name: Computer
+    to: Event.System.Computer
+  - name: Data
+    to: Event.EventData.Data
+
+filter:
+  condition: ntauth_failure
+
+  ntauth_failure:
+      Event.System.EventID: 20271
+      Event.System.Channel: System
+      Event.System.Provider: RemoteAccess

@@ -1,0 +1,43 @@
+---
+title: F-Secure Antivirus
+group: Antivirus
+description: Events from F-Secure's Antivirus products.
+authors:
+  - FranticTyping
+
+
+kind: evtx
+level: critical
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: Threat Name
+    from: threat_name
+    container:
+      field: Event.EventData.rv
+      format: json
+    to: iname
+  - name: Threat Path
+    from: threat_path
+    container:
+      field: Event.EventData.rv
+      format: json
+    to: obj.ref
+  - name: SHA1
+    from: sha1
+    container:
+      field: Event.EventData.rv
+      format: json
+    to: obj.sha1
+
+
+filter:
+  Event.System.Provider: F-Secure Ultralight SDK

@@ -1,0 +1,36 @@
+---
+title: User Added to Universal Group
+group: Account Tampering
+description: A user was added to a universal group.
+authors:
+  - FranticTyping
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: User
+    to: Event.EventData.TargetUserName
+  - name: Member SID
+    to: Event.EventData.MemberSid
+
+
+filter:
+  condition: global and not admin_or_rdp
+
+  global:
+    Event.System.EventID: 4756
+  admin_or_rdp:
+    Event.EventData.TargetUserName:
+      - Admin
+      - Remote Desktop

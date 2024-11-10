@@ -1,0 +1,37 @@
+---
+title: Sophos Antivirus
+group: Antivirus
+description: Events from Sophos' Antivirus products.
+authors:
+  - FranticTyping
+
+
+kind: evtx
+level: critical
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: Threat Type
+    to: Event.EventData.Data[0]
+  - name: Threat Name
+    to: Event.EventData.Data[2]
+  - name: Threat Path
+    to: Event.EventData.Data[1]
+  - name: SHA1
+    container:
+      field: Event.EventData.Data[4]
+      format: json
+    to: sha1FileHash  
+
+filter:
+  Event.System.Provider:
+    - Sophos Anti-Virus
+    - Sophos System Protection

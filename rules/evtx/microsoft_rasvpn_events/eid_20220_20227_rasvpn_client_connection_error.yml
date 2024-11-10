@@ -1,0 +1,38 @@
+---
+title: Microsoft Remote Access VPN - Client - Connection error
+group: Microsoft Remote Access VPN
+description: Microsoft Remote Access VPN - Client - Connection error. EID 20220 or 20227.
+authors: 
+  - Théo Letailleur
+  - Synacktiv
+
+kind: evtx
+level: low
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to: Event.System.Channel
+  - name: Provider
+    to: Event.System.Provider
+  - name: Computer
+    to: Event.System.Computer
+  - name: Data
+    to: Event.EventData.Data
+
+filter:
+  condition: invalid_server_cert or rasconnection_failed
+
+  invalid_server_cert:
+      Event.System.EventID: 20220
+      Event.System.Channel: Application
+      Event.System.Provider: RasClient
+
+  rasconnection_failed:
+      Event.System.EventID: 20227
+      Event.System.Channel: Application
+      Event.System.Provider: RasClient
