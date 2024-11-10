@@ -304,6 +304,14 @@ impl Reader {
                 }
             },
             None => {
+                // Edge cases
+                if file.file_name().and_then(|e| e.to_str()) == Some("$MFT") {
+                    if let Ok(parser) = MftParser::load(file) {
+                        return Ok(Self {
+                            parser: Parser::Mft(parser),
+                        });
+                    }
+                }
                 if load_unknown {
                     if let Ok(parser) = EvtxParser::load(file) {
                         return Ok(Self {
