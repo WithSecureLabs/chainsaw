@@ -1,0 +1,51 @@
+---
+title: NTDS.dit Suspicious Location
+group: MFT
+description: NTDS.dit in a different location than standard. Potential Dumping Activity.
+authors:
+  - Reece394
+
+
+kind: mft
+level: medium
+status: stable
+timestamp: StandardInfoCreated
+
+
+fields:
+  - name: FileNamePath
+    to: FullPath
+  - name: StandardInfoLastModified0x10
+    to: StandardInfoLastModified
+  - name: StandardInfoLastAccess0x10
+    to: StandardInfoLastAccess
+  - name: FileNameCreated0x30
+    to: FileNameCreated
+  - name: FileNameLastModified0x30
+    to: FileNameLastModified
+  - name: FileNameLastAccess0x30
+    to: FileNameLastAccess
+  - name: FileSize
+    to: FileSize
+  - name: IsADirectory
+    to: IsADirectory
+  - name: IsDeleted
+    to: IsDeleted
+  - name: HasAlternateDataStreams
+    to: HasAlternateDataStreams
+
+filter:
+  condition: (ntds and ntds_1) and not ntds_2
+
+  ntds:
+    FullPath:
+      - 'i*ntds*'
+
+  ntds_1:
+    FullPath:
+      - 'i*.dit*'
+
+  ntds_2:
+    FullPath:
+      - 'iWindows\NTDS\NTDS.dit'
+      - 'iWindows\WinSxS*'

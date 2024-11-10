@@ -1,0 +1,51 @@
+---
+title: Rclone
+group: MFT
+description: Rclone artifacts
+authors:
+  - Reece394
+
+
+kind: mft
+level: medium
+status: stable
+timestamp: StandardInfoCreated
+
+
+fields:
+  - name: FileNamePath
+    to: FullPath
+  - name: StandardInfoLastModified0x10
+    to: StandardInfoLastModified
+  - name: StandardInfoLastAccess0x10
+    to: StandardInfoLastAccess
+  - name: FileNameCreated0x30
+    to: FileNameCreated
+  - name: FileNameLastModified0x30
+    to: FileNameLastModified
+  - name: FileNameLastAccess0x30
+    to: FileNameLastAccess
+  - name: FileSize
+    to: FileSize
+  - name: IsADirectory
+    to: IsADirectory
+  - name: IsDeleted
+    to: IsDeleted
+  - name: HasAlternateDataStreams
+    to: HasAlternateDataStreams
+
+filter:
+  condition: rclone or (rclone_1 and rclone_2)
+
+  rclone:
+    FullPath:
+      - 'i*rclone.conf*'
+      - 'i*rclone.exe*'
+
+  rclone_1:
+    FullPath:
+      - 'i*rclone*'
+
+  rclone_2:
+    FullPath:
+      - 'i*webgui*'
