@@ -1,0 +1,117 @@
+---
+title: Remote Access Tool Service Installation
+group: Service Installation 
+description: A Remote Access Tool Service Was Installed
+authors:
+  - reece394
+
+
+kind: evtx
+level: medium
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: Service Name
+    to: Event.EventData.ServiceName
+  - name: Service File Name
+    to: Event.EventData.ImagePath
+  - name: Service Type
+    to: Event.EventData.ServiceType
+  - name: Service Start Type
+    to: Event.EventData.StartType  
+  - name: Service Account
+    to: Event.EventData.AccountName  
+
+filter:
+  condition: service_control_manager and (service_name or image_path)
+
+  service_control_manager:
+    Event.System.Provider: Service Control Manager
+    Event.System.EventID: 7045
+
+  service_name:
+    Event.EventData.ServiceName:
+      - 'i*AnyDesk*'
+      - 'i*Ammyy*'
+      - 'i*Atera*'
+      - 'i*GoTo Resolve*'
+      - 'i*GoToMyPC*'
+      - 'i*LMIGuardianSvc*'
+      - 'i*LogMeIn*'
+      - 'i*GoToAssist*'
+      - 'i*Parsec*'
+      - 'i*Remote Utilities - Host*'
+      - 'i*VPDAgent*' # Installed by Remote Utilities
+      - 'i*Client32*' # Installed by NetSupport Manager
+      - 'i*nskbfltr*' # Installed by NetSupport Manager
+      - 'i*Gateway32*' # Installed by NetSupport Manager if Connectivity Server is Selected During Install
+      - 'i*MeshCentral*'
+      - 'i*Mesh Agent*'
+      - 'i*RPCService*' # Installed by RemotePC
+      - 'i*ViewerService*' # Installed by RemotePC
+      - 'i*RemotePC Performance Service*' # Installed by RemotePC
+      - 'i*Splashtop*'
+      - 'i*TeamViewer*'
+      - 'i*TightVNC*'
+      - 'i*RealVNC*'
+      - 'i*Zoho Assist*'
+      - 'i*pcAnywhere*'
+      - 'i*UltraViewer*'
+      - 'i*Supremo*'
+      - 'i*ScreenConnect*'
+      - 'i*Chrome Remote Desktop*'
+      - 'i*N-central Take Control Service*'
+      - 'i*N-central Take Control Updater Service*'
+      - 'i*monblanking*'
+      - 'i*jumpcloud*'
+
+  image_path:
+    Event.EventData.ImagePath:
+      - 'i*AnyDesk.exe*'
+      - 'i*AA_v3.exe*'
+      - 'i*g2r-updater.exe*'
+      - 'i*g2svc.exe*'
+      - 'i*LMIGuardianSvc.exe*'
+      - 'i*ramaint.exe*'
+      - 'i*LogMeIn.exe*'
+      - 'i*RaMaint.exe*'
+      - 'i*LMIInfo.sys*'
+      - 'i*LMIRfsDriver.sys*'
+      - 'i*g2ax_service.exe*'
+      - 'i*pservice.exe*'
+      - 'i*rutserv.exe*'
+      - 'i*VPDAgent.exe*'
+      - 'i*client32.exe*'
+      - 'i*nskbfltr.sys*'
+      - 'i*Gateway32.exe*'
+      - 'i*meshcentral.exe*'
+      - 'i*MeshAgent.exe*'
+      - 'i*RemotePCService.exe*'
+      - 'i*ViewerService.exe*'
+      - 'i*RPCPerformanceService.exe*'
+      - 'i*SSUService.exe*'
+      - 'i*SRService.exe*'
+      - 'i*TeamViewer_Service.exe*'
+      - 'i*tvnserver.exe*'
+      - 'i*vncserver.exe*'
+      - 'i*ZohoURSService.exe*'
+      - 'i*awhost32.exe*'
+      - 'i*UltraViewer_Service.exe*'
+      - 'i*SupremoSystem.exe*'
+      - 'i*SupremoService.exe*'
+      - 'i*ScreenConnect.ClientService.exe*'
+      - 'i*remoting_host.exe*'
+      - 'i*AteraAgent.exe*'
+      - 'i*OpenHardwareMonitorLib.sys*'
+      - 'i*BASupSrvc.exe*'
+      - 'i*BASupSrvcUpdater.exe*'
+      - 'i*monblanking.sys*'
+      - 'i*jumpcloud-agent.exe*'

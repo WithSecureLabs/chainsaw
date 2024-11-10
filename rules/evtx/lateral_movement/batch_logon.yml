@@ -1,0 +1,41 @@
+---
+title: Batch Logon
+group: Lateral Movement
+description: An Batch based logon.
+authors:
+  - FranticTyping
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: User
+    to: Event.EventData.TargetUserName
+  - name: Logon Type
+    to: Event.EventData.LogonType
+  - name: IP Address
+    to: Event.EventData.IpAddress
+
+
+filter:
+  condition: batch and not local_ips_or_machine_accounts
+
+  batch:
+    Event.System.EventID: 4624
+    Event.EventData.LogonType: 4
+  local_ips_or_machine_accounts:
+    - Event.EventData.IpAddress:
+        - '-'
+        - 127.0.0.1
+        - ::1
+    - Event.EventData.TargetUserName: $*

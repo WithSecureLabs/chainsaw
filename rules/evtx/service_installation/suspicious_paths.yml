@@ -1,0 +1,62 @@
+---
+title: Suspicious Paths Service Installation
+group: Service Installation 
+description: Suspicious Paths were found in a Service that Was Installed
+authors:
+  - reece394
+
+
+kind: evtx
+level: medium
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: Service Name
+    to: Event.EventData.ServiceName
+  - name: Service File Name
+    to: Event.EventData.ImagePath
+  - name: Service Type
+    to: Event.EventData.ServiceType
+  - name: Service Start Type
+    to: Event.EventData.StartType  
+  - name: Service Account
+    to: Event.EventData.AccountName  
+
+filter:
+  condition: service_control_manager and service_name
+
+  service_control_manager:
+    Event.System.Provider: Service Control Manager
+    Event.System.EventID: 7045
+
+  service_name:
+    Event.EventData.ImagePath:
+      - 'i*\SystemRoot\*' # Could Produce False Positives
+      - 'i*\Perflogs\*'
+      - 'i*\Users\Public\*'
+      - 'i*\Windows\Temp\*'
+      - 'i*\AppData\*'
+      - 'i*\Temp\*'
+      - 'i*\Downloads\*'
+      - 'i*\Documents\*'
+      - 'i*\Music\*'
+      - 'i*\Desktop\*'
+      - 'i*\Favorites\*'
+      - 'i*\Links\*'
+      - 'i*\Favorites\*'
+      - 'i*\OneDrive\*'
+      - 'i*\Pictures\*'
+      - 'i*\Saved Games\*'
+      - 'i*\Videos\*'
+      - 'i?^[a-zA-Z]:\\.{1,16}\.exe$' # Could Produce False Positives
+      - 'i?^%SYSTEMROOT%\\.{1,16}\.exe$' # Could Produce False Positives
+      - 'i?^[a-zA-Z]:\\.{1,9}\.exe' # Could Produce False Positives
+      - 'i?^%SYSTEMROOT%\\.{1,9}\.exe' # Could Produce False Positives

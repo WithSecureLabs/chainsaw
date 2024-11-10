@@ -1,0 +1,33 @@
+---
+title: PowerShell - Script Block Auditing
+group: PowerShell Script
+description: PowerShell - Script Block Auditing
+authors: 
+  - Catarina de Faria
+
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to : Event.System.Channel
+  - name: Computer
+    to: Event.System.Computer
+  - name: Information
+    to: Event.EventData.Path
+
+filter:
+  condition: powershell_script_block and not filepath_empty
+
+  powershell_script_block:
+      Event.System.EventID: 4104
+      Event.System.Channel: Microsoft-Windows-PowerShell/Operational
+  filepath_empty:
+      Event.EventData.Path: ''
+

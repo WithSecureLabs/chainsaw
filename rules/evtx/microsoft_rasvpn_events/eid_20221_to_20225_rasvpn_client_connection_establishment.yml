@@ -1,0 +1,49 @@
+---
+title: Microsoft Remote Access VPN - Client - Connection establishment
+group: Microsoft Remote Access VPN
+description: Microsoft Remote Access VPN - Client - Connection establishment. Suite of EIDs 20221->20222->20223->20224->20225
+authors: 
+  - Théo Letailleur
+  - Synacktiv
+
+kind: evtx
+level: info
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Channel
+    to: Event.System.Channel
+  - name: Provider
+    to: Event.System.Provider
+  - name: Computer
+    to: Event.System.Computer
+  - name: Data
+    to: Event.EventData.Data
+
+filter:
+  condition: preconnect_info or connecting_device or device_connected or link_established or rasconnection_established
+
+  preconnect_info:
+      Event.System.EventID: 20221
+      Event.System.Channel: Application
+      Event.System.Provider: RasClient
+  connecting_device:
+      Event.System.EventID: 20222
+      Event.System.Channel: Application
+      Event.System.Provider: RasClient
+  device_connected:
+      Event.System.EventID: 20223
+      Event.System.Channel: Application
+      Event.System.Provider: RasClient
+  link_established:
+      Event.System.EventID: 20224
+      Event.System.Channel: Application
+      Event.System.Provider: RasClient
+  rasconnection_established:
+      Event.System.EventID: 20225
+      Event.System.Channel: Application
+      Event.System.Provider: RasClient

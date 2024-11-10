@@ -1,0 +1,31 @@
+---
+title: Windows Event Log Stopped
+group: Service Tampering
+description: The Windows Event Log service has been stopped.
+authors:
+  - FranticTyping
+
+
+kind: evtx
+level: critical
+status: stable
+timestamp: Event.System.TimeCreated
+
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Record ID
+    to: Event.System.EventRecordID
+  - name: Computer
+    to: Event.System.Computer
+  - name: Service Name
+    to: Event.EventData.param1
+  - name: Action
+    to: Event.EventData.param2
+
+
+filter:
+  Event.System.EventID: 7040
+  Event.EventData.param1: Windows Event Log
+  Event.EventData.param2: disabled
