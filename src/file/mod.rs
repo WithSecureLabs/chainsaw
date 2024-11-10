@@ -55,7 +55,11 @@ impl Kind {
             Kind::Hve => Some(vec!["hve".to_string()]),
             Kind::Json => Some(vec!["json".to_string()]),
             Kind::Jsonl => Some(vec!["jsonl".to_string()]),
-            Kind::Mft => Some(vec!["mft".to_string(), "bin".to_string()]),
+            Kind::Mft => Some(vec![
+                "mft".to_string(),
+                "bin".to_string(),
+                "$MFT".to_string(),
+            ]),
             Kind::Xml => Some(vec!["xml".to_string()]),
             Kind::Esedb => Some(vec!["dat".to_string(), "edb".to_string()]),
             Kind::Unknown => None,
@@ -459,6 +463,10 @@ pub fn get_files(
                 if e.contains(&ext.to_string_lossy().into_owned()) {
                     files.push(path.to_path_buf());
                 }
+            }
+            // Edge cases
+            if e.contains("$MFT") && path.file_name().and_then(|e| e.to_str()) == Some("$MFT") {
+                files.push(path.to_path_buf());
             }
         } else {
             files.push(path.to_path_buf());
