@@ -1,0 +1,75 @@
+---
+title: PSTools
+group: MFT
+description: PSTools artifacts
+authors:
+  - Reece394
+
+
+kind: mft
+level: medium
+status: stable
+timestamp: StandardInfoCreated
+
+
+fields:
+  - name: FileNamePath
+    to: FullPath
+  - name: StandardInfoLastModified0x10
+    to: StandardInfoLastModified
+  - name: StandardInfoLastAccess0x10
+    to: StandardInfoLastAccess
+  - name: FileNameCreated0x30
+    to: FileNameCreated
+  - name: FileNameLastModified0x30
+    to: FileNameLastModified
+  - name: FileNameLastAccess0x30
+    to: FileNameLastAccess
+  - name: FileSize
+    to: FileSize
+  - name: IsADirectory
+    to: IsADirectory
+  - name: IsDeleted
+    to: IsDeleted
+  - name: HasAlternateDataStreams
+    to: HasAlternateDataStreams
+
+filter:
+  condition: pstools or (pstools_1 and pstools_2)
+
+  pstools:
+    FullPath:
+      - 'i*psfile.exe*'
+      - 'i*psfile64.exe*'
+      - 'i*PsGetsid.exe*'
+      - 'i*PsGetsid64.exe*'
+      - 'i*PsInfo.exe*'
+      - 'i*PsInfo64.exe*'
+      - 'i*pskill.exe*'
+      - 'i*pskill64.exe*'
+      - 'i*pslist.exe*'
+      - 'i*pslist64.exe*'
+      - 'i*PsLoggedon.exe*'
+      - 'i*PsLoggedon64.exe*'
+      - 'i*psloglist.exe*'
+      - 'i*psloglist64.exe*'
+      - 'i*pspasswd.exe*'
+      - 'i*pspasswd64.exe*'
+      - 'i*psping.exe*'
+      - 'i*psping64.exe*'
+      - 'i*PsService.exe*'
+      - 'i*PsService64.exe*'
+      - 'i*psshutdown.exe*'
+      - 'i*psshutdown64.exe*'
+      - 'i*pssuspend.exe*'
+      - 'i*pssuspend64.exe*'
+      - 'i*Pstools.chm*'
+      - 'i*psversion.txt*'
+
+  pstools_1:
+    FullPath:
+      - 'i*PSTools*'
+
+  pstools_2:
+    FullPath:
+      - 'i*.zip*'

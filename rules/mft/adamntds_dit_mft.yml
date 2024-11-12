@@ -1,7 +1,7 @@
 ---
-title: NTDS.dit Suspicious Location
+title: ADAMNTDS.dit Suspicious Location
 group: MFT
-description: NTDS.dit in a different location than standard. Potential Dumping Activity.
+description: ADAMNTDS.dit in a different location than standard. Potential Dumping Activity.
 authors:
   - Reece394
 
@@ -35,19 +35,18 @@ fields:
     to: HasAlternateDataStreams
 
 filter:
-  condition: (ntds and ntds_1) and not ntds_2
+  condition: (adamntds and adamntds_1) and not adamntds_2
 
-  ntds:
+  adamntds:
     FullPath:
-      - 'i*ntds*'
+      - 'i*adamntds*'
 
-  ntds_1:
+  adamntds_1:
     FullPath:
       - 'i*.dit*'
 
-  ntds_2:
+  adamntds_2:
     FullPath:
-      - 'iWindows\NTDS\NTDS.dit'
+      - 'iProgram Files\Microsoft ADAM\*'
       - 'iWindows\WinSxS*'
       - 'iWindows\servicing\LCU\*'
-      - 'i*adamntds.dit*'
