@@ -1,13 +1,13 @@
 ---
-title: NTDS.dit Suspicious Location
+title: ShadowDumper
 group: MFT
-description: NTDS.dit in a different location than standard. Potential Dumping Activity.
+description: ShadowDumper artifacts
 authors:
   - Reece394
 
 
 kind: mft
-level: medium
+level: critical
 status: stable
 timestamp: StandardInfoCreated
 
@@ -35,19 +35,17 @@ fields:
     to: HasAlternateDataStreams
 
 filter:
-  condition: (ntds and ntds_1) and not ntds_2
+  condition: shadowdumper
 
-  ntds:
+  shadowdumper:
     FullPath:
-      - 'i*ntds*'
-
-  ntds_1:
-    FullPath:
-      - 'i*.dit*'
-
-  ntds_2:
-    FullPath:
-      - 'iWindows\NTDS\NTDS.dit'
-      - 'iWindows\WinSxS*'
-      - 'iWindows\servicing\LCU\*'
-      - 'i*adamntds.dit*'
+      - 'i*PANDA.txt*'
+      - 'i*simpleMDWD.raw*'
+      - 'i*sysMDWD.file*'
+      - 'i*panda.raw*'
+      - 'i*panda.sense*'
+      - 'i*panda.enc*'
+      - 'i*ShadowDumper*'
+      - 'i*off.bin*'
+      - 'i*pan.bin*'
+      - 'i*callback.elf*'
