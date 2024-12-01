@@ -19,6 +19,7 @@
           rustc
           rustfmt
           vscode-extensions.llvm-org.lldb-vscode
+          inputs.self.packages.${system}.chainsaw
         ];
 
         RUST_SRC_PATH = pkgs.rustPlatform.rustLibSrc;
@@ -31,7 +32,7 @@
     in {
       chainsaw = pkgs.rustPlatform.buildRustPackage {
         pname = "chainsaw";
-        version = "2.8.1";
+        version = "2.10.1";
 
         src = ./.;
 
