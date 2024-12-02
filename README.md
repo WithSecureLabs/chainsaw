@@ -32,6 +32,7 @@ Chainsaw provides a powerful ‘first-response’ capability to quickly identify
 - [Hunting Logic for Windows Event Logs](#hunting-logic-for-windows-event-logs)
 - [Quick Start Guide](#quick-start-guide)
   - [Downloading and Running](#downloading-and-running)
+  - [Install/Build with Nix](#installbuild-with-nix)
   - [EDR and AV Warnings](#edr-and-av-warnings)
   - [What changed in Chainsaw v2](#what-changed-in-chainsaw-v2)
 - [Examples](#examples)
@@ -109,6 +110,42 @@ and then run Chainsaw with the parameters below:
 ```
 ./chainsaw hunt EVTX-ATTACK-SAMPLES/ -s sigma/ --mapping mappings/sigma-event-logs-all.yml
 ```
+
+### Install/build with Nix
+
+```
+├───devShells
+│   └───x86_64-linux
+│       └───default: development environment 'nix-shell'
+├───formatter
+│   └───x86_64-linux: package 'alejandra-3.1.0'
+└───packages
+    └───x86_64-linux
+        ├───chainsaw: package 'chainsaw-2.10.1'
+        └───default: package 'chainsaw-2.10.1'
+```
+
+Chainsaw, as a package, is available via [nixpkgs](https://search.nixos.org/packages?query=chainsaw).
+If you're using NixOS, just add `chainsaw` to your system configuration file.
+
+However, if you're not using NixOS, you can still install Chainsaw via Nix. The recommend way is via `nix-shell`, which will temporarily modify your $PATH environment variable.
+To do so, please run the following:
+```
+nix-shell -p chainsaw
+```
+
+You can also utilize the fact, that this repo is a flake, and you can run the following:
+```
+nix profile install github:WithSecureLabs/chainsaw
+```
+
+However, if you want to build chainsaw yourself, using Nix, you can once again utilize `flake.nix`, which is provided with this repository. 
+To build the binary, please run the following, in the root dir of cloned repo
+```
+nix build .#
+```
+This will create `./result` directory, with chainsaw binary located under `./result/bin/chainsaw`. 
+
 ### EDR and AV Warnings
 
 When downloading and running chainsaw you may find that your local EDR / AntiVirus engine detects Chainsaw as malicious. You can see examples of this in the following GitHub issues: [Example1](https://github.com/WithSecureLabs/chainsaw/issues/12), [Example2](https://github.com/WithSecureLabs/chainsaw/issues/47).
