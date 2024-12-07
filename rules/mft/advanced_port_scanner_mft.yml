@@ -1,7 +1,7 @@
 ---
-title: WinSCP
+title: Advanced Port Scanner
 group: MFT
-description: WinSCP artifacts
+description: Advanced Port Scanner artifacts
 authors:
   - Reece394
 
@@ -35,20 +35,25 @@ fields:
     to: HasAlternateDataStreams
 
 filter:
-  condition: winscp and (winscp_1 or winscp_2 or winscp_3)
+  condition: aps and (aps_1 or aps_2 or aps_3 or aps_4)
 
-  winscp:
+  aps:
     FullPath:
-      - 'i*winscp*'
+      - 'i*advanced_port_scanner*'
+      - 'i*advanced port scanner*'
 
-  winscp_1:
-    FullPath:
-      - 'i*.ini*'
-
-  winscp_2:
+  aps_1:
     FullPath:
       - 'i*.exe*'
 
-  winscp_3:
+  aps_2:
     FullPath:
-      - 'i*.rnd*'
+      - 'i*.bin*'
+
+  aps_3:
+    FullPath:
+      - 'i*mac_interval_tree.txt*'
+
+  aps_4:
+    FullPath:
+      - 'i*.lnk*'

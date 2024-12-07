@@ -35,7 +35,7 @@ fields:
     to: HasAlternateDataStreams
 
 filter:
-  condition: ais and (ais_1 or ais_2 or ais_3)
+  condition: ais and (ais_1 or ais_2 or ais_3 or ais_4)
 
   ais:
     FullPath:
@@ -51,5 +51,9 @@ filter:
       - 'i*.bin*'
 
   ais_3:
+    FullPath:
+      - 'i*mac_interval_tree.txt*'
+
+  ais_4:
     FullPath:
       - 'i*.lnk*'
