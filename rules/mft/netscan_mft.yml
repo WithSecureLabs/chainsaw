@@ -1,7 +1,7 @@
 ---
-title: WinSCP
+title: SoftPerfect Network Scanner - Netscan
 group: MFT
-description: WinSCP artifacts
+description: SoftPerfect Network Scanner - Netscan artifacts
 authors:
   - Reece394
 
@@ -35,20 +35,21 @@ fields:
     to: HasAlternateDataStreams
 
 filter:
-  condition: winscp and (winscp_1 or winscp_2 or winscp_3)
+  condition: netscan and (netscan_1 or netscan_2 or netscan_3)
 
-  winscp:
+  netscan:
     FullPath:
-      - 'i*winscp*'
+      - 'i*netscan*'
+      - 'i*SoftPerfect Network Scanner*'
 
-  winscp_1:
-    FullPath:
-      - 'i*.ini*'
-
-  winscp_2:
+  netscan_1:
     FullPath:
       - 'i*.exe*'
 
-  winscp_3:
+  netscan_2:
     FullPath:
-      - 'i*.rnd*'
+      - 'i*.lic*'
+
+  netscan_3:
+    FullPath:
+      - 'i*.xml*'
