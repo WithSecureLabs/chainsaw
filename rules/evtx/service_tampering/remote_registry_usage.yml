@@ -1,0 +1,36 @@
+title: Remote Registry Service Interaction
+group: Service Tampering
+description: Detects the possible usage of remote registry dumping via tools like Impacket-Secretsdump & CrackMapExec/NetExec
+authors:
+  - 0xFFaraday
+references:
+  - https://github.com/fortra/impacket/blob/af91d617c382e1eb132506159debcbc10da7a567/examples/secretsdump.py#L12-L31
+
+kind: evtx
+level: medium
+status: stable
+timestamp: Event.System.TimeCreated
+
+fields:
+  - name: Event ID
+    to: Event.System.EventID
+  - name: Computer
+    to: Event.System.Computer
+  - name: Service
+    to: Event.EventData.param1
+  - name: Old State
+    to: Event.EventData.param2
+  - name: New State
+    to: Event.EventData.param3
+  - name: SID
+    to: Event.System.Security_attributes.UserID
+
+filter:
+  condition: selection_service and not filter_sid
+
+  selection_service:
+    Event.System.EventID: 7040
+    Event.EventData.param1: "Remote Registry"
+
+  filter_sid:
+    Event.System.Security_attributes.UserID: "S-1-5-18"
