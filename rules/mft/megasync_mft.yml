@@ -1,0 +1,54 @@
+---
+title: MegaSync
+group: MFT
+description: MegaSync artifacts
+authors:
+  - Reece394
+
+
+kind: mft
+level: medium
+status: stable
+timestamp: StandardInfoCreated
+
+
+fields:
+  - name: FileNamePath
+    to: FullPath
+  - name: StandardInfoLastModified0x10
+    to: StandardInfoLastModified
+  - name: StandardInfoLastAccess0x10
+    to: StandardInfoLastAccess
+  - name: FileNameCreated0x30
+    to: FileNameCreated
+  - name: FileNameLastModified0x30
+    to: FileNameLastModified
+  - name: FileNameLastAccess0x30
+    to: FileNameLastAccess
+  - name: FileSize
+    to: FileSize
+  - name: IsADirectory
+    to: IsADirectory
+  - name: IsDeleted
+    to: IsDeleted
+  - name: HasAlternateDataStreams
+    to: HasAlternateDataStreams
+
+filter:
+  condition: ms and (ms_1 or ms_2 or ms_3)
+
+  ms:
+    FullPath:
+      - 'i*megasync*'
+
+  ms_1:
+    FullPath:
+      - 'i*.exe*'
+
+  ms_2:
+    FullPath:
+      - 'i*.cfg*'
+
+  ms_3:
+    FullPath:
+      - 'i*.log*'

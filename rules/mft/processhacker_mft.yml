@@ -1,0 +1,59 @@
+---
+title: Process Hacker
+group: MFT
+description: Process Hacker artifacts
+authors:
+  - Reece394
+
+
+kind: mft
+level: high
+status: stable
+timestamp: StandardInfoCreated
+
+
+fields:
+  - name: FileNamePath
+    to: FullPath
+  - name: StandardInfoLastModified0x10
+    to: StandardInfoLastModified
+  - name: StandardInfoLastAccess0x10
+    to: StandardInfoLastAccess
+  - name: FileNameCreated0x30
+    to: FileNameCreated
+  - name: FileNameLastModified0x30
+    to: FileNameLastModified
+  - name: FileNameLastAccess0x30
+    to: FileNameLastAccess
+  - name: FileSize
+    to: FileSize
+  - name: IsADirectory
+    to: IsADirectory
+  - name: IsDeleted
+    to: IsDeleted
+  - name: HasAlternateDataStreams
+    to: HasAlternateDataStreams
+
+filter:
+  condition: ph and (ph_1 or ph_2 or ph_3 or ph_4)
+
+  ph:
+    FullPath:
+      - 'i*ProcessHacker*'
+      - 'i*peview*'
+
+  ph_1:
+    FullPath:
+      - 'i*.exe*'
+
+  ph_2:
+    FullPath:
+      - 'i*.sys*'
+
+  ph_3:
+    FullPath:
+      - 'i*.zip*'
+
+  ph_4:
+    FullPath:
+      - 'i*.sig*'
