@@ -960,19 +960,19 @@ fn run() -> Result<()> {
                             };
 
                             // Create lock before dealing with JSON print sequence
-                            let mut hit_count = total_hits.lock().unwrap();
+                            let mut hit_count = total_hits.lock().expect("Failed to lock total_hits mutex");
 
                             if json {
                                 if *hit_count != 0 {
                                     cs_print!(",");
                                 }
-                                cs_print_json!(&hit).unwrap();
+                                cs_print_json!(&hit)?;
                             } else if jsonl {
-                                cs_print_json!(&hit).unwrap();
+                                cs_print_json!(&hit)?;
                                 cs_println!();
                             } else {
                                 cs_println!("---");
-                                cs_print_yaml!(&hit).unwrap();
+                                cs_print_yaml!(&hit)?;
                             }
                             *hit_count += 1;
                         }
@@ -993,7 +993,10 @@ fn run() -> Result<()> {
             if json {
                 cs_println!("]");
             }
-            cs_eprintln!("[+] Found {} hits", *total_hits.lock().unwrap());
+            cs_eprintln!(
+                "[+] Found {} hits",
+                *total_hits.lock().expect("Failed to lock total_hits mutex")
+            );
         }
         Command::Analyse { cmd } => {
             match cmd {
