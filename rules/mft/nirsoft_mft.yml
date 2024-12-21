@@ -1,0 +1,71 @@
+---
+title: Nirsoft Tools
+group: MFT
+description: Nirsoft Tools artifacts
+authors:
+  - Reece394
+
+
+kind: mft
+level: high
+status: stable
+timestamp: StandardInfoCreated
+
+
+fields:
+  - name: FileNamePath
+    to: FullPath
+  - name: StandardInfoLastModified0x10
+    to: StandardInfoLastModified
+  - name: StandardInfoLastAccess0x10
+    to: StandardInfoLastAccess
+  - name: FileNameCreated0x30
+    to: FileNameCreated
+  - name: FileNameLastModified0x30
+    to: FileNameLastModified
+  - name: FileNameLastAccess0x30
+    to: FileNameLastAccess
+  - name: FileSize
+    to: FileSize
+  - name: IsADirectory
+    to: IsADirectory
+  - name: IsDeleted
+    to: IsDeleted
+  - name: HasAlternateDataStreams
+    to: HasAlternateDataStreams
+
+filter:
+  condition: nirsoft and (nirsoft_1 or nirsoft_2 or nirsoft_3)
+
+  nirsoft:
+    FullPath:
+      - 'i*winlister*'
+      - 'i*bulletspassview*'
+      - 'i*chromepass*'
+      - 'i*dialupass*'
+      - 'i*extpassword*'
+      - 'i*iepv*'
+      - 'i*mailpv*'
+      - 'i*netpass*'
+      - 'i*operapassview*'
+      - 'i*routerpassview*'
+      - 'i*rdpv*'
+      - 'i*sniffpass*'
+      - 'i*vncpassview*'
+      - 'i*webbrowserpassview*'
+      - 'i*wirelesskeyview*'
+      - 'i*browsinghistoryview*'
+      - 'i*mspass*'
+      - 'i*nircmd*'
+
+  nirsoft_1:
+    FullPath:
+      - 'i*.exe*'
+
+  nirsoft_2:
+    FullPath:
+      - 'i*.zip*'
+
+  nirsoft_3:
+    FullPath:
+      - 'i*.chm*'

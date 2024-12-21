@@ -1,0 +1,61 @@
+---
+title: BrowserScan
+group: MFT
+description: BrowserScan artifacts
+authors:
+  - Reece394
+
+
+kind: mft
+level: high
+status: stable
+timestamp: StandardInfoCreated
+
+
+fields:
+  - name: FileNamePath
+    to: FullPath
+  - name: StandardInfoLastModified0x10
+    to: StandardInfoLastModified
+  - name: StandardInfoLastAccess0x10
+    to: StandardInfoLastAccess
+  - name: FileNameCreated0x30
+    to: FileNameCreated
+  - name: FileNameLastModified0x30
+    to: FileNameLastModified
+  - name: FileNameLastAccess0x30
+    to: FileNameLastAccess
+  - name: FileSize
+    to: FileSize
+  - name: IsADirectory
+    to: IsADirectory
+  - name: IsDeleted
+    to: IsDeleted
+  - name: HasAlternateDataStreams
+    to: HasAlternateDataStreams
+
+filter:
+  condition: (browserscan and browserscan_loot) or (browserscan_1 and browserscan_2)
+
+  browserscan:
+    FullPath:
+      - 'i*bookmarks.json*'
+      - 'i*state.json*'
+      - 'i*history.sqlite3*'
+      - 'i*chromekey.bin*'
+      - 'i*plaintext-cookies.csv*'
+      - 'i*plaintext-passwords.csv*'
+      - 'i*plaintext-ccards.csv*'
+
+  browserscan_loot:
+    FullPath:
+      - 'i*browser-loot*'
+
+  browserscan_1:
+    FullPath:
+      - 'i*browserscan*'
+
+  browserscan_2:
+    FullPath:
+      - 'i*.exe*'
+      - 'i*.py*'
