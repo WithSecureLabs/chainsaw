@@ -32,7 +32,7 @@
     in {
       chainsaw = pkgs.rustPlatform.buildRustPackage {
         pname = "chainsaw";
-        version = "2.10.2";
+        version = "2.10.3";
 
         src = ./.;
 
