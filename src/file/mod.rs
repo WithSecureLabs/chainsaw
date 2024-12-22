@@ -67,7 +67,7 @@ impl Kind {
     }
 }
 
-impl<'a> Iterator for Documents<'a> {
+impl Iterator for Documents<'_> {
     type Item = crate::Result<Document>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -84,6 +84,7 @@ impl Iterator for Unknown {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 pub enum Parser {
     Evtx(EvtxParser),
     Hve(HveParser),

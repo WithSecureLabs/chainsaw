@@ -20,7 +20,7 @@ use crate::file::Kind as FileKind;
 use crate::hunt::{Detections, Hunt, Kind};
 use crate::rule::{Kind as RuleKind, Level, Rule, Status};
 use crate::value::Value;
-use crate::write::WRITER;
+use crate::write::writer;
 
 #[cfg(not(windows))]
 pub const RULE_PREFIX: &str = "‣";
@@ -592,7 +592,7 @@ pub fn print_detections(
 }
 
 pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Result<()> {
-    let path = unsafe { &WRITER.path };
+    let path = &writer().path;
     let csv = if let Some(path) = path {
         Some(prettytable::csv::Writer::from_path(path)?)
     } else {
@@ -746,12 +746,10 @@ pub fn print_csv(
     local: bool,
     timezone: Option<Tz>,
 ) -> crate::Result<()> {
-    let directory = unsafe {
-        WRITER
-            .path
-            .as_ref()
-            .expect("could not get output directory")
-    };
+    let directory = writer()
+        .path
+        .as_ref()
+        .expect("could not get output directory");
     fs::create_dir_all(directory)?;
 
     // Build headers

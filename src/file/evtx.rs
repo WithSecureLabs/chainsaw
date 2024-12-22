@@ -32,7 +32,7 @@ impl Parser {
 }
 
 pub struct Wrapper<'a>(pub &'a Value);
-impl<'a> Document for Wrapper<'a> {
+impl Document for Wrapper<'_> {
     fn find(&self, key: &str) -> Option<Tau<'_>> {
         // As event logs can store values in a key or complex objects we do some aliasing here for
         // convenience...
@@ -49,7 +49,7 @@ impl<'a> Document for Wrapper<'a> {
 // the blocker here. It's actually quite easy to do, but just want to think it through first...
 // This structure means that we don't get the lookup speed improvements from using `Value`.
 pub struct WrapperLegacy<'a>(pub &'a Json);
-impl<'a> Document for WrapperLegacy<'a> {
+impl Document for WrapperLegacy<'_> {
     fn find(&self, key: &str) -> Option<Tau<'_>> {
         // As event logs can store values in a key or complex objects we do some aliasing here for
         // convenience...

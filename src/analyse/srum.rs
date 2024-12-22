@@ -1,9 +1,9 @@
-/// The SRUM (System Resource Usage Monitor) is a mechanism first introduced on Windows 8 (2015) that tracks
-/// programs, services, Windows apps and network connectivity. It relies on extensions/providers and parameters
-/// defined in HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SRUM\ to retrieve data from the system.
-/// The information is stored in a ESE database, located by default at %SystemRoot%\System32\sru\SRUDB.dat.
+// The SRUM (System Resource Usage Monitor) is a mechanism first introduced on Windows 8 (2015) that tracks
+// programs, services, Windows apps and network connectivity. It relies on extensions/providers and parameters
+// defined in HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SRUM\ to retrieve data from the system.
+// The information is stored in a ESE database, located by default at %SystemRoot%\System32\sru\SRUDB.dat.
 
-/// The SRUM parser will analyse the SRUM database and provide insights
+// The SRUM parser will analyse the SRUM database and provide insights
 use std::collections::BTreeMap;
 use std::{fs, path::PathBuf};
 

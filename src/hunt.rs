@@ -87,7 +87,7 @@ pub struct Document<'a> {
     pub data: Vec<u8>,
 }
 
-impl<'a> Serialize for Document<'a> {
+impl Serialize for Document<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -580,7 +580,7 @@ impl Mapper {
         }
         let kind = if full {
             let mut map =
-                FxHashMap::with_capacity_and_hasher(fields.len(), FxBuildHasher::default());
+                FxHashMap::with_capacity_and_hasher(fields.len(), FxBuildHasher);
             for field in &fields {
                 map.insert(
                     field.from.clone(),
@@ -594,7 +594,7 @@ impl Mapper {
             MapperKind::Full(map)
         } else if fast {
             let mut map =
-                FxHashMap::with_capacity_and_hasher(fields.len(), FxBuildHasher::default());
+                FxHashMap::with_capacity_and_hasher(fields.len(), FxBuildHasher);
             for field in &fields {
                 map.insert(field.from.clone(), field.to.clone());
             }
@@ -626,7 +626,7 @@ pub struct Mapped<'a> {
     document: &'a dyn TauDocument,
     mapper: &'a Mapper,
 }
-impl<'a> TauDocument for Mapped<'a> {
+impl TauDocument for Mapped<'_> {
     fn find(&self, key: &str) -> Option<Tau<'_>> {
         match &self.mapper.kind {
             MapperKind::None => self.document.find(key),
@@ -712,7 +712,7 @@ struct Cache<'a> {
     cache: Option<Vec<Option<Tau<'a>>>>,
     mapped: &'a Mapped<'a>,
 }
-impl<'a> TauDocument for Cache<'a> {
+impl TauDocument for Cache<'_> {
     #[inline(always)]
     fn find(&self, key: &str) -> Option<Tau<'_>> {
         if let Some(cache) = &self.cache {
@@ -768,7 +768,7 @@ impl Hunter {
         &'a self,
         file: &'a Path,
         cache: &Option<std::fs::File>,
-    ) -> crate::Result<Vec<Detections>> {
+    ) -> crate::Result<Vec<Detections<'a>>> {
         let mut reader = Reader::load(file, self.inner.load_unknown, self.inner.skip_errors)?;
         let kind = reader.kind();
         #[allow(clippy::type_complexity)]

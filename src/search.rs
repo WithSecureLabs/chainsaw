@@ -17,7 +17,7 @@ pub struct Hits<'a> {
     searcher: &'a SearcherInner,
 }
 
-impl<'a> Hits<'a> {
+impl Hits<'_> {
     pub fn iter(&mut self) -> Iter<'_> {
         Iter {
             documents: self.reader.documents(),
@@ -31,7 +31,7 @@ pub struct Iter<'a> {
     searcher: &'a SearcherInner,
 }
 
-impl<'a> Iterator for Iter<'a> {
+impl Iterator for Iter<'_> {
     type Item = crate::Result<Json>;
 
     fn next(&mut self) -> Option<Self::Item> {

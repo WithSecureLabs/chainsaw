@@ -11,7 +11,7 @@ pub use rule::{
     lint, load, sigma, Filter, Kind as RuleKind, Level as RuleLevel, Status as RuleStatus,
 };
 pub use search::{Searcher, SearcherBuilder};
-pub use write::{set_writer, Format, Writer, WRITER};
+pub use write::{set_writer, Format, Writer, writer};
 
 #[macro_use]
 mod write;

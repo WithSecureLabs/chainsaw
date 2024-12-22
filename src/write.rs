@@ -50,18 +50,21 @@ where
     Ok(())
 }
 
+pub fn writer() -> &'static Writer {
+    #[allow(static_mut_refs)]
+    unsafe { &WRITER }
+}
+
 #[macro_export]
 macro_rules! cs_print {
     ($($arg:tt)*) => ({
         use std::io::Write;
-        unsafe {
-            match $crate::WRITER.output.as_ref() {
-                Some(mut f) => {
-                    f.write_all(format!($($arg)*).as_bytes()).expect("could not write to file");
-                }
-                None => {
-                    print!($($arg)*);
-                }
+        match $crate::writer().output.as_ref() {
+            Some(mut f) => {
+                f.write_all(format!($($arg)*).as_bytes()).expect("could not write to file");
+            }
+            None => {
+                print!($($arg)*);
             }
         }
     })
@@ -71,28 +74,24 @@ macro_rules! cs_print {
 macro_rules! cs_println {
     () => {
         use std::io::Write;
-        unsafe {
-            match $crate::WRITER.output.as_ref() {
-                Some(mut f) => {
-                    f.write_all(b"\n").expect("could not write to file");
-                }
-                None => {
-                    println!();
-                }
+        match $crate::writer().output.as_ref() {
+            Some(mut f) => {
+                f.write_all(b"\n").expect("could not write to file");
+            }
+            None => {
+                println!();
             }
         }
     };
     ($($arg:tt)*) => {
         use std::io::Write;
-        unsafe {
-            match $crate::WRITER.output.as_ref() {
-                Some(mut f) => {
-                    f.write_all(format!($($arg)*).as_bytes()).expect("could not write to file");
-                    f.write_all(b"\n").expect("could not write to file");
-                }
-                None => {
-                    println!($($arg)*);
-                }
+        match $crate::writer().output.as_ref() {
+            Some(mut f) => {
+                f.write_all(format!($($arg)*).as_bytes()).expect("could not write to file");
+                f.write_all(b"\n").expect("could not write to file");
+            }
+            None => {
+                println!($($arg)*);
             }
         }
     }
@@ -101,10 +100,8 @@ macro_rules! cs_println {
 #[macro_export]
 macro_rules! cs_eprintln {
     ($($arg:tt)*) => ({
-        unsafe {
-            if !$crate::WRITER.quiet {
-                eprintln!($($arg)*);
-            }
+        if !$crate::writer().quiet {
+            eprintln!($($arg)*);
         }
     })
 }
@@ -113,16 +110,14 @@ macro_rules! cs_eprintln {
 macro_rules! cs_print_json {
     ($value:expr) => {{
         use std::io::Write;
-        unsafe {
-            match $crate::WRITER.output.as_ref() {
-                Some(mut f) => {
-                    ::serde_json::to_writer(f, $value)?;
-                    f.flush()
-                }
-                None => {
-                    ::serde_json::to_writer(std::io::stdout(), $value)?;
-                    std::io::stdout().flush()
-                }
+        match $crate::writer().output.as_ref() {
+            Some(mut f) => {
+                ::serde_json::to_writer(f, $value)?;
+                f.flush()
+            }
+            None => {
+                ::serde_json::to_writer(std::io::stdout(), $value)?;
+                std::io::stdout().flush()
             }
         }
     }};
@@ -132,16 +127,14 @@ macro_rules! cs_print_json {
 macro_rules! cs_print_json_pretty {
     ($value:expr) => {{
         use std::io::Write;
-        unsafe {
-            match $crate::WRITER.output.as_ref() {
-                Some(mut f) => {
-                    ::serde_json::to_writer_pretty(f, $value)?;
-                    f.flush()
-                }
-                None => {
-                    ::serde_json::to_writer_pretty(std::io::stdout(), $value)?;
-                    std::io::stdout().flush()
-                }
+        match $crate::writer().output.as_ref() {
+            Some(mut f) => {
+                ::serde_json::to_writer_pretty(f, $value)?;
+                f.flush()
+            }
+            None => {
+                ::serde_json::to_writer_pretty(std::io::stdout(), $value)?;
+                std::io::stdout().flush()
             }
         }
     }};
@@ -151,18 +144,16 @@ macro_rules! cs_print_json_pretty {
 macro_rules! cs_print_yaml {
     ($value:expr) => {{
         use std::io::Write;
-        unsafe {
-            match $crate::WRITER.output.as_ref() {
-                Some(mut f) => {
-                    ::serde_yaml::to_writer(f, $value)?;
-                    f.write_all(b"\n")?;
-                    f.flush()
-                }
-                None => {
-                    ::serde_yaml::to_writer(std::io::stdout(), $value)?;
-                    println!();
-                    std::io::stdout().flush()
-                }
+        match $crate::writer().output.as_ref() {
+            Some(mut f) => {
+                ::serde_yaml::to_writer(f, $value)?;
+                f.write_all(b"\n")?;
+                f.flush()
+            }
+            None => {
+                ::serde_yaml::to_writer(std::io::stdout(), $value)?;
+                println!();
+                std::io::stdout().flush()
             }
         }
     }};
@@ -170,13 +161,11 @@ macro_rules! cs_print_yaml {
 
 macro_rules! cs_print_table {
     ($table:ident) => {
-        unsafe {
-            match $crate::WRITER.output.as_ref() {
-                Some(mut f) => {
-                    let _ = $table.print(&mut f).expect("could not write table to file");
-                }
-                None => $table.printstd(),
+        match $crate::writer().output.as_ref() {
+            Some(mut f) => {
+                let _ = $table.print(&mut f).expect("could not write table to file");
             }
+            None => $table.printstd(),
         }
     };
 }
@@ -184,22 +173,20 @@ macro_rules! cs_print_table {
 macro_rules! cs_greenln {
     ($($arg:tt)*) => {
         use std::io::Write;
-        unsafe {
-            match $crate::WRITER.output.as_ref() {
-                Some(mut f) => {
-                    f.write_all(format!($($arg)*).as_bytes()).expect("could not write to file");
-                    f.write_all(b"\n").expect("could not write to file");
-                }
-                None => {
-                    let _ = std::io::stderr().lock();
-                    crossterm::execute!(
-                        std::io::stdout(),
-                        crossterm::style::SetForegroundColor(crossterm::style::Color::Green),
-                        crossterm::style::Print(format!($($arg)*)),
-                        crossterm::style::ResetColor
-                    ).expect("failed to write line");
-                    println!()
-                }
+        match $crate::writer().output.as_ref() {
+            Some(mut f) => {
+                f.write_all(format!($($arg)*).as_bytes()).expect("could not write to file");
+                f.write_all(b"\n").expect("could not write to file");
+            }
+            None => {
+                let _ = std::io::stderr().lock();
+                crossterm::execute!(
+                    std::io::stdout(),
+                    crossterm::style::SetForegroundColor(crossterm::style::Color::Green),
+                    crossterm::style::Print(format!($($arg)*)),
+                    crossterm::style::ResetColor
+                ).expect("failed to write line");
+                println!()
             }
         }
     };
@@ -208,8 +195,7 @@ macro_rules! cs_greenln {
 #[macro_export]
 macro_rules! cs_egreenln {
     ($($arg:tt)*) => {
-        unsafe {
-            if !$crate::WRITER.quiet {
+            if !$crate::writer().quiet {
                 let _ = std::io::stderr().lock();
                 crossterm::execute!(
                     std::io::stderr(),
@@ -219,24 +205,21 @@ macro_rules! cs_egreenln {
                 ).expect("failed to write line");
                 eprintln!()
             }
-        }
     };
 }
 
 #[macro_export]
 macro_rules! cs_eyellowln {
     ($($arg:tt)*) => {
-        unsafe {
-            if !$crate::WRITER.quiet {
-                let _ = std::io::stderr().lock();
-                crossterm::execute!(
-                    std::io::stderr(),
-                    crossterm::style::SetForegroundColor(crossterm::style::Color::Yellow),
-                    crossterm::style::Print(format!($($arg)*)),
-                    crossterm::style::ResetColor
-                ).expect("failed to write line");
-                eprintln!()
-            }
+        if !$crate::writer().quiet {
+            let _ = std::io::stderr().lock();
+            crossterm::execute!(
+                std::io::stderr(),
+                crossterm::style::SetForegroundColor(crossterm::style::Color::Yellow),
+                crossterm::style::Print(format!($($arg)*)),
+                crossterm::style::ResetColor
+            ).expect("failed to write line");
+            eprintln!()
         }
     };
 }
@@ -244,17 +227,15 @@ macro_rules! cs_eyellowln {
 #[macro_export]
 macro_rules! cs_eredln {
     ($($arg:tt)*) => {
-        unsafe {
-            if !$crate::WRITER.quiet {
-                let _ = std::io::stderr().lock();
-                crossterm::execute!(
-                    std::io::stderr(),
-                    crossterm::style::SetForegroundColor(crossterm::style::Color::Red),
-                    crossterm::style::Print(format!($($arg)*)),
-                    crossterm::style::ResetColor
-                ).expect("failed to write line");
-                eprintln!()
-            }
+        if !$crate::writer().quiet {
+            let _ = std::io::stderr().lock();
+            crossterm::execute!(
+                std::io::stderr(),
+                crossterm::style::SetForegroundColor(crossterm::style::Color::Red),
+                crossterm::style::Print(format!($($arg)*)),
+                crossterm::style::ResetColor
+            ).expect("failed to write line");
+            eprintln!()
         }
     };
 }
