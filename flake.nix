@@ -32,7 +32,7 @@
     in {
       chainsaw = pkgs.rustPlatform.buildRustPackage {
         pname = "chainsaw";
-        version = "2.10.1";
+        version = "2.10.2";
 
         src = ./.;
 
@@ -46,4 +46,3 @@
     formatter = genSystems (system: inputs.nixpkgs.legacyPackages.${system}.alejandra);
   };
 }
-
