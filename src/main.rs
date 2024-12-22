@@ -13,7 +13,7 @@ use bytesize::ByteSize;
 use chrono::NaiveDateTime;
 use chrono_tz::Tz;
 
-use clap::{Parser, Subcommand};
+use clap::{ArgAction, Parser, Subcommand};
 
 use chainsaw::{
     cli, get_files, lint as lint_rule, load as load_rule, set_writer, Document, Filter, Format,
@@ -48,6 +48,9 @@ struct Args {
     /// Limit the thread number (default: num of CPUs)
     #[arg(long)]
     num_threads: Option<usize>,
+    /// Print verbose output.
+    #[arg(short = 'v', action = ArgAction::Count)]
+    verbose: u8,
     #[command(subcommand)]
     cmd: Command,
 }
@@ -342,7 +345,13 @@ fn resolve_col_width() -> Option<u32> {
     }
 }
 
-fn init_writer(output: Option<PathBuf>, csv: bool, json: bool, quiet: bool) -> crate::Result<()> {
+fn init_writer(
+    output: Option<PathBuf>,
+    csv: bool,
+    json: bool,
+    quiet: bool,
+    verbose: u8,
+) -> crate::Result<()> {
     let (path, output) = match &output {
         Some(path) => {
             if csv {
@@ -375,6 +384,7 @@ fn init_writer(output: Option<PathBuf>, csv: bool, json: bool, quiet: bool) -> c
         output,
         path,
         quiet,
+        verbose,
     };
     set_writer(writer).expect("could not set writer");
     Ok(())
@@ -399,7 +409,7 @@ fn run() -> Result<()> {
             quiet,
             skip_errors,
         } => {
-            init_writer(output, false, json, quiet)?;
+            init_writer(output, false, json, quiet, args.verbose)?;
             if !args.no_banner {
                 print_title();
             }
@@ -533,7 +543,7 @@ fn run() -> Result<()> {
                     }
                 }
             }
-            init_writer(output.clone(), csv, json, quiet)?;
+            init_writer(output.clone(), csv, json, quiet, args.verbose)?;
             if !args.no_banner {
                 print_title();
             }
@@ -582,6 +592,7 @@ fn run() -> Result<()> {
             let mut rs = vec![];
             for path in &rules {
                 for file in get_files(path, &None, skip_errors)? {
+                    cs_debug!("[*] Loading chainsaw rule - {}", file.display());
                     match load_rule(RuleKind::Chainsaw, &file, &kinds, &levels, &statuses) {
                         Ok(r) => {
                             if !r.is_empty() {
@@ -597,6 +608,7 @@ fn run() -> Result<()> {
             }
             for path in &sigma {
                 for file in get_files(path, &None, skip_errors)? {
+                    cs_debug!("[*] Loading sigma rule - {}", file.display());
                     match load_rule(RuleKind::Sigma, &file, &kinds, &levels, &statuses) {
                         Ok(r) => {
                             if !r.is_empty() {
@@ -709,8 +721,13 @@ fn run() -> Result<()> {
             let mut hits = 0;
             let mut documents = 0;
             let mut detections = vec![];
-            let pb = cli::init_progress_bar(files.len() as u64, "Hunting".to_string());
+            let pb = cli::init_progress_bar(
+                files.len() as u64,
+                "Hunting".to_string(),
+                args.verbose != 0,
+            );
             for file in &files {
+                cs_debug!("[*] Hunting through file - {}", file.display());
                 pb.tick();
                 let cache = if cache {
                     match tempfile::tempfile() {
@@ -768,7 +785,7 @@ fn run() -> Result<()> {
             cs_eprintln!("\n[+] {} Detections found on {} documents", hits, documents,);
         }
         Command::Lint { path, kind, tau } => {
-            init_writer(None, false, false, false)?;
+            init_writer(None, false, false, false, args.verbose)?;
             if !args.no_banner {
                 print_title();
             }
@@ -849,7 +866,7 @@ fn run() -> Result<()> {
             timezone,
             to,
         } => {
-            init_writer(output, false, json, quiet)?;
+            init_writer(output, false, json, quiet, args.verbose)?;
             if !args.no_banner {
                 print_title();
             }
@@ -1011,7 +1028,7 @@ fn run() -> Result<()> {
                     if !args.no_banner {
                         print_title();
                     }
-                    init_writer(output.clone(), true, false, false)?;
+                    init_writer(output.clone(), true, false, false, args.verbose)?;
                     let shimcache_analyser = ShimcacheAnalyser::new(shimcache, amcache);
 
                     // Load regex
@@ -1051,7 +1068,7 @@ fn run() -> Result<()> {
                     quiet,
                     output,
                 } => {
-                    init_writer(output.clone(), false, true, quiet)?;
+                    init_writer(output.clone(), false, true, quiet, args.verbose)?;
                     if !args.no_banner {
                         print_title();
                     }

@@ -8,6 +8,7 @@ pub static mut WRITER: Writer = Writer {
     output: None,
     path: None,
     quiet: false,
+    verbose: 0,
 };
 
 #[derive(Default)]
@@ -23,6 +24,7 @@ pub struct Writer {
     pub output: Option<File>,
     pub path: Option<PathBuf>,
     pub quiet: bool,
+    pub verbose: u8,
 }
 
 impl Default for Writer {
@@ -32,6 +34,7 @@ impl Default for Writer {
             output: None,
             path: None,
             quiet: false,
+            verbose: 0,
         }
     }
 }
@@ -52,7 +55,9 @@ where
 
 pub fn writer() -> &'static Writer {
     #[allow(static_mut_refs)]
-    unsafe { &WRITER }
+    unsafe {
+        &WRITER
+    }
 }
 
 #[macro_export]
@@ -95,6 +100,24 @@ macro_rules! cs_println {
             }
         }
     }
+}
+
+#[macro_export]
+macro_rules! cs_debug {
+    ($($arg:tt)*) => ({
+        if $crate::writer().verbose > 0 {
+            eprintln!($($arg)*);
+        }
+    })
+}
+
+#[macro_export]
+macro_rules! cs_trace {
+    ($($arg:tt)*) => ({
+        if $crate::writer().verbose > 1 {
+            eprintln!($($arg)*);
+        }
+    })
 }
 
 #[macro_export]

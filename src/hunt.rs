@@ -150,6 +150,7 @@ impl HunterBuilder {
 
     pub fn build(self) -> crate::Result<Hunter> {
         let mut hunts = vec![];
+        cs_trace!("[*] Loading rules...");
         let mut rules = match self.rules {
             Some(mut rules) => {
                 rules.sort_by(|x, y| x.name().cmp(y.name()));
@@ -179,6 +180,7 @@ impl HunterBuilder {
             None => BTreeMap::new(),
         };
         if let Some(mut mappings) = self.mappings {
+            cs_trace!("[*] Loading mappings...");
             mappings.sort();
             for mapping in mappings {
                 let mut file = match fs::File::open(mapping) {
@@ -276,6 +278,7 @@ impl HunterBuilder {
 
         let mut fields = vec![];
         if preprocess {
+            cs_trace!("[*] Preprocessing...");
             let mut keys = HashSet::new();
             for hunt in &hunts {
                 keys.insert(hunt.timestamp.clone());
@@ -579,8 +582,8 @@ impl Mapper {
             }
         }
         let kind = if full {
-            let mut map =
-                FxHashMap::with_capacity_and_hasher(fields.len(), FxBuildHasher);
+            cs_trace!("[*] Using mapper in full mode");
+            let mut map = FxHashMap::with_capacity_and_hasher(fields.len(), FxBuildHasher);
             for field in &fields {
                 map.insert(
                     field.from.clone(),
@@ -593,13 +596,14 @@ impl Mapper {
             }
             MapperKind::Full(map)
         } else if fast {
-            let mut map =
-                FxHashMap::with_capacity_and_hasher(fields.len(), FxBuildHasher);
+            cs_trace!("[*] Using mapper in fast mode");
+            let mut map = FxHashMap::with_capacity_and_hasher(fields.len(), FxBuildHasher);
             for field in &fields {
                 map.insert(field.from.clone(), field.to.clone());
             }
             MapperKind::Fast(map)
         } else {
+            cs_trace!("[*] Using mapper in bypass mode");
             MapperKind::None
         };
         Self { fields, kind }
@@ -716,6 +720,7 @@ impl TauDocument for Cache<'_> {
     #[inline(always)]
     fn find(&self, key: &str) -> Option<Tau<'_>> {
         if let Some(cache) = &self.cache {
+            cs_trace!("[*] Using cache for key lookup - {}", key);
             let index = key.bytes().fold(0, |acc, x| acc + (x as usize));
             cache[index].clone()
         } else {
@@ -798,12 +803,34 @@ impl Hunter {
                     }
                 };
                 let (kind, value): (FileKind, Value) = match document {
-                    File::Evtx(evtx) => (FileKind::Evtx, evtx.data.into()),
-                    File::Hve(hve) => (FileKind::Hve, hve.into()),
-                    File::Json(json) => (FileKind::Json, json.into()),
-                    File::Mft(mft) => (FileKind::Mft, mft.into()),
-                    File::Xml(xml) => (FileKind::Xml, xml.into()),
-                    File::Esedb(esedb) => (FileKind::Esedb, esedb.into()),
+                    File::Evtx(evtx) => {
+                        cs_trace!(
+                            "[*] Hunting through document {} - {:?}",
+                            document_id,
+                            evtx.data
+                        );
+                        (FileKind::Evtx, evtx.data.into())
+                    }
+                    File::Hve(hve) => {
+                        cs_trace!("[*] Hunting through document {} - {:?}", document_id, hve);
+                        (FileKind::Hve, hve.into())
+                    }
+                    File::Json(json) => {
+                        cs_trace!("[*] Hunting through document {} - {:?}", document_id, json);
+                        (FileKind::Json, json.into())
+                    }
+                    File::Mft(mft) => {
+                        cs_trace!("[*] Hunting through document {} - {:?}", document_id, mft);
+                        (FileKind::Mft, mft.into())
+                    }
+                    File::Xml(xml) => {
+                        cs_trace!("[*] Hunting through document {} - {:?}", document_id, xml);
+                        (FileKind::Xml, xml.into())
+                    }
+                    File::Esedb(esedb) => {
+                        cs_trace!("[*] Hunting through document {} - {:?}", document_id, esedb);
+                        (FileKind::Esedb, esedb.into())
+                    }
                 };
                 let mut hits = smallvec::smallvec![];
                 for hunt in &self.inner.hunts {
@@ -984,6 +1011,7 @@ impl Hunter {
                         }
                     }
                 }
+                cs_trace!("[*] Hunted through document {}", document_id);
                 if !hits.is_empty() {
                     if let Some(mut cache) = cache.as_ref() {
                         let mut offset = offset.lock().expect("could not lock offset");

@@ -34,14 +34,18 @@ const TICK_SETTINGS: (&str, u64) = ("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ ", 80);
 #[cfg(windows)]
 const TICK_SETTINGS: (&str, u64) = (r"-\|/-", 200);
 
-pub fn init_progress_bar(size: u64, msg: String) -> indicatif::ProgressBar {
+pub fn init_progress_bar(size: u64, msg: String, verbose: bool) -> indicatif::ProgressBar {
     let pb = ProgressBar::new(size);
-    unsafe {
-        match crate::write::WRITER.quiet {
-            true => pb.set_draw_target(ProgressDrawTarget::hidden()),
-            false => pb.set_draw_target(ProgressDrawTarget::stderr()),
+    if verbose {
+        pb.set_draw_target(ProgressDrawTarget::hidden());
+    } else {
+        unsafe {
+            match crate::write::WRITER.quiet {
+                true => pb.set_draw_target(ProgressDrawTarget::hidden()),
+                false => pb.set_draw_target(ProgressDrawTarget::stderr()),
+            }
         }
-    };
+    }
     pb.set_style(
         ProgressStyle::default_bar()
             .template("[+] {msg}: [{bar:40}] {pos}/{len} {spinner}")
