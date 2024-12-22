@@ -1,9 +1,11 @@
 #[macro_use]
 extern crate chainsaw;
 
+use rayon::prelude::*;
 use std::fs::{self, File};
 use std::io::BufRead;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::{collections::HashSet, io::BufReader};
 
 use anyhow::{Context, Result};
@@ -403,8 +405,7 @@ fn run() -> Result<()> {
             }
             cs_eprintln!(
                 "[+] Dumping the contents of forensic artefacts from: {} (extensions: {})",
-                path
-                    .iter()
+                path.iter()
                     .map(|r| r.display().to_string())
                     .collect::<Vec<_>>()
                     .join(", "),
@@ -940,37 +941,62 @@ fn run() -> Result<()> {
             if json {
                 cs_print!("[");
             }
-            let mut hits = 0;
-            for file in &files {
-                for res in searcher.search(file)?.iter() {
-                    let hit = match res {
-                        Ok(hit) => hit,
-                        Err(e) => {
-                            if skip_errors {
-                                continue;
+
+            let total_hits = Arc::new(std::sync::Mutex::new(0));
+
+            files.par_iter().try_for_each(|file| {
+                match searcher.search(file) {
+                    Ok(mut results) => {
+                        for res in results.iter() {
+                            let hit = match res {
+                                Ok(hit) => hit,
+                                Err(e) => {
+                                    return Err(anyhow::anyhow!(
+                                        "Failed to search file {} - {} (Use --skip-errors to continue processing)",
+                                        file.display(),
+                                        e
+                                    ));
+                                }
+                            };
+
+                            // Create lock before dealing with JSON print sequence
+                            let mut hit_count = total_hits.lock().expect("Failed to lock total_hits mutex");
+
+                            if json {
+                                if *hit_count != 0 {
+                                    cs_print!(",");
+                                }
+                                cs_print_json!(&hit)?;
+                            } else if jsonl {
+                                cs_print_json!(&hit)?;
+                                cs_println!();
+                            } else {
+                                cs_println!("---");
+                                cs_print_yaml!(&hit)?;
                             }
-                            anyhow::bail!("Failed to search file... - {}", e);
+                            *hit_count += 1;
                         }
-                    };
-                    if json {
-                        if hits != 0 {
-                            cs_print!(",");
-                        }
-                        cs_print_json!(&hit)?;
-                    } else if jsonl {
-                        cs_print_json!(&hit)?;
-                        cs_println!();
-                    } else {
-                        cs_println!("---");
-                        cs_print_yaml!(&hit)?;
                     }
-                    hits += 1;
+                    Err(e) => {
+                        return Err(anyhow::anyhow!(
+                            "Failed to search file {} - {} (Use --skip-errors to continue processing)",
+                            file.display(),
+                            e
+                        ));
+                    }
                 }
-            }
+
+
+                Ok(())
+            })?;
+
             if json {
                 cs_println!("]");
             }
-            cs_eprintln!("[+] Found {} hits", hits);
+            cs_eprintln!(
+                "[+] Found {} hits",
+                *total_hits.lock().expect("Failed to lock total_hits mutex")
+            );
         }
         Command::Analyse { cmd } => {
             match cmd {
