@@ -34,7 +34,12 @@ const TICK_SETTINGS: (&str, u64) = ("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ ", 80);
 #[cfg(windows)]
 const TICK_SETTINGS: (&str, u64) = (r"-\|/-", 200);
 
-pub fn init_progress_bar(size: u64, msg: String, verbose: bool) -> indicatif::ProgressBar {
+pub fn init_progress_bar(
+    size: u64,
+    msg: String,
+    verbose: bool,
+    prefix: String,
+) -> indicatif::ProgressBar {
     let pb = ProgressBar::new(size);
     if verbose {
         pb.set_draw_target(ProgressDrawTarget::hidden());
@@ -48,7 +53,13 @@ pub fn init_progress_bar(size: u64, msg: String, verbose: bool) -> indicatif::Pr
     }
     pb.set_style(
         ProgressStyle::default_bar()
-            .template("[+] {msg}: [{bar:40}] {pos}/{len} {spinner}")
+            .template(
+                format!(
+                    "{{msg}}[+] {} [{{bar:40}}] {{pos}}/{{len}} {{spinner}} [{{elapsed_precise}}]",
+                    prefix
+                )
+                .as_str(),
+            )
             .expect("could not set template")
             .tick_chars(TICK_SETTINGS.0)
             .progress_chars("=>-"),
