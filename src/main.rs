@@ -723,12 +723,13 @@ fn run() -> Result<()> {
             let mut detections = vec![];
             let pb = cli::init_progress_bar(
                 files.len() as u64,
-                "Hunting".to_string(),
+                "".to_string(),
                 args.verbose != 0,
+                "Hunting".to_string(),
             );
             for file in &files {
                 cs_debug!("[*] Hunting through file - {}", file.display());
-                pb.tick();
+                pb.set_message(format!("[+] Current Artifact: {}\n", file.display()));
                 let cache = if cache {
                     match tempfile::tempfile() {
                         Ok(f) => Some(f),
@@ -740,7 +741,7 @@ fn run() -> Result<()> {
                     None
                 };
                 let scratch = hunter.hunt(file, &cache).with_context(|| {
-                    format!("Failed to hunt through file '{}'", file.to_string_lossy())
+                    format!("Failed to hunt through file '{}' (Use --skip-errors to continue processing)", file.to_string_lossy())
                 })?;
                 hits += scratch.iter().map(|d| d.hits.len()).sum::<usize>();
                 documents += scratch.len();

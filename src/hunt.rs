@@ -793,7 +793,7 @@ impl Hunter {
                     Err(e) => {
                         if self.inner.skip_errors {
                             cs_eyellowln!(
-                                "[!] failed to parse document '{}' - {}\n",
+                                "[!] failed to parse document '{}' - {} - use --skip-errors to continue...\n",
                                 file.display(),
                                 e
                             );
