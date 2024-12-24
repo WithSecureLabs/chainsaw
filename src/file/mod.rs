@@ -101,7 +101,13 @@ pub struct Reader {
 }
 
 impl Reader {
-    pub fn load(file: &Path, load_unknown: bool, skip_errors: bool) -> crate::Result<Self> {
+    pub fn load(
+        file: &Path,
+        load_unknown: bool,
+        skip_errors: bool,
+        decode_data_streams: bool,
+        data_streams_directory: Option<PathBuf>,
+    ) -> crate::Result<Self> {
         // NOTE: We don't want to use libmagic because then we have to include databases etc... So
         // for now we assume that the file extensions are correct!
         match file.extension().and_then(|e| e.to_str()) {
@@ -173,7 +179,11 @@ impl Reader {
                     })
                 }
                 "bin" | "mft" => {
-                    let parser = match MftParser::load(file) {
+                    let parser = match MftParser::load(
+                        file,
+                        data_streams_directory.clone(),
+                        decode_data_streams,
+                    ) {
                         Ok(parser) => parser,
                         Err(e) => {
                             if skip_errors {
@@ -266,7 +276,11 @@ impl Reader {
                             return Ok(Self {
                                 parser: Parser::Evtx(parser),
                             });
-                        } else if let Ok(parser) = MftParser::load(file) {
+                        } else if let Ok(parser) = MftParser::load(
+                            file,
+                            data_streams_directory.clone(),
+                            decode_data_streams,
+                        ) {
                             return Ok(Self {
                                 parser: Parser::Mft(parser),
                             });
@@ -311,7 +325,9 @@ impl Reader {
             None => {
                 // Edge cases
                 if file.file_name().and_then(|e| e.to_str()) == Some("$MFT") {
-                    if let Ok(parser) = MftParser::load(file) {
+                    if let Ok(parser) =
+                        MftParser::load(file, data_streams_directory.clone(), decode_data_streams)
+                    {
                         return Ok(Self {
                             parser: Parser::Mft(parser),
                         });
@@ -322,7 +338,9 @@ impl Reader {
                         return Ok(Self {
                             parser: Parser::Evtx(parser),
                         });
-                    } else if let Ok(parser) = MftParser::load(file) {
+                    } else if let Ok(parser) =
+                        MftParser::load(file, data_streams_directory.clone(), decode_data_streams)
+                    {
                         return Ok(Self {
                             parser: Parser::Mft(parser),
                         });

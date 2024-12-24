@@ -282,6 +282,7 @@ dependencies = [
  "predicates",
  "prettytable-rs",
  "quick-xml 0.37.1",
+ "rand",
  "rayon",
  "regex",
  "rustc-hash",

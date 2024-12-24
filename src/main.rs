@@ -83,6 +83,14 @@ enum Command {
         /// Continue to hunt when an error is encountered.
         #[arg(long = "skip-errors")]
         skip_errors: bool,
+
+        // MFT Specific Options
+        /// Attempt to decode all extracted data streams from Hex to UTF-8
+        #[arg(long = "decode-data-streams", help_heading = "MFT Specific Options")]
+        decode_data_streams: bool,
+        /// Extracted data streams will be decoded and written to this directory
+        #[arg(long = "data-streams-directory", help_heading = "MFT Specific Options")]
+        data_streams_directory: Option<PathBuf>,
     },
 
     /// Hunt through artefacts using detection rules for threat detection.
@@ -408,6 +416,8 @@ fn run() -> Result<()> {
             output,
             quiet,
             skip_errors,
+            decode_data_streams,
+            data_streams_directory,
         } => {
             init_writer(output, false, json, quiet, args.verbose)?;
             if !args.no_banner {
@@ -449,7 +459,17 @@ fn run() -> Result<()> {
 
             let mut first = true;
             for path in &files {
-                let mut reader = Reader::load(path, load_unknown, skip_errors)?;
+                let mut reader = Reader::load(
+                    path,
+                    load_unknown,
+                    skip_errors,
+                    decode_data_streams,
+                    data_streams_directory.clone(),
+                )?;
+
+                // We try to keep the reader and parser as generic as possible.
+                // However in some cases we need to pass artefact specific arguments to the parser.
+                // If the argument is not relevant for the artefact, it is ignored.
                 for result in reader.documents() {
                     let document = match result {
                         Ok(document) => document,
@@ -473,6 +493,7 @@ fn run() -> Result<()> {
                         | Document::Mft(json)
                         | Document::Esedb(json) => json,
                     };
+
                     if json {
                         if first {
                             first = false;
