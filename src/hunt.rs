@@ -774,7 +774,14 @@ impl Hunter {
         file: &'a Path,
         cache: &Option<std::fs::File>,
     ) -> crate::Result<Vec<Detections<'a>>> {
-        let mut reader = Reader::load(file, self.inner.load_unknown, self.inner.skip_errors)?;
+        let mut reader = Reader::load(
+            file,
+            self.inner.load_unknown,
+            self.inner.skip_errors,
+            true,
+            None,
+        )?;
+
         let kind = reader.kind();
         #[allow(clippy::type_complexity)]
         let aggregates: Mutex<

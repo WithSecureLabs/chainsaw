@@ -334,7 +334,13 @@ impl Searcher {
     }
 
     pub fn search(&self, file: &Path) -> crate::Result<Hits<'_>> {
-        let reader = Reader::load(file, self.inner.load_unknown, self.inner.skip_errors)?;
+        let reader = Reader::load(
+            file,
+            self.inner.load_unknown,
+            self.inner.skip_errors,
+            true,
+            None,
+        )?;
         Ok(Hits {
             reader,
             searcher: &self.inner,
