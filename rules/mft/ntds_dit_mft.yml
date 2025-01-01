@@ -33,9 +33,11 @@ fields:
     to: IsDeleted
   - name: HasAlternateDataStreams
     to: HasAlternateDataStreams
+  - name: DataStreams
+    to: DataStreams
 
 filter:
-  condition: (ntds and ntds_1) and not ntds_2
+  condition: (ntds and ntds_1) and not (ntds_2 or ntds_3)
 
   ntds:
     FullPath:
@@ -51,3 +53,7 @@ filter:
       - 'iWindows\WinSxS*'
       - 'iWindows\servicing\LCU\*'
       - 'i*adamntds.dit*'
+
+  ntds_3:
+    FileSize:
+      - 55
