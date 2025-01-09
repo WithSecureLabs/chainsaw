@@ -24,7 +24,7 @@ hex = "0.4.3"
 indicatif = "0.17"
 lazy_static = "1.4.0"
 libesedb = "0.2.4"
-mft = { git = "https://github.com/reece394/mft.git" , rev = "f462549" } # modified fork
+mft = { git = "https://github.com/reece394/mft.git" , rev = "9b1dbef" } # modified fork
 notatin = "1.0"
 once_cell = "1.0"
 prettytable-rs = "0.10"
