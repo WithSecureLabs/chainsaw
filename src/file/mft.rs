@@ -156,7 +156,7 @@ pub fn extract_data_streams(parser: &mut Parser, entry: &MftEntry) -> crate::Res
                 // Replace file path seperators with underscores
 
                 let sanitized_path = path
-                    .to_string_lossy()
+                    .to_string()
                     .chars()
                     .map(|c| if path::is_separator(c) { '_' } else { c })
                     .collect::<String>();
