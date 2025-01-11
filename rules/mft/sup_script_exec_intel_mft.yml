@@ -115,4 +115,4 @@ filter:
 
   directory:
     FullPath:
-      - 'iIntel\*'
+      - 'iIntel/*'

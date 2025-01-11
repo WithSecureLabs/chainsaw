@@ -115,7 +115,7 @@ filter:
 
   directory:
     FullPath:
-      - 'i*\*'
+      - 'i*/*'
       - 'i$Recycle.bin'
       - 'ipagefile.sys'
       - 'iswapfile.sys'

@@ -115,9 +115,9 @@ filter:
 
   directory:
     FullPath:
-      - 'iProgram Files\*'
-      - 'iProgram Files (x86)\*'
+      - 'iProgram Files/*'
+      - 'iProgram Files (x86)/*'
 
   regex:
     FullPath:
-      - 'i?^[^\\]+\\[^\\]+\.[^\\]+$'
+      - 'i?^[^\x00/?%*:|"<>\.]+/[^\x00/?%*:|"<>\.]+(?:\.[^\x00/?%*:|"<>\.]+)?$'

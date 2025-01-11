@@ -7,7 +7,7 @@ authors:
 
 
 kind: mft
-level: high
+level: medium
 status: stable
 timestamp: StandardInfoCreated
 
@@ -115,4 +115,4 @@ filter:
 
   directory:
     FullPath:
-      - 'iPerfLogs\*'
+      - 'iPerfLogs/*'

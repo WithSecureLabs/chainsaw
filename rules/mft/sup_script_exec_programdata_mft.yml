@@ -114,8 +114,8 @@ filter:
 
   directory:
     FullPath:
-      - 'iProgramData\*'
+      - 'iProgramData/*'
 
   directoryexc:
     FullPath:
-      - 'iProgramData\Microsoft\Windows Defender\*'
+      - 'iProgramData/Microsoft/Windows Defender/*'

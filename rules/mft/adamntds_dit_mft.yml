@@ -49,9 +49,9 @@ filter:
 
   adamntds_2:
     FullPath:
-      - 'iProgram Files\Microsoft ADAM\*'
-      - 'iWindows\WinSxS*'
-      - 'iWindows\servicing\LCU\*'
+      - 'iProgram Files/Microsoft ADAM/*'
+      - 'iWindows/WinSxS*'
+      - 'iWindows/servicing/LCU/*'
     
   adamntds_3:
     FileSize:

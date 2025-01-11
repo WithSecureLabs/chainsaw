@@ -114,4 +114,4 @@ filter:
 
   directory:
     FullPath:
-      - 'iUsers\Public\*'
+      - 'iUsers/Public/*'

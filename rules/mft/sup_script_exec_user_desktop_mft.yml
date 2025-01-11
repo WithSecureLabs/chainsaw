@@ -114,15 +114,15 @@ filter:
 
   directory:
     FullPath:
-      - 'iUsers\*'
+      - 'iUsers/*'
 
   desktop:
     FullPath:
-      - 'i*\Desktop\*'
+      - 'i*/Desktop/*'
 
   directoryexc:
     FullPath:
-      - 'iUsers\Public\*'
-      - 'iUsers\All Users\*'
-      - 'i*\AppData\*'
-      - 'i*\Downloads\*'
+      - 'iUsers/Public/*'
+      - 'iUsers/All Users/*'
+      - 'i*/AppData/*'
+      - 'i*/Downloads/*'

@@ -115,9 +115,9 @@ filter:
 
   directory:
     FullPath:
-      - 'i$Recycle.Bin\*'
+      - 'i$Recycle.Bin/*'
 
   name:
     FullPath:
-      - 'i*\$I*'
-      - 'i*\$R*'
+      - 'i*/$I*'
+      - 'i*/$R*'

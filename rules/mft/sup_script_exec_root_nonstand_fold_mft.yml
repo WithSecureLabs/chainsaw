@@ -115,21 +115,21 @@ filter:
 
   directory:
     FullPath:
-      - 'i*\*'
+      - 'i*/*'
 
   directoryexc:
     FullPath:
-      - 'i$Recycle.Bin\*'
-      - 'iDocuments and Settings\*'
-      - 'iUsers\*'
-      - 'iPerfLogs\*'
-      - 'iProgram Files\*'
-      - 'iProgram Files (x86)\*'
-      - 'iProgramData\*'
-      - 'iRecovery\*'
-      - 'iSystem Volume Information\*'
-      - 'iWindows\*'
-      - 'i[Unknown]\*'
-      - 'iIntel\*'
-      - 'iTemp\*'
-      - 'iWindows.old\*'
+      - 'i$Recycle.Bin/*'
+      - 'iDocuments and Settings/*'
+      - 'iUsers/*'
+      - 'iPerfLogs/*'
+      - 'iProgram Files/*'
+      - 'iProgram Files (x86)/*'
+      - 'iProgramData/*'
+      - 'iRecovery/*'
+      - 'iSystem Volume Information/*'
+      - 'iWindows/*'
+      - 'i[Unknown]/*'
+      - 'iIntel/*'
+      - 'iTemp/*'
+      - 'iWindows.old/*'
