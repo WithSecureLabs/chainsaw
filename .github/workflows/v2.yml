@@ -222,27 +222,27 @@ jobs:
       - name: Move files to artifacts
         run: mv sigma EVTX-ATTACK-SAMPLES chainsaw/
       - name: Download build-linux binary
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: linux-binary
           path: ./chainsaw-linux
       - name: Download build-linux-arm binary
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: linux-binary-arm
           path: ./chainsaw-linux-arm
       - name: Download build-win binary
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: win-binary
           path: ./chainsaw-win
       - name: Download build-mac binary
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: mac-binary
           path: ./chainsaw-mac
       - name: Download build-mac-arm binary
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: mac-binary-arm
           path: ./chainsaw-mac-arm
