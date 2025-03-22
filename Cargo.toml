@@ -6,7 +6,7 @@ description = "Rapidly Search and Hunt Through Windows Forensic Artefacts"
 authors = ["James Dorgan <james@dorgan.io>","Alex Kornitzer <alex.kornitzer@withsecure.com>"]
 readme = "README.md"
 license = "GPL3"
-edition = "2021"
+edition = "2024"
 
 
 [dependencies]

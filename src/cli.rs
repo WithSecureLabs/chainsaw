@@ -1,4 +1,4 @@
-use std::collections::{hash_map::DefaultHasher, BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet, hash_map::DefaultHasher};
 use std::fs;
 use std::hash::{Hash, Hasher};
 use std::io::*;
@@ -7,16 +7,16 @@ use std::time::Duration;
 use chrono::{DateTime, Local, NaiveDateTime, SecondsFormat, TimeZone, Utc};
 use chrono_tz::Tz;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
-use prettytable::{cell, format, Row, Table};
+use prettytable::{Row, Table, cell, format};
 use rustc_hash::FxHashMap;
 use serde::Serialize;
-use serde_json::{value::RawValue, Map, Number, Value as Json};
+use serde_json::{Map, Number, Value as Json, value::RawValue};
 use tau_engine::{Document, Value as Tau};
 use uuid::Uuid;
 
 use crate::analyse::shimcache::{TimelineEntity, TimelineTimestamp, TimestampType};
-use crate::file::hve::shimcache::EntryType;
 use crate::file::Kind as FileKind;
+use crate::file::hve::shimcache::EntryType;
 use crate::hunt::{Detections, Hunt, Kind};
 use crate::rule::{Kind as RuleKind, Level, Rule, Status};
 use crate::value::Value;
@@ -236,7 +236,7 @@ fn agg_to_doc<'a>(
     Ok(crate::hunt::Document {
         kind: first.kind.clone(),
         path: first.path,
-        data: bincode::serde::encode_to_vec(&Value::Object(doc), bincode::config::standard())
+        data: bincode::serde::encode_to_vec(Value::Object(doc), bincode::config::standard())
             .expect("could not serialise collated documents"),
     })
 }
@@ -607,11 +607,13 @@ pub fn print_detections(
                         }
                         cells.push(cell!(table));
                     } else {
-                        cells.push(cell!(rules
-                            .iter()
-                            .map(|rule| format!("{} {}", RULE_PREFIX, split_tag(rule.name())))
-                            .collect::<Vec<_>>()
-                            .join("\n")));
+                        cells.push(cell!(
+                            rules
+                                .iter()
+                                .map(|rule| format!("{} {}", RULE_PREFIX, split_tag(rule.name())))
+                                .collect::<Vec<_>>()
+                                .join("\n")
+                        ));
                     }
                     cells.extend(row);
                     table.add_row(Row::new(cells));

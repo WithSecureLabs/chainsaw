@@ -13,21 +13,21 @@ use once_cell::sync::OnceCell;
 use rayon::prelude::*;
 use rustc_hash::{FxBuildHasher, FxHashMap, FxHasher};
 use serde::{
-    ser::{SerializeStruct, Serializer},
     Deserialize, Serialize,
+    ser::{SerializeStruct, Serializer},
 };
-use serde_json::{value::RawValue, Value as Json};
+use serde_json::{Value as Json, value::RawValue};
 use smallvec::SmallVec;
 use tau_engine::{
-    core::parser::{Expression, ModSym, Pattern},
     Document as TauDocument, Value as Tau,
+    core::parser::{Expression, ModSym, Pattern},
 };
 use uuid::Uuid;
 
 use crate::file::{Document as File, Kind as FileKind, Reader};
 use crate::rule::{
-    chainsaw::{Container, Field, Format},
     Aggregate, Filter, Kind as RuleKind, Rule,
+    chainsaw::{Container, Field, Format},
 };
 use crate::value::Value;
 
@@ -1028,7 +1028,7 @@ impl Hunter {
                             .expect("could not serialise data");
                         let _ = cache.write_all(json.as_bytes());
                         let val = *offset;
-                        let size = json.as_bytes().len();
+                        let size = json.len();
                         *offset += size;
                         Some(Ok(Detections {
                             hits,
@@ -1080,7 +1080,7 @@ impl Hunter {
                             kind: kind.clone(),
                             path: file,
                             data: bincode::serde::encode_to_vec(
-                                &value,
+                                value,
                                 bincode::config::standard(),
                             )?,
                         });
