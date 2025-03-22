@@ -506,19 +506,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dialoguer"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "658bce805d770f407bc62102fca7c2c64ceef2fbcb2b8bd19d2765ce093980de"
-dependencies = [
- "console",
- "shell-words",
- "tempfile",
- "thiserror 1.0.69",
- "zeroize",
-]
-
-[[package]]
 name = "difflib"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -669,22 +656,16 @@ version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f1a22a16bc3030e9f443bdc74d43af77e1f21a84bc21cdf86287bcb2c64f7fa"
 dependencies = [
- "anyhow",
  "bitflags 2.6.0",
  "byteorder",
  "chrono",
- "clap",
  "crc32fast",
- "dialoguer 0.11.0",
  "encoding",
  "hashbrown 0.14.5",
- "indoc",
  "log",
  "quick-xml 0.36.2",
- "rayon",
  "serde",
  "serde_json",
- "simplelog",
  "skeptic",
  "thiserror 1.0.69",
  "winstructs",
@@ -965,7 +946,7 @@ dependencies = [
  "chrono",
  "clap",
  "csv",
- "dialoguer 0.10.4",
+ "dialoguer",
  "encoding",
  "indoc",
  "itertools",
