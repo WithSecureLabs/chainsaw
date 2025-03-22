@@ -26,7 +26,7 @@ jobs:
         run: cargo build --all --release --target x86_64-unknown-linux-gnu && strip
           target/x86_64-unknown-linux-gnu/release/chainsaw
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: linux-binary
           path: target/x86_64-unknown-linux-gnu/release/chainsaw
@@ -67,7 +67,7 @@ jobs:
           cargo build --all --release --target aarch64-unknown-linux-gnu && aarch64-linux-gnu-strip
           target/aarch64-unknown-linux-gnu/release/chainsaw
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: linux-binary-arm
           path: target/aarch64-unknown-linux-gnu/release/chainsaw
@@ -101,7 +101,7 @@ jobs:
       - name: Build
         run: cargo build --all --release
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: win-binary
           path: target/release/chainsaw.exe
@@ -141,7 +141,7 @@ jobs:
       - name: Build for mac
         run: cargo build --all --release && strip target/release/chainsaw
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: mac-binary
           path: target/release/chainsaw
@@ -177,7 +177,7 @@ jobs:
       - name: Build for mac
         run: cargo build --all --release && strip target/release/chainsaw
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: mac-binary-arm
           path: target/release/chainsaw
