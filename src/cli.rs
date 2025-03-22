@@ -144,7 +144,10 @@ fn agg_to_doc<'a>(
             let wrapper;
             let mapped = match &document.kind {
                 FileKind::Evtx => {
-                    data = bincode::deserialize::<Value>(&document.data)?;
+                    (data, _) = bincode::serde::decode_from_slice::<Value, _>(
+                        &document.data,
+                        bincode::config::standard(),
+                    )?;
                     wrapper = crate::evtx::Wrapper(&data);
                     hunt.mapper.mapped(&wrapper)
                 }
@@ -154,7 +157,10 @@ fn agg_to_doc<'a>(
                 | FileKind::Mft
                 | FileKind::Xml
                 | FileKind::Esedb => {
-                    data = bincode::deserialize::<Value>(&document.data)?;
+                    (data, _) = bincode::serde::decode_from_slice::<Value, _>(
+                        &document.data,
+                        bincode::config::standard(),
+                    )?;
                     hunt.mapper.mapped(&data)
                 }
                 FileKind::Unknown => continue,
@@ -230,7 +236,7 @@ fn agg_to_doc<'a>(
     Ok(crate::hunt::Document {
         kind: first.kind.clone(),
         path: first.path,
-        data: bincode::serialize(&Value::Object(doc))
+        data: bincode::serde::encode_to_vec(&Value::Object(doc), bincode::config::standard())
             .expect("could not serialise collated documents"),
     })
 }
@@ -305,7 +311,10 @@ pub fn print_log(
         let wrapper;
         let mapped = match &document.kind {
             FileKind::Evtx => {
-                data = bincode::deserialize::<Value>(&document.data)?;
+                (data, _) = bincode::serde::decode_from_slice::<Value, _>(
+                    &document.data,
+                    bincode::config::standard(),
+                )?;
                 wrapper = crate::evtx::Wrapper(&data);
                 hunt.mapper.mapped(&wrapper)
             }
@@ -315,7 +324,10 @@ pub fn print_log(
             | FileKind::Mft
             | FileKind::Xml
             | FileKind::Esedb => {
-                data = bincode::deserialize::<Value>(&document.data)?;
+                (data, _) = bincode::serde::decode_from_slice::<Value, _>(
+                    &document.data,
+                    bincode::config::standard(),
+                )?;
                 hunt.mapper.mapped(&data)
             }
             FileKind::Unknown => continue,
@@ -483,8 +495,11 @@ pub fn print_detections(
                         let wrapper;
                         let mapped = match &document.kind {
                             FileKind::Evtx => {
-                                data = bincode::deserialize::<Value>(&document.data)
-                                    .expect("could not decompress");
+                                (data, _) = bincode::serde::decode_from_slice::<Value, _>(
+                                    &document.data,
+                                    bincode::config::standard(),
+                                )
+                                .expect("could not decompress");
                                 wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
@@ -494,8 +509,11 @@ pub fn print_detections(
                             | FileKind::Jsonl
                             | FileKind::Mft
                             | FileKind::Xml => {
-                                data = bincode::deserialize::<Value>(&document.data)
-                                    .expect("could not decompress");
+                                (data, _) = bincode::serde::decode_from_slice::<Value, _>(
+                                    &document.data,
+                                    bincode::config::standard(),
+                                )
+                                .expect("could not decompress");
                                 hit.hunt.mapper.mapped(&data)
                             }
                             FileKind::Unknown => continue,
@@ -875,7 +893,10 @@ pub fn print_csv(
                         let wrapper;
                         let mapped = match &document.kind {
                             FileKind::Evtx => {
-                                data = bincode::deserialize::<Value>(&document.data)?;
+                                (data, _) = bincode::serde::decode_from_slice::<Value, _>(
+                                    &document.data,
+                                    bincode::config::standard(),
+                                )?;
                                 wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
                             }
@@ -885,7 +906,10 @@ pub fn print_csv(
                             | FileKind::Jsonl
                             | FileKind::Mft
                             | FileKind::Xml => {
-                                data = bincode::deserialize::<Value>(&document.data)?;
+                                (data, _) = bincode::serde::decode_from_slice::<Value, _>(
+                                    &document.data,
+                                    bincode::config::standard(),
+                                )?;
                                 hit.hunt.mapper.mapped(&data)
                             }
                             FileKind::Unknown => continue,

@@ -96,7 +96,9 @@ impl Serialize for Document<'_> {
         let mut state = serializer.serialize_struct("Document", 3)?;
         state.serialize_field("kind", &self.kind)?;
         state.serialize_field("path", &self.path)?;
-        let value: Value = bincode::deserialize(&self.data).expect("could not decompress");
+        let (value, _) =
+            bincode::serde::decode_from_slice::<Value, _>(&self.data, bincode::config::standard())
+                .expect("could not decompress");
         let json = Json::from(value);
         state.serialize_field("data", &json)?;
         state.end()
@@ -1047,7 +1049,7 @@ impl Hunter {
                                 document: Document {
                                     kind,
                                     path: file,
-                                    data: bincode::serialize(&value).ok()?,
+                                    data: bincode::serde::encode_to_vec(&value, bincode::config::standard()).ok()?,
                                 },
                             },
                         }))
@@ -1077,7 +1079,10 @@ impl Hunter {
                         documents.push(Document {
                             kind: kind.clone(),
                             path: file,
-                            data: bincode::serialize(&value)?,
+                            data: bincode::serde::encode_to_vec(
+                                &value,
+                                bincode::config::standard(),
+                            )?,
                         });
                         timestamps.push(*timestamp);
                     }
