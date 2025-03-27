@@ -33,6 +33,8 @@ fields:
     to: IsDeleted
   - name: HasAlternateDataStreams
     to: HasAlternateDataStreams
+  - name: DataStreams
+    to: DataStreams
 
 filter:
   condition: winscp and (winscp_1 or winscp_2 or winscp_3)

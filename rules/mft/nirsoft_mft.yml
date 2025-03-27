@@ -33,6 +33,8 @@ fields:
     to: IsDeleted
   - name: HasAlternateDataStreams
     to: HasAlternateDataStreams
+  - name: DataStreams
+    to: DataStreams
 
 filter:
   condition: nirsoft and (nirsoft_1 or nirsoft_2 or nirsoft_3)

@@ -33,6 +33,8 @@ fields:
     to: IsDeleted
   - name: HasAlternateDataStreams
     to: HasAlternateDataStreams
+  - name: DataStreams
+    to: DataStreams
 
 filter:
   condition: filezilla and (filezilla_1 or filezilla_2 or filezilla_3 or filezilla_4)
