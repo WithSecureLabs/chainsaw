@@ -10,7 +10,7 @@ use chrono::{DateTime, Utc};
 use self::esedb::{Esedb, Parser as EsedbParser};
 use self::evtx::{Evtx, Parser as EvtxParser};
 use self::hve::{Hve, Parser as HveParser};
-use self::json::{lines::Parser as JsonlParser, Json, Parser as JsonParser};
+use self::json::{Json, Parser as JsonParser, lines::Parser as JsonlParser};
 use self::mft::{Mft, Parser as MftParser};
 use self::xml::{Parser as XmlParser, Xml};
 
@@ -53,7 +53,7 @@ impl Kind {
         match self {
             Kind::Evtx => Some(vec!["evt".to_string(), "evtx".to_string()]),
             Kind::Hve => Some(vec!["hve".to_string()]),
-            Kind::Json => Some(vec!["json".to_string()]),
+            Kind::Json => Some(vec!["json".to_string(), "gz".to_string()]),
             Kind::Jsonl => Some(vec!["jsonl".to_string()]),
             Kind::Mft => Some(vec![
                 "mft".to_string(),
@@ -134,7 +134,7 @@ impl Reader {
                         parser: Parser::Evtx(parser),
                     })
                 }
-                "json" => {
+                "json" | "gz" => {
                     let parser = match JsonParser::load(file) {
                         Ok(parser) => parser,
                         Err(e) => {

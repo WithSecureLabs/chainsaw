@@ -518,7 +518,6 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
         },
         None => bail!("missing condition"),
     };
-
     // Handle identifiers
     // NOTE: We can be inefficient here because the tree shaker will do the hard work for us!
     let mut patches = HashMap::new();

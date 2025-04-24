@@ -1,0 +1,140 @@
+---
+name: Chainsaw's Sigma mappings for Cloudtrail
+kind: json
+rules: sigma
+
+groups:
+  - name: Sigma Detections (Cloudtrail Logs)
+    timestamp: eventTime
+    filter:
+      eventType:
+        - AwsApiCall
+        - AwsServiceEvent
+        - AwsConsoleAction
+        - AwsConsoleSignIn
+        - AwsVpceEvents
+    fields:
+      - from: eventName
+        to: eventName
+        visible: true
+      - from: requestParameters
+        to: requestParameters
+        visible: true
+      - from: userAgent
+        to: userAgent
+        visible: true
+      - from: userIdentity
+        to: userIdentity
+        visible: true
+
+      - from: eventID
+        to: eventID
+        visible: false
+      - from: recipientAccountId
+        to: recipientAccountId
+        visible: false
+      - from: accessKeyId
+        to: userIdentity.accessKeyId
+        visible: false
+      - from: accountId
+        to: userIdentity.accountId
+        visible: false
+      - from: arn
+        to: userIdentity.arn
+        visible: false
+      - from: attributes
+        to: userIdentity.sessionContext.attributes
+        visible: false
+      - from: byCreatedAfter
+        to: requestParameters.byCreatedAfter
+        visible: false
+      - from: byState
+        to: requestParameters.byState
+        visible: false
+      - from: byStatus
+        to: requestParameters.byStatus
+        visible: false
+      - from: cipherSuite
+        to: tlsDetails.cipherSuite
+        visible: false
+      - from: clientProvidedHostHeader
+        to: tlsDetails.clientProvidedHostHeader
+        visible: false
+      - from: creationDate
+        to: userIdentity.sessionContext.attributes.creationDate
+        visible: false
+      - from: errorCode
+        to: errorCode
+        visible: false
+      - from: errorMessage
+        to: errorMessage
+        visible: false
+      - from: eventCategory
+        to: eventCategory
+        visible: false
+      - from: eventSource
+        to: eventSource
+        visible: false
+      - from: eventTime
+        to: eventTime
+        visible: false
+      - from: eventType
+        to: eventType
+        visible: false
+      - from: eventVersion
+        to: eventVersion
+        visible: false
+      - from: lookupAttributes
+        to: requestParameters.lookupAttributes
+        visible: false
+      - from: managementEvent
+        to: managementEvent
+        visible: false
+      - from: maxResults
+        to: requestParameters.maxResults
+        visible: false
+      - from: mfaAuthenticated
+        to: userIdentity.sessionContext.attributes.mfaAuthenticated
+        visible: false
+      - from: name
+        to: requestParameters.name
+        visible: false
+      - from: principalId
+        to: userIdentity.principalId
+        visible: false
+      - from: readOnly
+        to: readOnly
+        visible: false
+      - from: requestID
+        to: requestID
+        visible: false
+      - from: responseElements
+        to: responseElements
+        visible: false
+      - from: sessionContext
+        to: userIdentity.sessionContext
+        visible: false
+      - from: sessionCredentialFromConsole
+        to: sessionCredentialFromConsole
+        visible: false
+      - from: sessionIssuer
+        to: userIdentity.sessionContext.sessionIssuer
+        visible: false
+      - from: sourceIPAddress
+        to: sourceIPAddress
+        visible: false
+      - from: tlsDetails
+        to: tlsDetails
+        visible: false
+      - from: tlsVersion
+        to: tlsDetails.tlsVersion
+        visible: false
+      - from: type
+        to: userIdentity.type
+        visible: false
+      - from: userName
+        to: userIdentity.userName
+        visible: false
+      - from: webIdFederationData
+        to: userIdentity.sessionContext.webIdFederationData
+        visible: false

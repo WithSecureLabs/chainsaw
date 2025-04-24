@@ -5,12 +5,11 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 use tau_engine::{
-    core::{
-        optimiser,
-        parser::{Expression, Pattern},
-        Detection,
-    },
     Document,
+    core::{
+        Detection, optimiser,
+        parser::{Expression, Pattern},
+    },
 };
 
 use crate::file::Kind as FileKind;

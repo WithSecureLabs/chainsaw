@@ -16,9 +16,9 @@ use chrono_tz::Tz;
 use clap::{ArgAction, Parser, Subcommand};
 
 use chainsaw::{
-    cli, get_files, lint as lint_rule, load as load_rule, set_writer, Document, Filter, Format,
-    Hunter, Reader, RuleKind, RuleLevel, RuleStatus, Searcher, ShimcacheAnalyser, SrumAnalyser,
-    Writer,
+    Document, Filter, Format, Hunter, Reader, RuleKind, RuleLevel, RuleStatus, Searcher,
+    ShimcacheAnalyser, SrumAnalyser, Writer, cli, get_files, lint as lint_rule, load as load_rule,
+    set_writer,
 };
 
 #[derive(Parser)]
@@ -337,7 +337,7 @@ fn print_title() {
 }
 
 fn resolve_col_width() -> Option<u32> {
-    use terminal_size::{terminal_size, Width};
+    use terminal_size::{Width, terminal_size};
     if let Some((Width(w), _)) = terminal_size() {
         match w {
             50..=120 => Some(20),
@@ -456,6 +456,7 @@ fn run() -> Result<()> {
             } else {
                 cs_eprintln!("[+] Loaded {} forensic artefacts ({})", files.len(), size);
             }
+            println!("Files: {:?}", files);
 
             let mut first = true;
             for path in &files {
@@ -466,7 +467,6 @@ fn run() -> Result<()> {
                     decode_data_streams,
                     data_streams_directory.clone(),
                 )?;
-
                 // We try to keep the reader and parser as generic as possible.
                 // However in some cases we need to pass artefact specific arguments to the parser.
                 // If the argument is not relevant for the artefact, it is ignored.
@@ -644,7 +644,10 @@ fn run() -> Result<()> {
                 }
             }
             if failed > 500 && sigma.is_empty() {
-                cs_eyellowln!("[!] {} rules failed to load, ensure Sigma rule paths are specified with the '-s' flag", failed);
+                cs_eyellowln!(
+                    "[!] {} rules failed to load, ensure Sigma rule paths are specified with the '-s' flag",
+                    failed
+                );
             }
             if count == 0 {
                 return Err(anyhow::anyhow!(
@@ -702,8 +705,8 @@ fn run() -> Result<()> {
                         .collect();
                     if scratch.is_empty() {
                         return Err(anyhow::anyhow!(
-                        "The specified file extension is not supported. Use --load-unknown to force loading",
-                    ));
+                            "The specified file extension is not supported. Use --load-unknown to force loading",
+                        ));
                     }
                 };
                 message = scratch
@@ -836,7 +839,9 @@ fn run() -> Result<()> {
                                         serde_yaml::to_string(&d)?
                                     }
                                     Filter::Expression(_) => {
-                                        cs_eyellowln!("[!] Tau does not support visual representation of expressions");
+                                        cs_eyellowln!(
+                                            "[!] Tau does not support visual representation of expressions"
+                                        );
                                         continue;
                                     }
                                 };
@@ -1111,7 +1116,10 @@ fn run() -> Result<()> {
                             } else {
                                 cs_eprintln!(
                                     "[+] Details about the tables related to the SRUM extensions:\n{}",
-                                    srum_db_info.table_details.to_string().trim_end_matches('\n')
+                                    srum_db_info
+                                        .table_details
+                                        .to_string()
+                                        .trim_end_matches('\n')
                                 );
 
                                 let json = srum_db_info.db_content;

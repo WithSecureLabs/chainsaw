@@ -1,3 +1,4 @@
+use flate2::read::GzDecoder;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
@@ -9,6 +10,32 @@ pub use serde_json::Value as Json;
 
 use crate::search::Searchable;
 
+// We perform a crude check by looking for the "eventType" key in the first entry
+// and matching it against a list of valid AWS CloudTrail event types
+// If a match is found we flatten the records into a single array
+fn is_cloudtrail_log(object: &serde_json::Map<String, Json>) -> Option<&Vec<Json>> {
+    const VALID_EVENT_TYPES: &[&str] = &[
+        "AwsApiCall",
+        "AwsServiceEvent",
+        "AwsConsoleAction",
+        "AwsConsoleSignIn",
+        "AwsVpceEvents",
+    ];
+
+    object
+        .get("Records")
+        .and_then(|v| v.as_array())
+        .and_then(|records| {
+            records
+                .first()
+                .and_then(|first| first.as_object())
+                .and_then(|first_obj| first_obj.get("eventType"))
+                .and_then(|event_type| event_type.as_str())
+                .filter(|&event_type| VALID_EVENT_TYPES.contains(&event_type))
+                .map(|_| records)
+        })
+}
+
 pub struct Parser {
     pub inner: Option<Json>,
 }
@@ -17,18 +44,34 @@ impl Parser {
     pub fn load(path: &Path) -> crate::Result<Self> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
-        let json = serde_json::from_reader(reader)?;
+        let json = if path.extension().and_then(|ext| ext.to_str()) == Some("gz") {
+            let decoder = GzDecoder::new(reader);
+            serde_json::from_reader(decoder)?
+        } else {
+            serde_json::from_reader(reader)?
+        };
         Ok(Self { inner: Some(json) })
     }
 
     pub fn parse(&mut self) -> impl Iterator<Item = Result<Json, Error>> + '_ {
-        if let Some(json) = self.inner.take() {
-            return match json {
-                Json::Array(array) => ParserIter(Some(array.into_iter())),
-                _ => ParserIter(Some(vec![json].into_iter())),
-            };
+        let json = match self.inner.take() {
+            Some(json) => json,
+            None => return ParserIter(None),
+        };
+
+        match json {
+            Json::Array(array) => ParserIter(Some(array.into_iter())),
+            Json::Object(ref object) => {
+                // Handle AWS CloudTrail logs which have the format {Records: [entry,entry]}
+                match is_cloudtrail_log(object) {
+                    Some(records) => {
+                        return ParserIter(Some(records.clone().into_iter()));
+                    }
+                    None => ParserIter(Some(vec![json].into_iter())),
+                }
+            }
+            _ => ParserIter(Some(vec![json].into_iter())),
         }
-        ParserIter(None)
     }
 }
 
@@ -70,8 +113,8 @@ impl Searchable for Json {
 pub mod lines {
     use super::*;
 
-    use std::io::prelude::*;
     use std::io::Lines;
+    use std::io::prelude::*;
 
     pub struct Parser {
         pub inner: Option<BufReader<File>>,
