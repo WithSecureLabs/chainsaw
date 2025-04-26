@@ -1,12 +1,15 @@
+use flate2::read::GzDecoder;
 use std::collections::HashMap;
-use std::{fs, path::Path};
+use std::fs::File;
+use std::io::BufReader;
+use std::path::Path;
 
 use anyhow::Error;
 use chrono::{DateTime, SecondsFormat, Utc};
 use libesedb::EseDb;
 use libesedb::Value as EseValue;
-use serde_json::json;
 use serde_json::Value as Json;
+use serde_json::json;
 
 pub mod srum;
 
@@ -20,13 +23,22 @@ pub struct Parser {
 impl Parser {
     // Implement a generic ESE database parser using libesedb
 
-    pub fn load(file_path: &Path) -> crate::Result<Self> {
+    pub fn load(
+        file_path: &Path,
+        decoder: Option<GzDecoder<BufReader<File>>>,
+    ) -> crate::Result<Self> {
         // Load the ESE database
-        let ese_db = EseDb::open(file_path)?;
-        cs_eprintln!(
-            "[+] ESE database file loaded from {:?}",
-            fs::canonicalize(file_path).expect("could not get the absolute path")
-        );
+
+        let ese_db = match decoder {
+            Some(mut decoder) => {
+                // EseDB cannot read directly from a GzReader, given the small size of the ESE database
+                // we can use a temporary file to store the decompressed data as a bodgy fix
+                let mut temp_file = tempfile::NamedTempFile::new()?;
+                std::io::copy(&mut decoder, &mut temp_file)?;
+                EseDb::open(temp_file.path())?
+            }
+            None => EseDb::open(file_path)?,
+        };
         Ok(Self {
             database: ese_db,
             esedb_entries: Vec::new(),

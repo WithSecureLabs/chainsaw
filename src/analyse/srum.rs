@@ -10,11 +10,11 @@ use std::{fs, path::PathBuf};
 use anyhow::{Context, Error};
 use chrono::{DateTime, SecondsFormat, Utc};
 use prettytable::{Cell, Row, Table};
-use serde_json::json;
 use serde_json::Value as Json;
+use serde_json::json;
 
 use crate::file::esedb::Parser as EsedbParser;
-use crate::file::hve::{srum::SrumRegInfo, Parser as HveParser};
+use crate::file::hve::{Parser as HveParser, srum::SrumRegInfo};
 use crate::file::win32_ts_to_datetime;
 
 #[derive(Debug)]
@@ -96,7 +96,7 @@ impl SrumAnalyser {
 
     pub fn parse_srum_database(&self) -> Result<SrumDbInfo, Error> {
         // Load the SRUM ESE database
-        let mut ese_db_parser = EsedbParser::load(&self.srum_path)
+        let mut ese_db_parser = EsedbParser::load(&self.srum_path, None)
             .with_context(|| "unable to load the ESE database")?;
 
         let srum_data = ese_db_parser.parse();
@@ -141,31 +141,29 @@ impl SrumAnalyser {
                 // Calculate the long term retention period
                 let mut t2_long_term_period = srum_parameters_reg["Tier2LongTermPeriod"]
                     .as_f64()
-                    .with_context(|| {
-                    "the default value for Tier2LongTermPeriod could not be retrieved"
-                })?;
+                    .with_context(
+                    || "the default value for Tier2LongTermPeriod could not be retrieved",
+                )?;
 
                 if let Some(extension_t2_long_term_period) = extension.get("Tier2LongTermPeriod") {
-                    t2_long_term_period =
-                        extension_t2_long_term_period.as_f64().with_context(|| {
-                            "the value for Tier2LongTermPeriod could not be retrieved"
-                        })?;
+                    t2_long_term_period = extension_t2_long_term_period.as_f64().with_context(
+                        || "the value for Tier2LongTermPeriod could not be retrieved",
+                    )?;
                 }
 
                 let mut t2_long_term_max_entries = srum_parameters_reg["Tier2LongTermMaxEntries"]
                     .as_f64()
-                    .with_context(|| {
-                        "the default value for Tier2LongTermMaxEntries could not be retrieved"
-                    })?;
+                    .with_context(
+                        || "the default value for Tier2LongTermMaxEntries could not be retrieved",
+                    )?;
 
                 if let Some(extension_t2_long_term_max_entries) =
                     extension.get("Tier2LongTermMaxEntries")
                 {
-                    t2_long_term_max_entries = extension_t2_long_term_max_entries
-                        .as_f64()
-                        .with_context(|| {
-                            "the value for Tier2LongTermMaxEntries could not be retrieved"
-                        })?;
+                    t2_long_term_max_entries =
+                        extension_t2_long_term_max_entries.as_f64().with_context(
+                            || "the value for Tier2LongTermMaxEntries could not be retrieved",
+                        )?;
                 }
 
                 let long_term_retention_time =
@@ -273,9 +271,9 @@ impl SrumAnalyser {
                                 let table_name_description = &srum_extensions_reg
                                     [&table_name.replace("}LT", "}")]["(default)"]
                                     .as_str()
-                                    .with_context(|| {
-                                        "unable to get the table name from the SRUM database"
-                                    })?;
+                                    .with_context(
+                                        || "unable to get the table name from the SRUM database",
+                                    )?;
 
                                 table_name_mut = format!("{} (Long Term)", table_name_description);
 

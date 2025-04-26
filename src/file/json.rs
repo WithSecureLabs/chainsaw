@@ -41,15 +41,15 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn load(path: &Path) -> crate::Result<Self> {
-        let file = File::open(path)?;
-        let reader = BufReader::new(file);
-        let json = if path.extension().and_then(|ext| ext.to_str()) == Some("gz") {
-            let decoder = GzDecoder::new(reader);
-            serde_json::from_reader(decoder)?
+    pub fn load(path: &Path, decoder: Option<GzDecoder<BufReader<File>>>) -> crate::Result<Self> {
+        let json;
+        if let Some(decoder) = decoder {
+            json = serde_json::from_reader(decoder)?;
         } else {
-            serde_json::from_reader(reader)?
-        };
+            let file = File::open(path)?;
+            let reader = BufReader::new(file);
+            json = serde_json::from_reader(reader)?;
+        }
         Ok(Self { inner: Some(json) })
     }
 
@@ -117,21 +117,20 @@ pub mod lines {
     use std::io::prelude::*;
 
     pub struct Parser {
-        pub inner: Option<BufReader<File>>,
+        pub inner: Option<BufReader<Box<dyn Read + Send + Sync>>>,
     }
 
     impl Parser {
-        pub fn load(path: &Path) -> crate::Result<Self> {
-            let file = File::open(path)?;
-            let mut reader = BufReader::new(file);
-            // A crude check where we read the first line to see if its JSON, we should probably
-            // read more than this?
-            let mut line = String::new();
-            reader.read_line(&mut line)?;
-            let _ = serde_json::from_str::<Json>(&line)?;
-            reader.rewind()?;
+        pub fn load(
+            path: &Path,
+            decoder: Option<GzDecoder<BufReader<File>>>,
+        ) -> crate::Result<Self> {
+            let reader: Box<dyn Read + Send + Sync> = match decoder {
+                Some(decoder) => Box::new(decoder),
+                None => Box::new(File::open(path)?),
+            };
             Ok(Self {
-                inner: Some(reader),
+                inner: Some(BufReader::new(reader)),
             })
         }
 
@@ -143,7 +142,7 @@ pub mod lines {
         }
     }
 
-    struct ParserIter(Option<Lines<BufReader<File>>>);
+    struct ParserIter(Option<Lines<BufReader<Box<dyn Read + Send + Sync>>>>);
 
     impl Iterator for ParserIter {
         type Item = Result<Json, Error>;

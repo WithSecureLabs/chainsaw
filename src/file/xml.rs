@@ -1,9 +1,10 @@
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, Read};
 use std::path::Path;
 use std::vec::IntoIter;
 
 use anyhow::Error;
+use flate2::read::GzDecoder;
 use serde_json::Value as Json;
 
 // NOTE: Because we just deserialize into JSON, this looks pretty much the same as the JSON
@@ -16,9 +17,12 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn load(path: &Path) -> crate::Result<Self> {
-        let file = File::open(path)?;
-        let reader = BufReader::new(file);
+    pub fn load(path: &Path, decoder: Option<GzDecoder<BufReader<File>>>) -> crate::Result<Self> {
+        let reader: Box<dyn Read + Send + Sync> = match decoder {
+            Some(decoder) => Box::new(decoder),
+            None => Box::new(File::open(path)?),
+        };
+        let reader = BufReader::new(reader);
         let xml = quick_xml::de::from_reader(reader)?;
         Ok(Self { inner: Some(xml) })
     }

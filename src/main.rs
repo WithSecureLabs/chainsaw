@@ -456,7 +456,6 @@ fn run() -> Result<()> {
             } else {
                 cs_eprintln!("[+] Loaded {} forensic artefacts ({})", files.len(), size);
             }
-            println!("Files: {:?}", files);
 
             let mut first = true;
             for path in &files {
@@ -466,6 +465,7 @@ fn run() -> Result<()> {
                     skip_errors,
                     decode_data_streams,
                     data_streams_directory.clone(),
+                    None,
                 )?;
                 // We try to keep the reader and parser as generic as possible.
                 // However in some cases we need to pass artefact specific arguments to the parser.

@@ -1,7 +1,9 @@
+use flate2::read::GzDecoder;
 use std::fs::File;
+use std::io::BufReader;
 use std::path::Path;
 
-use evtx::{err::EvtxError, EvtxParser, ParserSettings, SerializedEvtxRecord};
+use evtx::{EvtxParser, ParserSettings, SerializedEvtxRecord, err::EvtxError};
 use regex::RegexSet;
 use serde_json::Value as Json;
 use tau_engine::{Document, Value as Tau};
@@ -16,9 +18,16 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn load(file: &Path) -> crate::Result<Self> {
+    pub fn load(file: &Path, decoder: Option<GzDecoder<BufReader<File>>>) -> crate::Result<Self> {
         let settings = ParserSettings::default().separate_json_attributes(true);
-        let parser = EvtxParser::from_path(file)?.with_configuration(settings);
+        let parser = if let Some(mut decoder) = decoder {
+            // EvtxParser
+            let mut temp_file = tempfile::NamedTempFile::new()?;
+            std::io::copy(&mut decoder, &mut temp_file)?;
+            EvtxParser::from_path(temp_file.path())?.with_configuration(settings)
+        } else {
+            EvtxParser::from_path(file)?.with_configuration(settings)
+        };
         Ok(Self { inner: parser })
     }
 

@@ -782,6 +782,7 @@ impl Hunter {
             self.inner.skip_errors,
             true,
             None,
+            None,
         )?;
 
         let kind = reader.kind();

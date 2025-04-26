@@ -14,6 +14,10 @@ use self::json::{Json, Parser as JsonParser, lines::Parser as JsonlParser};
 use self::mft::{Mft, Parser as MftParser};
 use self::xml::{Parser as XmlParser, Xml};
 
+use flate2::read::GzDecoder;
+use std::fs::File;
+use std::io::BufReader;
+
 pub mod esedb;
 pub mod evtx;
 pub mod hve;
@@ -51,10 +55,14 @@ pub enum Kind {
 impl Kind {
     pub fn extensions(&self) -> Option<Vec<String>> {
         match self {
-            Kind::Evtx => Some(vec!["evt".to_string(), "evtx".to_string()]),
+            Kind::Evtx => Some(vec![
+                "evt".to_string(),
+                "evtx".to_string(),
+                "gz".to_string(),
+            ]),
             Kind::Hve => Some(vec!["hve".to_string()]),
             Kind::Json => Some(vec!["json".to_string(), "gz".to_string()]),
-            Kind::Jsonl => Some(vec!["jsonl".to_string()]),
+            Kind::Jsonl => Some(vec!["jsonl".to_string(), "gz".to_string()]),
             Kind::Mft => Some(vec![
                 "mft".to_string(),
                 "bin".to_string(),
@@ -107,13 +115,62 @@ impl Reader {
         skip_errors: bool,
         decode_data_streams: bool,
         data_streams_directory: Option<PathBuf>,
+        decoder: Option<GzDecoder<BufReader<File>>>,
     ) -> crate::Result<Self> {
         // NOTE: We don't want to use libmagic because then we have to include databases etc... So
         // for now we assume that the file extensions are correct!
         match file.extension().and_then(|e| e.to_str()) {
             Some(extension) => match extension {
+                "gz" => {
+                    // If a .gz file is passed then we open it, extract the embedded filename from the header
+                    // then pass the GzReader and the filename back to this loader function for parsing.
+                    let file_handle = File::open(file)?;
+                    let reader = BufReader::new(file_handle);
+                    let decoder = GzDecoder::new(reader);
+
+                    // Get the filename of the uncompressed file so we can route to the correct loader
+                    let mut filename: String = String::new();
+                    let mut failed = false;
+                    match decoder.header() {
+                        Some(header) => match header.filename() {
+                            Some(f) => {
+                                filename = String::from_utf8_lossy(f).to_string();
+                            }
+                            None => {
+                                failed = true;
+                            }
+                        },
+                        None => {
+                            failed = true;
+                        }
+                    }
+                    if failed {
+                        if skip_errors {
+                            cs_eyellowln!(
+                                "[!] Failed to get filename from gzip header - {}",
+                                file.display()
+                            );
+                            return Ok(Self {
+                                parser: Parser::Unknown,
+                            });
+                        }
+                        anyhow::bail!(
+                            "Failed to get filename from gzip header - {}",
+                            file.display()
+                        );
+                    }
+                    let parser = Reader::load(
+                        Path::new(&filename.to_owned()),
+                        load_unknown,
+                        skip_errors,
+                        decode_data_streams,
+                        data_streams_directory,
+                        Some(decoder),
+                    )?;
+                    return Ok(parser);
+                }
                 "evt" | "evtx" => {
-                    let parser = match EvtxParser::load(file) {
+                    let parser = match EvtxParser::load(file, decoder) {
                         Ok(parser) => parser,
                         Err(e) => {
                             if skip_errors {
@@ -134,8 +191,8 @@ impl Reader {
                         parser: Parser::Evtx(parser),
                     })
                 }
-                "json" | "gz" => {
-                    let parser = match JsonParser::load(file) {
+                "json" => {
+                    let parser = match JsonParser::load(file, decoder) {
                         Ok(parser) => parser,
                         Err(e) => {
                             if skip_errors {
@@ -157,7 +214,7 @@ impl Reader {
                     })
                 }
                 "jsonl" => {
-                    let parser = match JsonlParser::load(file) {
+                    let parser = match JsonlParser::load(file, decoder) {
                         Ok(parser) => parser,
                         Err(e) => {
                             if skip_errors {
@@ -183,6 +240,7 @@ impl Reader {
                         file,
                         data_streams_directory.clone(),
                         decode_data_streams,
+                        decoder,
                     ) {
                         Ok(parser) => parser,
                         Err(e) => {
@@ -205,7 +263,7 @@ impl Reader {
                     })
                 }
                 "xml" => {
-                    let parser = match XmlParser::load(file) {
+                    let parser = match XmlParser::load(file, decoder) {
                         Ok(parser) => parser,
                         Err(e) => {
                             if skip_errors {
@@ -249,7 +307,7 @@ impl Reader {
                     })
                 }
                 "dat" | "edb" => {
-                    let parser = match EsedbParser::load(file) {
+                    let parser = match EsedbParser::load(file, decoder) {
                         Ok(parser) => parser,
                         Err(e) => {
                             if skip_errors {
@@ -272,7 +330,7 @@ impl Reader {
                 }
                 _ => {
                     if load_unknown {
-                        if let Ok(parser) = EvtxParser::load(file) {
+                        if let Ok(parser) = EvtxParser::load(file, decoder) {
                             return Ok(Self {
                                 parser: Parser::Evtx(parser),
                             });
@@ -280,15 +338,16 @@ impl Reader {
                             file,
                             data_streams_directory.clone(),
                             decode_data_streams,
+                            None,
                         ) {
                             return Ok(Self {
                                 parser: Parser::Mft(parser),
                             });
-                        } else if let Ok(parser) = JsonParser::load(file) {
+                        } else if let Ok(parser) = JsonParser::load(file, None) {
                             return Ok(Self {
                                 parser: Parser::Json(parser),
                             });
-                        } else if let Ok(parser) = XmlParser::load(file) {
+                        } else if let Ok(parser) = XmlParser::load(file, None) {
                             return Ok(Self {
                                 parser: Parser::Xml(parser),
                             });
@@ -296,7 +355,7 @@ impl Reader {
                             return Ok(Self {
                                 parser: Parser::Hve(parser),
                             });
-                        } else if let Ok(parser) = EsedbParser::load(file) {
+                        } else if let Ok(parser) = EsedbParser::load(file, None) {
                             return Ok(Self {
                                 parser: Parser::Esedb(parser),
                             });
@@ -325,30 +384,36 @@ impl Reader {
             None => {
                 // Edge cases
                 if file.file_name().and_then(|e| e.to_str()) == Some("$MFT") {
-                    if let Ok(parser) =
-                        MftParser::load(file, data_streams_directory.clone(), decode_data_streams)
-                    {
+                    if let Ok(parser) = MftParser::load(
+                        file,
+                        data_streams_directory.clone(),
+                        decode_data_streams,
+                        decoder,
+                    ) {
                         return Ok(Self {
                             parser: Parser::Mft(parser),
                         });
                     }
                 }
                 if load_unknown {
-                    if let Ok(parser) = EvtxParser::load(file) {
+                    if let Ok(parser) = EvtxParser::load(file, None) {
                         return Ok(Self {
                             parser: Parser::Evtx(parser),
                         });
-                    } else if let Ok(parser) =
-                        MftParser::load(file, data_streams_directory.clone(), decode_data_streams)
-                    {
+                    } else if let Ok(parser) = MftParser::load(
+                        file,
+                        data_streams_directory.clone(),
+                        decode_data_streams,
+                        None,
+                    ) {
                         return Ok(Self {
                             parser: Parser::Mft(parser),
                         });
-                    } else if let Ok(parser) = JsonParser::load(file) {
+                    } else if let Ok(parser) = JsonParser::load(file, None) {
                         return Ok(Self {
                             parser: Parser::Json(parser),
                         });
-                    } else if let Ok(parser) = XmlParser::load(file) {
+                    } else if let Ok(parser) = XmlParser::load(file, None) {
                         return Ok(Self {
                             parser: Parser::Xml(parser),
                         });
@@ -356,7 +421,7 @@ impl Reader {
                         return Ok(Self {
                             parser: Parser::Hve(parser),
                         });
-                    } else if let Ok(parser) = EsedbParser::load(file) {
+                    } else if let Ok(parser) = EsedbParser::load(file, None) {
                         return Ok(Self {
                             parser: Parser::Esedb(parser),
                         });

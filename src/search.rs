@@ -5,8 +5,8 @@ use chrono_tz::Tz;
 use regex::{RegexSet, RegexSetBuilder};
 use serde_json::Value as Json;
 use tau_engine::{
-    core::parser::{BoolSym, Expression},
     Document as Doc,
+    core::parser::{BoolSym, Expression},
 };
 
 use crate::ext;
@@ -339,6 +339,7 @@ impl Searcher {
             self.inner.load_unknown,
             self.inner.skip_errors,
             true,
+            None,
             None,
         )?;
         Ok(Hits {

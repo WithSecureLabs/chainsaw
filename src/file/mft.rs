@@ -1,16 +1,17 @@
+use flate2::read::GzDecoder;
 use std::io::{BufReader, Write};
 use std::path::{self, Path, PathBuf};
-use std::{fs::create_dir_all, fs::File, ops::RangeInclusive, str::FromStr};
+use std::{fs::File, fs::create_dir_all, ops::RangeInclusive, str::FromStr};
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::{Error, Result, anyhow};
 use mft::{
+    MftParser,
     attribute::MftAttributeType,
     csv::FlatMftEntryWithName,
     entry::{MftEntry, ZERO_HEADER},
-    MftParser,
 };
 use serde::Serialize;
-use serde_json::{json, Value as Json};
+use serde_json::{Value as Json, json};
 
 pub type Mft = Json;
 
@@ -68,8 +69,18 @@ impl Parser {
         file: &Path,
         data_streams_directory: Option<PathBuf>,
         decode_data_streams: bool,
+        mut decoder: Option<GzDecoder<BufReader<File>>>,
     ) -> crate::Result<Self> {
-        let parser = MftParser::from_path(file)?;
+        let parser = match decoder {
+            Some(ref mut decoder) => {
+                // MFT files are very unlikely to be compressed, and even if they are the size shouldn't be overly large
+                // so the speed of writing to a temp file is acceptable instead of figuring out how to stream the data
+                let mut temp_file = tempfile::NamedTempFile::new()?;
+                std::io::copy(decoder, &mut temp_file)?;
+                MftParser::from_path(temp_file.path())?
+            }
+            None => MftParser::from_path(file)?,
+        };
         Ok(Self {
             inner: parser,
             ranges: None,
