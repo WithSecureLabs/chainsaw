@@ -821,5 +821,5 @@ groups:
         to: Event.EventData.sha1
         visible: false
       - from: PreAuthType
-        to: Event.EventData.PreAuthType
+        to: int(Event.EventData.PreAuthType)
         visible: false
