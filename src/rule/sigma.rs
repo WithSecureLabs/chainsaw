@@ -42,7 +42,7 @@ pub struct Rule {
 }
 
 impl Document for Rule {
-    fn find(&self, key: &str) -> Option<tau_engine::Value> {
+    fn find(&self, key: &str) -> Option<tau_engine::Value<'_>> {
         use tau_engine::Value as Tau;
         // NOTE: We have not implemented all fields here...
         match key {

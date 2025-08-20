@@ -1,16 +1,16 @@
 use std::io::{BufReader, Write};
 use std::path::{self, Path, PathBuf};
-use std::{fs::create_dir_all, fs::File, ops::RangeInclusive, str::FromStr};
+use std::{fs::File, fs::create_dir_all, ops::RangeInclusive, str::FromStr};
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::{Error, Result, anyhow};
 use mft::{
+    MftParser,
     attribute::MftAttributeType,
     csv::FlatMftEntryWithName,
     entry::{MftEntry, ZERO_HEADER},
-    MftParser,
 };
 use serde::Serialize;
-use serde_json::{json, Value as Json};
+use serde_json::{Value as Json, json};
 
 pub type Mft = Json;
 
@@ -156,7 +156,7 @@ pub fn extract_data_streams(parser: &mut Parser, entry: &MftEntry) -> crate::Res
                 // Replace file path seperators with underscores
 
                 let sanitized_path = path
-                    .to_string_lossy()
+                    .to_string()
                     .chars()
                     .map(|c| if path::is_separator(c) { '_' } else { c })
                     .collect::<String>();

@@ -18,17 +18,17 @@ bytesize = "2.0"
 chrono = "0.4"
 chrono-tz = { version = "0.10", features = ["serde"] }
 clap = { version = "4.0", features = ["derive"] }
-crossterm = "0.28"
+crossterm = "0.29"
 evtx = { version = "0.8", default-features = false }
 hex = "0.4.3"
-indicatif = "0.17"
+indicatif = "0.18"
 lazy_static = "1.4.0"
 libesedb = "0.2.4"
 mft = "0.6"
 notatin = "1.0"
 once_cell = "1.0"
 prettytable-rs = "0.10"
-quick-xml = { version = "0.37", features = ["serialize"] }
+quick-xml = { version = "0.38", features = ["serialize"] }
 rayon = "1.5"
 rand = "0.9"
 regex = "1.6"
@@ -47,3 +47,9 @@ uuid = { version = "1.1", features = ["serde", "v4"] }
 assert_cmd = "2.0"
 paste = "1.0"
 predicates = "3.0"
+
+
+# Handling abandoned upstreams...
+[patch.crates-io]
+mft = { git = 'https://github.com/alexkornitzer/mft.git' }
+notatin = { git = 'https://github.com/alexkornitzer/notatin.git' }

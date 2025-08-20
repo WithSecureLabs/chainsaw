@@ -74,7 +74,7 @@ impl AsValue for Value {
 }
 
 impl Document for Value {
-    fn find(&self, key: &str) -> Option<Tau> {
+    fn find(&self, key: &str) -> Option<Tau<'_>> {
         if let Self::Object(o) = self {
             return Object::find(o, key);
         }
