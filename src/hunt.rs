@@ -199,34 +199,34 @@ impl HunterBuilder {
                     anyhow::bail!("Chainsaw rules do not support mappings");
                 }
                 let mut preconds = FxHashMap::default();
-                if let Some(extensions) = &mapping.extensions {
-                    if let Some(preconditions) = &extensions.preconditions {
-                        for precondition in preconditions {
-                            for (rid, rule) in &rules {
-                                if let Rule::Sigma(sigma) = rule {
-                                    // FIXME: How do we handle multiple matches, for now we just take
-                                    // the latest, we chould probably just combine them into an AND?
-                                    if precondition.for_.is_empty() {
-                                        continue;
-                                    }
-                                    let mut matched = true;
-                                    for (f, v) in &precondition.for_ {
-                                        match sigma.find(f) {
-                                            Some(value) => {
-                                                if value.as_str() != Some(v.as_str()) {
-                                                    matched = false;
-                                                    break;
-                                                }
-                                            }
-                                            None => {
+                if let Some(extensions) = &mapping.extensions
+                    && let Some(preconditions) = &extensions.preconditions
+                {
+                    for precondition in preconditions {
+                        for (rid, rule) in &rules {
+                            if let Rule::Sigma(sigma) = rule {
+                                // FIXME: How do we handle multiple matches, for now we just take
+                                // the latest, we chould probably just combine them into an AND?
+                                if precondition.for_.is_empty() {
+                                    continue;
+                                }
+                                let mut matched = true;
+                                for (f, v) in &precondition.for_ {
+                                    match sigma.find(f) {
+                                        Some(value) => {
+                                            if value.as_str() != Some(v.as_str()) {
                                                 matched = false;
                                                 break;
                                             }
                                         }
+                                        None => {
+                                            matched = false;
+                                            break;
+                                        }
                                     }
-                                    if matched {
-                                        preconds.insert(*rid, precondition.filter.clone());
-                                    }
+                                }
+                                if matched {
+                                    preconds.insert(*rid, precondition.filter.clone());
                                 }
                             }
                         }
@@ -649,34 +649,33 @@ impl TauDocument for Mapped<'_> {
                     // then allows us to use a OnceCell.
                     let mut lookup = FxHashMap::default();
                     for field in &self.mapper.fields {
-                        if let Some(container) = &field.container {
-                            if !lookup.contains_key(&container.field) {
-                                let data = match self.document.find(&container.field) {
-                                    Some(Tau::String(s)) => match container.format {
-                                        Format::Json => match serde_json::from_str::<Json>(&s) {
-                                            Ok(j) => Box::new(j) as Box<dyn TauDocument>,
-                                            Err(_) => continue,
-                                        },
-                                        Format::Kv {
-                                            ref delimiter,
-                                            ref separator,
-                                            trim,
-                                        } => {
-                                            let mut map = FxHashMap::default();
-                                            for item in s.split(delimiter) {
-                                                let cleaned = if trim { item.trim() } else { item };
-                                                if let Some((k, v)) = cleaned.split_once(separator)
-                                                {
-                                                    map.insert(k.to_owned(), v.to_owned());
-                                                }
-                                            }
-                                            Box::new(map) as Box<dyn TauDocument>
-                                        }
+                        if let Some(container) = &field.container
+                            && !lookup.contains_key(&container.field)
+                        {
+                            let data = match self.document.find(&container.field) {
+                                Some(Tau::String(s)) => match container.format {
+                                    Format::Json => match serde_json::from_str::<Json>(&s) {
+                                        Ok(j) => Box::new(j) as Box<dyn TauDocument>,
+                                        Err(_) => continue,
                                     },
-                                    _ => continue,
-                                };
-                                lookup.insert(container.field.clone(), data);
-                            }
+                                    Format::Kv {
+                                        ref delimiter,
+                                        ref separator,
+                                        trim,
+                                    } => {
+                                        let mut map = FxHashMap::default();
+                                        for item in s.split(delimiter) {
+                                            let cleaned = if trim { item.trim() } else { item };
+                                            if let Some((k, v)) = cleaned.split_once(separator) {
+                                                map.insert(k.to_owned(), v.to_owned());
+                                            }
+                                        }
+                                        Box::new(map) as Box<dyn TauDocument>
+                                    }
+                                },
+                                _ => continue,
+                            };
+                            lookup.insert(container.field.clone(), data);
                         }
                     }
                     if self.cache.set(lookup).is_err() {
@@ -692,10 +691,10 @@ impl TauDocument for Mapped<'_> {
                         Some(res) => {
                             // NOTE: We only parse string into i64 for now, we leave the other
                             // types alone...
-                            if let Tau::String(s) = &res {
-                                if let Ok(i) = str::parse::<i64>(s) {
-                                    return Some(Tau::Int(i));
-                                }
+                            if let Tau::String(s) = &res
+                                && let Ok(i) = str::parse::<i64>(s)
+                            {
+                                return Some(Tau::Int(i));
                             }
                             Some(res)
                         }
@@ -924,10 +923,9 @@ impl Hunter {
                                         if exclusions.contains(rid) {
                                             return None;
                                         }
-                                        if let Some(filter) = preconditions.get(rid) {
-                                            if !tau_engine::core::solve(filter, &mapped) {
+                                        if let Some(filter) = preconditions.get(rid)
+                                            && !tau_engine::core::solve(filter, &mapped) {
                                                 return None;
-                                            }
                                         }
                                         if rule.solve(&mapped) {
                                             Some((*rid, rule))
@@ -1131,16 +1129,16 @@ impl Hunter {
         if self.inner.from.is_some() || self.inner.to.is_some() {
             let localised = Utc.from_utc_datetime(&timestamp);
             // Check if event is older than start date marker
-            if let Some(sd) = self.inner.from {
-                if localised <= sd {
-                    return Ok(true);
-                }
+            if let Some(sd) = self.inner.from
+                && localised <= sd
+            {
+                return Ok(true);
             }
             // Check if event is newer than end date marker
-            if let Some(ed) = self.inner.to {
-                if localised >= ed {
-                    return Ok(true);
-                }
+            if let Some(ed) = self.inner.to
+                && localised >= ed
+            {
+                return Ok(true);
             }
         }
         Ok(false)

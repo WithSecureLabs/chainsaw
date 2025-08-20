@@ -16,9 +16,9 @@ use chrono_tz::Tz;
 use clap::{ArgAction, Parser, Subcommand};
 
 use chainsaw::{
-    cli, get_files, lint as lint_rule, load as load_rule, set_writer, Document, Filter, Format,
-    Hunter, Reader, RuleKind, RuleLevel, RuleStatus, Searcher, ShimcacheAnalyser, SrumAnalyser,
-    Writer,
+    Document, Filter, Format, Hunter, Reader, RuleKind, RuleLevel, RuleStatus, Searcher,
+    ShimcacheAnalyser, SrumAnalyser, Writer, cli, get_files, lint as lint_rule, load as load_rule,
+    set_writer,
 };
 
 #[derive(Parser)]
@@ -337,7 +337,7 @@ fn print_title() {
 }
 
 fn resolve_col_width() -> Option<u32> {
-    use terminal_size::{terminal_size, Width};
+    use terminal_size::{Width, terminal_size};
     if let Some((Width(w), _)) = terminal_size() {
         match w {
             50..=120 => Some(20),
@@ -549,20 +549,19 @@ fn run() -> Result<()> {
                 column_width = resolve_col_width();
             }
             // CSV must be a folder when hunting due to the complexity of the output
-            if csv {
-                if let Some(path) = &output {
-                    if path.is_file() {
-                        let writer = Writer {
-                            quiet,
-                            ..Default::default()
-                        };
-                        set_writer(writer).expect("could not set writer");
-                        if !args.no_banner {
-                            print_title();
-                        }
-                        anyhow::bail!("Unable to create output directory");
-                    }
+            if csv
+                && let Some(path) = &output
+                && path.is_file()
+            {
+                let writer = Writer {
+                    quiet,
+                    ..Default::default()
+                };
+                set_writer(writer).expect("could not set writer");
+                if !args.no_banner {
+                    print_title();
                 }
+                anyhow::bail!("Unable to create output directory");
             }
             init_writer(output.clone(), csv, json, quiet, args.verbose)?;
             if !args.no_banner {
@@ -644,7 +643,10 @@ fn run() -> Result<()> {
                 }
             }
             if failed > 500 && sigma.is_empty() {
-                cs_eyellowln!("[!] {} rules failed to load, ensure Sigma rule paths are specified with the '-s' flag", failed);
+                cs_eyellowln!(
+                    "[!] {} rules failed to load, ensure Sigma rule paths are specified with the '-s' flag",
+                    failed
+                );
             }
             if count == 0 {
                 return Err(anyhow::anyhow!(
@@ -702,8 +704,8 @@ fn run() -> Result<()> {
                         .collect();
                     if scratch.is_empty() {
                         return Err(anyhow::anyhow!(
-                        "The specified file extension is not supported. Use --load-unknown to force loading",
-                    ));
+                            "The specified file extension is not supported. Use --load-unknown to force loading",
+                        ));
                     }
                 };
                 message = scratch
@@ -836,7 +838,9 @@ fn run() -> Result<()> {
                                         serde_yaml::to_string(&d)?
                                     }
                                     Filter::Expression(_) => {
-                                        cs_eyellowln!("[!] Tau does not support visual representation of expressions");
+                                        cs_eyellowln!(
+                                            "[!] Tau does not support visual representation of expressions"
+                                        );
                                         continue;
                                     }
                                 };
@@ -1111,7 +1115,10 @@ fn run() -> Result<()> {
                             } else {
                                 cs_eprintln!(
                                     "[+] Details about the tables related to the SRUM extensions:\n{}",
-                                    srum_db_info.table_details.to_string().trim_end_matches('\n')
+                                    srum_db_info
+                                        .table_details
+                                        .to_string()
+                                        .trim_end_matches('\n')
                                 );
 
                                 let json = srum_db_info.db_content;

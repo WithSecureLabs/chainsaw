@@ -112,7 +112,7 @@ fn split_tag(tag_name: &str) -> String {
 }
 
 fn format_time(event_time: String) -> String {
-    let chunks = event_time.rsplit('.').last();
+    let chunks = event_time.rsplit('.').next_back();
     match chunks {
         Some(e) => e.replace('T', " ").replace('"', ""),
         None => event_time,
@@ -166,18 +166,18 @@ fn agg_to_doc<'a>(
                 FileKind::Unknown => continue,
             };
             for field in fields {
-                if field.visible {
-                    if let Some(value) = mapped.find(&field.from) {
-                        let entry = scratch
-                            .entry(field.from.clone())
-                            .or_insert(HashSet::with_capacity(documents.len()));
-                        match value.to_string() {
-                            Some(v) => {
-                                entry.insert(v);
-                            }
-                            None => {
-                                entry.insert("<see raw event>".to_string());
-                            }
+                if field.visible
+                    && let Some(value) = mapped.find(&field.from)
+                {
+                    let entry = scratch
+                        .entry(field.from.clone())
+                        .or_insert(HashSet::with_capacity(documents.len()));
+                    match value.to_string() {
+                        Some(v) => {
+                            entry.insert(v);
+                        }
+                        None => {
+                            entry.insert("<see raw event>".to_string());
                         }
                     }
                 }
@@ -333,15 +333,15 @@ pub fn print_log(
             FileKind::Unknown => continue,
         };
         for field in hunt.mapper.fields() {
-            if field.visible {
-                if let Some(value) = mapped.find(&field.from) {
-                    match value.to_string() {
-                        Some(v) => {
-                            values.push(v);
-                        }
-                        None => {
-                            values.push("<see raw event>".to_string());
-                        }
+            if field.visible
+                && let Some(value) = mapped.find(&field.from)
+            {
+                match value.to_string() {
+                    Some(v) => {
+                        values.push(v);
+                    }
+                    None => {
+                        values.push("<see raw event>".to_string());
                     }
                 }
             }
@@ -729,32 +729,31 @@ pub fn print_shimcache_analysis_csv(timeline: &Vec<TimelineEntity>) -> crate::Re
             _ts,
             TimestampType::AmcacheRangeMatch | TimestampType::NearTSMatch,
         )) = &entity.timestamp
+            && let Some(file_entry) = &entity.amcache_file
         {
-            if let Some(file_entry) = &entity.amcache_file {
-                let amcache_timestamp = format_ts(&file_entry.key_last_modified_ts);
-                let file_path = file_entry.path.clone();
-                let sha1_hash = file_entry
-                    .sha1_hash
-                    .as_ref()
-                    .unwrap_or(&String::new())
-                    .to_string();
-                let entry_type = "AmcacheFileEntry";
-                let raw_entry = serde_json::to_string(file_entry.as_ref())?;
-                let timeline_entry_nr_string = timeline_entry_nr.to_string();
-                let amcache_row = [
-                    &amcache_timestamp,
-                    &file_path,
-                    "",
-                    &sha1_hash,
-                    &timeline_entry_nr_string,
-                    entry_type,
-                    "",
-                    &raw_entry,
-                ];
-                let cells = amcache_row.map(|s| cell!(s)).to_vec();
-                table.add_row(Row::new(cells));
-                timeline_entry_nr += 1;
-            }
+            let amcache_timestamp = format_ts(&file_entry.key_last_modified_ts);
+            let file_path = file_entry.path.clone();
+            let sha1_hash = file_entry
+                .sha1_hash
+                .as_ref()
+                .unwrap_or(&String::new())
+                .to_string();
+            let entry_type = "AmcacheFileEntry";
+            let raw_entry = serde_json::to_string(file_entry.as_ref())?;
+            let timeline_entry_nr_string = timeline_entry_nr.to_string();
+            let amcache_row = [
+                &amcache_timestamp,
+                &file_path,
+                "",
+                &sha1_hash,
+                &timeline_entry_nr_string,
+                entry_type,
+                "",
+                &raw_entry,
+            ];
+            let cells = amcache_row.map(|s| cell!(s)).to_vec();
+            table.add_row(Row::new(cells));
+            timeline_entry_nr += 1;
         }
     }
     if let Some(writer) = csv {

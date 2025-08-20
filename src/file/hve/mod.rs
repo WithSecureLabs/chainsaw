@@ -32,10 +32,10 @@ impl Parser {
             let path = dir_entry.path();
             if path.file_stem() == hive_file_name {
                 let file_extension = path.extension();
-                if let Some(extension) = file_extension {
-                    if extension == "LOG" || extension == "LOG1" || extension == "LOG2" {
-                        transaction_log_files.push(path);
-                    }
+                if let Some(extension) = file_extension
+                    && (extension == "LOG" || extension == "LOG1" || extension == "LOG2")
+                {
+                    transaction_log_files.push(path);
                 }
             }
         }

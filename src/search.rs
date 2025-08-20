@@ -5,8 +5,8 @@ use chrono_tz::Tz;
 use regex::{RegexSet, RegexSetBuilder};
 use serde_json::Value as Json;
 use tau_engine::{
-    core::parser::{BoolSym, Expression},
     Document as Doc,
+    core::parser::{BoolSym, Expression},
 };
 
 use crate::ext;
@@ -94,16 +94,16 @@ impl Iterator for Iter<'_> {
                 };
                 let localised = Utc.from_utc_datetime(&timestamp);
                 // Check if event is older than start date marker
-                if let Some(sd) = self.searcher.from {
-                    if localised <= sd {
-                        continue;
-                    }
+                if let Some(sd) = self.searcher.from
+                    && localised <= sd
+                {
+                    continue;
                 }
                 // Check if event is newer than end date marker
-                if let Some(ed) = self.searcher.to {
-                    if localised >= ed {
-                        continue;
-                    }
+                if let Some(ed) = self.searcher.to
+                    && localised >= ed
+                {
+                    continue;
                 }
             }
             // TODO: Remove duplication...

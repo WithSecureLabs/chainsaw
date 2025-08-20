@@ -5,12 +5,11 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 use tau_engine::{
-    core::{
-        optimiser,
-        parser::{Expression, Pattern},
-        Detection,
-    },
     Document,
+    core::{
+        Detection, optimiser,
+        parser::{Expression, Pattern},
+    },
 };
 
 use crate::file::Kind as FileKind;
@@ -211,26 +210,27 @@ pub fn load(
     levels: &Option<HashSet<Level>>,
     statuses: &Option<HashSet<Status>>,
 ) -> crate::Result<Vec<Rule>> {
-    if let Some(x) = path.extension() {
-        if x != "yml" && x != "yaml" {
-            anyhow::bail!("rule must have a yaml file extension");
-        }
+    if let Some(x) = path.extension()
+        && x != "yml"
+        && x != "yaml"
+    {
+        anyhow::bail!("rule must have a yaml file extension");
     }
     let mut rules = match kind {
         Kind::Chainsaw => {
-            if let Some(kinds) = kinds.as_ref() {
-                if !kinds.contains(&Kind::Chainsaw) {
-                    return Ok(vec![]);
-                }
+            if let Some(kinds) = kinds.as_ref()
+                && !kinds.contains(&Kind::Chainsaw)
+            {
+                return Ok(vec![]);
             }
             let rule = chainsaw::load(path)?;
             vec![Rule::Chainsaw(rule)]
         }
         Kind::Sigma => {
-            if let Some(kinds) = kinds.as_ref() {
-                if !kinds.contains(&Kind::Sigma) {
-                    return Ok(vec![]);
-                }
+            if let Some(kinds) = kinds.as_ref()
+                && !kinds.contains(&Kind::Sigma)
+            {
+                return Ok(vec![]);
             }
             let sigma = match sigma::load(path)?
                 .into_iter()
@@ -268,10 +268,11 @@ pub fn load(
 }
 
 pub fn lint(kind: &Kind, path: &Path) -> crate::Result<Vec<Filter>> {
-    if let Some(x) = path.extension() {
-        if x != "yml" && x != "yaml" {
-            anyhow::bail!("rule must have a yaml file extension");
-        }
+    if let Some(x) = path.extension()
+        && x != "yml"
+        && x != "yaml"
+    {
+        anyhow::bail!("rule must have a yaml file extension");
     }
     let detections = match kind {
         Kind::Chainsaw => match chainsaw::load(path) {

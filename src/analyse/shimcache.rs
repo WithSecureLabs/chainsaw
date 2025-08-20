@@ -4,9 +4,9 @@ use chrono::{DateTime, Utc};
 use regex::Regex;
 
 use crate::file::hve::{
+    Parser as HveParser,
     amcache::{AmcacheArtefact, FileEntry, ProgramEntry},
     shimcache::{EntryType, ShimcacheEntry},
-    Parser as HveParser,
 };
 
 #[derive(Debug, Clone)]
@@ -223,10 +223,10 @@ impl ShimcacheAnalyser {
                     } else {
                         continue;
                     };
-                    if let EntryType::File { path } = &shimcache_entry.entry_type {
-                        if file_entry.path.to_lowercase() == path.to_lowercase() {
-                            entity.amcache_file = Some(Rc::clone(&file_entry));
-                        }
+                    if let EntryType::File { path } = &shimcache_entry.entry_type
+                        && file_entry.path.to_lowercase() == path.to_lowercase()
+                    {
+                        entity.amcache_file = Some(Rc::clone(&file_entry));
                     }
                 }
             }
@@ -245,12 +245,10 @@ impl ShimcacheAnalyser {
                         program_version,
                         ..
                     } = &shimcache_entry.entry_type
+                        && &program_entry.program_name == program_name
+                        && &program_entry.version == program_version
                     {
-                        if &program_entry.program_name == program_name
-                            && &program_entry.version == program_version
-                        {
-                            entity.amcache_program = Some(Rc::clone(&program_entry));
-                        }
+                        entity.amcache_program = Some(Rc::clone(&program_entry));
                     }
                 }
             }
@@ -263,27 +261,24 @@ impl ShimcacheAnalyser {
                 for entity in &mut timeline_entities {
                     if let (Some(shimcache_entry), Some(amcache_entry)) =
                         (&entity.shimcache_entry, &entity.amcache_file)
+                        && let Some(shimcache_ts) = shimcache_entry.last_modified_ts
                     {
-                        if let Some(shimcache_ts) = shimcache_entry.last_modified_ts {
-                            let difference = shimcache_ts - amcache_entry.key_last_modified_ts;
-                            if difference.num_milliseconds().abs() > MAX_TIME_DIFFERENCE {
-                                continue;
-                            }
-                            near_timestamps_count += 1;
-                            // Do not overwrite pattern matched timestamps
-                            if let Some(TimelineTimestamp::Exact(
-                                _ts,
-                                TimestampType::PatternMatch,
-                            )) = entity.timestamp
-                            {
-                                pattern_match_overlap_count += 1;
-                                continue;
-                            }
-                            entity.timestamp = Some(TimelineTimestamp::Exact(
-                                amcache_entry.key_last_modified_ts,
-                                TimestampType::NearTSMatch,
-                            ));
+                        let difference = shimcache_ts - amcache_entry.key_last_modified_ts;
+                        if difference.num_milliseconds().abs() > MAX_TIME_DIFFERENCE {
+                            continue;
                         }
+                        near_timestamps_count += 1;
+                        // Do not overwrite pattern matched timestamps
+                        if let Some(TimelineTimestamp::Exact(_ts, TimestampType::PatternMatch)) =
+                            entity.timestamp
+                        {
+                            pattern_match_overlap_count += 1;
+                            continue;
+                        }
+                        entity.timestamp = Some(TimelineTimestamp::Exact(
+                            amcache_entry.key_last_modified_ts,
+                            TimestampType::NearTSMatch,
+                        ));
                     }
                 }
                 let new_exact_ts_indices = get_exact_ts_indices(&timeline_entities);
@@ -310,16 +305,16 @@ impl ShimcacheAnalyser {
                 } else {
                     continue;
                 };
-                if let EntryType::File { .. } = &shimcache_entry.entry_type {
-                    if let Some(TimelineTimestamp::Range { from, to }) = entity.timestamp {
-                        let amcache_ts = amcache_file_entry.key_last_modified_ts;
-                        if from < amcache_ts && amcache_ts < to {
-                            entity.timestamp = Some(TimelineTimestamp::Exact(
-                                amcache_ts,
-                                TimestampType::AmcacheRangeMatch,
-                            ));
-                            ts_match_count += 1;
-                        }
+                if let EntryType::File { .. } = &shimcache_entry.entry_type
+                    && let Some(TimelineTimestamp::Range { from, to }) = entity.timestamp
+                {
+                    let amcache_ts = amcache_file_entry.key_last_modified_ts;
+                    if from < amcache_ts && amcache_ts < to {
+                        entity.timestamp = Some(TimelineTimestamp::Exact(
+                            amcache_ts,
+                            TimestampType::AmcacheRangeMatch,
+                        ));
+                        ts_match_count += 1;
                     }
                 }
             }

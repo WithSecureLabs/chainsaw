@@ -714,12 +714,12 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
                             if let Some(ident) = identifier.strip_suffix('*') {
                                 let mut keys = vec![];
                                 for (k, _) in &det {
-                                    if let Yaml::String(key) = k {
-                                        if key.starts_with(ident) {
-                                            match patches.get(key) {
-                                                Some(i) => keys.push(i.to_owned()),
-                                                None => keys.push(key.to_owned()),
-                                            }
+                                    if let Yaml::String(key) = k
+                                        && key.starts_with(ident)
+                                    {
+                                        match patches.get(key) {
+                                            Some(i) => keys.push(i.to_owned()),
+                                            None => keys.push(key.to_owned()),
                                         }
                                     }
                                 }
@@ -874,13 +874,13 @@ mod tests {
     #[test]
     fn test_unsupported_conditions() {
         let condition = "search_expression | aggregation_expression".to_owned();
-        assert_eq!(condition.unsupported(), true);
+        assert!(condition.unsupported());
 
         let condition = "selection*".to_owned();
-        assert_eq!(condition.unsupported(), true);
+        assert!(condition.unsupported());
 
         let condition = "1 of them".to_owned();
-        assert_eq!(condition.unsupported(), true);
+        assert!(condition.unsupported());
     }
 
     #[test]
@@ -911,9 +911,9 @@ mod tests {
 
         // NOTE: These are none as we need to write regex to support them...
         let x = "foo*bar".to_owned();
-        assert_eq!(x.as_match().is_none(), true);
+        assert!(x.as_match().is_none());
         let x = "foo?bar".to_owned();
-        assert_eq!(x.as_match().is_none(), true);
+        assert!(x.as_match().is_none());
     }
 
     #[test]
@@ -941,7 +941,7 @@ mod tests {
             number: 30
             string: iabcd
         "#;
-        let expected: serde_yaml::Value = serde_yaml::from_str(&rule).unwrap();
+        let expected: serde_yaml::Value = serde_yaml::from_str(rule).unwrap();
 
         let rule = r#"
             array:
@@ -954,7 +954,7 @@ mod tests {
             number: 30
             string: abcd
         "#;
-        let yaml: serde_yaml::Value = serde_yaml::from_str(&rule).unwrap();
+        let yaml: serde_yaml::Value = serde_yaml::from_str(rule).unwrap();
         let yaml = parse_identifier(&yaml, &HashSet::new()).unwrap();
         assert_eq!(yaml, expected);
     }
@@ -966,7 +966,7 @@ mod tests {
                 string: abcd
             condition: A
         "#;
-        let expected: Detection = serde_yaml::from_str(&expected).unwrap();
+        let expected: Detection = serde_yaml::from_str(expected).unwrap();
 
         let detection = r#"
             A:
@@ -974,7 +974,7 @@ mod tests {
             condition: A
         "#;
 
-        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let detection: Detection = serde_yaml::from_str(detection).unwrap();
         let (detection, _) = prepare(detection, None).unwrap();
         assert_eq!(detection, expected);
     }
@@ -988,7 +988,7 @@ mod tests {
                 string: efgh
             condition: A and B
         "#;
-        let expected: Detection = serde_yaml::from_str(&expected).unwrap();
+        let expected: Detection = serde_yaml::from_str(expected).unwrap();
 
         let base = r#"
             A:
@@ -1001,8 +1001,8 @@ mod tests {
             condition: A and B
         "#;
 
-        let base: Detection = serde_yaml::from_str(&base).unwrap();
-        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let base: Detection = serde_yaml::from_str(base).unwrap();
+        let detection: Detection = serde_yaml::from_str(detection).unwrap();
         let (detection, _) = prepare(base, Some(detection)).unwrap();
         assert_eq!(detection, expected);
     }
@@ -1038,7 +1038,7 @@ mod tests {
             true_negatives: []
             true_positives: []
         "#;
-        let expected: serde_yaml::Value = serde_yaml::from_str(&expected).unwrap();
+        let expected: serde_yaml::Value = serde_yaml::from_str(expected).unwrap();
 
         let detection = r#"
             A:
@@ -1063,7 +1063,7 @@ mod tests {
                 - string|startswith: foobar
             condition: A and B and C
         "#;
-        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let detection: Detection = serde_yaml::from_str(detection).unwrap();
         let detection = detections_to_tau(detection).unwrap();
         assert_eq!(detection, *expected.as_mapping().unwrap());
     }
@@ -1080,7 +1080,7 @@ mod tests {
             true_negatives: []
             true_positives: []
         "#;
-        let expected: serde_yaml::Value = serde_yaml::from_str(&expected).unwrap();
+        let expected: serde_yaml::Value = serde_yaml::from_str(expected).unwrap();
 
         let detection = r#"
             A:
@@ -1090,7 +1090,7 @@ mod tests {
             condition: all of them
         "#;
 
-        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let detection: Detection = serde_yaml::from_str(detection).unwrap();
         let detection = detections_to_tau(detection).unwrap();
         assert_eq!(detection, *expected.as_mapping().unwrap());
     }
@@ -1107,7 +1107,7 @@ mod tests {
             true_negatives: []
             true_positives: []
         "#;
-        let expected: serde_yaml::Value = serde_yaml::from_str(&expected).unwrap();
+        let expected: serde_yaml::Value = serde_yaml::from_str(expected).unwrap();
 
         let detection = r#"
             A:
@@ -1117,7 +1117,7 @@ mod tests {
             condition: 1 of them
         "#;
 
-        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let detection: Detection = serde_yaml::from_str(detection).unwrap();
         let detection = detections_to_tau(detection).unwrap();
         assert_eq!(detection, *expected.as_mapping().unwrap());
     }
@@ -1136,7 +1136,7 @@ mod tests {
             true_negatives: []
             true_positives: []
         "#;
-        let expected: serde_yaml::Value = serde_yaml::from_str(&expected).unwrap();
+        let expected: serde_yaml::Value = serde_yaml::from_str(expected).unwrap();
 
         let detection = r#"
             A:
@@ -1148,7 +1148,7 @@ mod tests {
             condition: A and all of selection*
         "#;
 
-        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let detection: Detection = serde_yaml::from_str(detection).unwrap();
         let detection = detections_to_tau(detection).unwrap();
         assert_eq!(detection, *expected.as_mapping().unwrap());
     }
@@ -1167,7 +1167,7 @@ mod tests {
             true_negatives: []
             true_positives: []
         "#;
-        let expected: serde_yaml::Value = serde_yaml::from_str(&expected).unwrap();
+        let expected: serde_yaml::Value = serde_yaml::from_str(expected).unwrap();
 
         let detection = r#"
             A:
@@ -1179,7 +1179,7 @@ mod tests {
             condition: A and 1 of selection*
         "#;
 
-        let detection: Detection = serde_yaml::from_str(&detection).unwrap();
+        let detection: Detection = serde_yaml::from_str(detection).unwrap();
         let detection = detections_to_tau(detection).unwrap();
         assert_eq!(detection, *expected.as_mapping().unwrap());
     }

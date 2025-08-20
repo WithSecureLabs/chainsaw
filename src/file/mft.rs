@@ -82,10 +82,10 @@ impl Parser {
         // Code is adapted MFT Library implementation of the mft_dump.rs file
         // Reference: https://github.com/omerbenamram/mft/blob/6767bb5d3787b5532a7a5a07532f0c6b4e22413d/src/bin/mft_dump.rs#L289
 
-        if let Some(data_streams_dir) = &self.data_streams_directory {
-            if !data_streams_dir.exists() {
-                create_dir_all(data_streams_dir).expect("Failed to create data streams directory");
-            }
+        if let Some(data_streams_dir) = &self.data_streams_directory
+            && !data_streams_dir.exists()
+        {
+            create_dir_all(data_streams_dir).expect("Failed to create data streams directory");
         }
 
         let number_of_entries = self.inner.get_entry_count();
@@ -151,45 +151,45 @@ pub fn extract_data_streams(parser: &mut Parser, entry: &MftEntry) -> crate::Res
         })
         .enumerate()
     {
-        if let Some(data_streams_dir) = &parser.data_streams_directory {
-            if let Some(path) = parser.inner.get_full_path_for_entry(entry)? {
-                // Replace file path seperators with underscores
+        if let Some(data_streams_dir) = &parser.data_streams_directory
+            && let Some(path) = parser.inner.get_full_path_for_entry(entry)?
+        {
+            // Replace file path seperators with underscores
 
-                let sanitized_path = path
-                    .to_string()
-                    .chars()
-                    .map(|c| if path::is_separator(c) { '_' } else { c })
-                    .collect::<String>();
+            let sanitized_path = path
+                .to_string()
+                .chars()
+                .map(|c| if path::is_separator(c) { '_' } else { c })
+                .collect::<String>();
 
-                let output_path: String = data_streams_dir
-                    .join(&sanitized_path)
-                    .to_string_lossy()
-                    .to_string();
+            let output_path: String = data_streams_dir
+                .join(&sanitized_path)
+                .to_string_lossy()
+                .to_string();
 
-                // Generate 6 characters random hex string
-                let random: String = (0..6)
-                    .map(|_| format!("{:02x}", rand::random::<u8>()))
-                    .fold(String::new(), |acc, hex| format!("{}{}", acc, hex));
+            // Generate 6 characters random hex string
+            let random: String = (0..6)
+                .map(|_| format!("{:02x}", rand::random::<u8>()))
+                .fold(String::new(), |acc, hex| format!("{}{}", acc, hex));
 
-                let truncated: String = output_path.chars().take(150).collect();
+            let truncated: String = output_path.chars().take(150).collect();
 
-                if PathBuf::from(&output_path).exists() {
-                    return Err(anyhow!(
-                        "Data stream output path already exists: {}\n\
+            if PathBuf::from(&output_path).exists() {
+                return Err(anyhow!(
+                    "Data stream output path already exists: {}\n\
                         Exiting out of precaution.",
-                        output_path
-                    ));
-                }
-
-                File::create(format!(
-                    "{path}__{random}_{stream_number}_{stream_name}.disabled",
-                    path = truncated,
-                    random = random,
-                    stream_number = i,
-                    stream_name = name
-                ))?
-                .write_all(stream.data())?;
+                    output_path
+                ));
             }
+
+            File::create(format!(
+                "{path}__{random}_{stream_number}_{stream_name}.disabled",
+                path = truncated,
+                random = random,
+                stream_number = i,
+                stream_name = name
+            ))?
+            .write_all(stream.data())?;
         }
 
         //convert stream.data() to a hex string
