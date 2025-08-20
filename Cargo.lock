@@ -273,7 +273,7 @@ checksum = "2fd1289c04a9ea8cb22300a459a72a385d7c73d3259e2ed7dcb2af674838cfa9"
 
 [[package]]
 name = "chainsaw"
-version = "2.12.0"
+version = "2.13.0-beta.0"
 dependencies = [
  "aho-corasick",
  "anyhow",
