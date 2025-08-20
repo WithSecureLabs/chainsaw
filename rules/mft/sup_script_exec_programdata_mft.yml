@@ -1,0 +1,121 @@
+---
+title: Suspicious Script or Executable Location - ProgramData
+group: MFT
+description: Suspicious Script or Executable in a different location than standard. Potential Threat Actor Activity.
+authors:
+  - Reece394
+
+
+kind: mft
+level: info
+status: stable
+timestamp: StandardInfoCreated
+
+
+fields:
+  - name: FileNamePath
+    to: FullPath
+  - name: StandardInfoLastModified0x10
+    to: StandardInfoLastModified
+  - name: StandardInfoLastAccess0x10
+    to: StandardInfoLastAccess
+  - name: FileNameCreated0x30
+    to: FileNameCreated
+  - name: FileNameLastModified0x30
+    to: FileNameLastModified
+  - name: FileNameLastAccess0x30
+    to: FileNameLastAccess
+  - name: FileSize
+    to: FileSize
+  - name: IsADirectory
+    to: IsADirectory
+  - name: IsDeleted
+    to: IsDeleted
+  - name: HasAlternateDataStreams
+    to: HasAlternateDataStreams
+  - name: DataStreams
+    to: DataStreams
+
+filter:
+  condition: (sup and directory) and not directoryexc
+
+  sup:
+    FullPath:
+      - 'i*.bat'
+      - 'i*.cmd'
+      - 'i*.cpl'
+      - 'i*.ex'
+      - 'i*.ex_'
+      - 'i*.exe'
+      - 'i*.jse'
+      - 'i*.msc'
+      - 'i*.ps1'
+      - 'i*.ps1xml'
+      - 'i*.ps2'
+      - 'i*.ps2xml'
+      - 'i*.psc1'
+      - 'i*.psc2'
+      - 'i*.msh'
+      - 'i*.msh1'
+      - 'i*.msh2'
+      - 'i*.mshxml'
+      - 'i*.msh1xml'
+      - 'i*.msh2xml'
+      - 'i*.reg'
+      - 'i*.vb'
+      - 'i*.vbe'
+      - 'i*.ws'
+      - 'i*.wsf'
+      - 'i*.wsc'
+      - 'i*.hta'
+      - 'i*.vbs'
+      - 'i*.com'
+      - 'i*.dll'
+      - 'i*.sys'
+      - 'i*.isu'
+      - 'i*.scr'
+      - 'i*.mst'
+      - 'i*.job'
+      - 'i*.paf'
+      - 'i*.sct'
+      - 'i*.gadget'
+      - 'i*.pif'
+      - 'i*.shb'
+      - 'i*.vbscript'
+      - 'i*.inf'
+      - 'i*.inf1'
+      - 'i*.shs'
+      - 'i*.bin'
+      - 'i*.ins'
+      - 'i*.u3p'
+      - 'i*.wsh'
+      - 'i*.inx'
+      - 'i*.js'
+      - 'i*.msi'
+      - 'i*.msp'
+      - 'i*.rgs'
+      - 'i*.sh'
+      - 'i*.run'
+      - 'i*.jar'
+      - 'i*.py'
+      - 'i*.py3'
+      - 'i*.pyc'
+      - 'i*.pyo'
+      - 'i*.pyw'
+      - 'i*.pyx'
+      - 'i*.pyd'
+      - 'i*.pxd'
+      - 'i*.pyi'
+      - 'i*.pyz'
+      - 'i*.pl'
+      - 'i*.rb'
+      - 'i*.ocx'
+      - 'i*.scf'
+
+  directory:
+    FullPath:
+      - 'iProgramData/*'
+
+  directoryexc:
+    FullPath:
+      - 'iProgramData/Microsoft/Windows Defender/*'

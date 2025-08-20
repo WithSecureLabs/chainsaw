@@ -33,6 +33,8 @@ fields:
     to: IsDeleted
   - name: HasAlternateDataStreams
     to: HasAlternateDataStreams
+  - name: DataStreams
+    to: DataStreams
 
 filter:
   condition: ms and (ms_1 or ms_2 or ms_3)
