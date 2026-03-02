@@ -7,7 +7,7 @@ authors:
 
 
 kind: mft
-level: critical
+level: medium
 status: stable
 timestamp: StandardInfoCreated
 
@@ -43,4 +43,5 @@ filter:
     FullPath:
       - 'i*pd64.exe*'
       - 'i*procdump64.exe*'
+
       - 'i*procdump.exe*'
