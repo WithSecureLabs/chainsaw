@@ -1,13 +1,13 @@
 ---
-title: PSExec
+title: TokenDuplicator
 group: MFT
-description: PsExec artifacts
+description: TokenDuplicator artifacts - https://github.com/magnusstubman/tokenduplicator/
 authors:
-  - Reece394, Krzysztof Kuzin
+  - Krzysztof Kuzin
 
 
 kind: mft
-level: medium
+level: critical
 status: stable
 timestamp: StandardInfoCreated
 
@@ -37,19 +37,10 @@ fields:
     to: DataStreams
 
 filter:
-  condition: psexec or (key_1 and key_2)
+  condition: tokenduplicator
 
-  psexec:
+  tokenduplicator:
     FullPath:
-      - 'i*PSEXESVC.exe*'
-      - 'i*PSExec.exe*'
-      - 'i*PSExec64.exe*'
-      - 'i*PS64.exe*'
-
-  key_1:
-    FullPath:
-      - 'i*.key*'
-
-  key_2:
-    FullPath:
-      - 'i*PSEXEC-*'
+      - 'i*tokenduplicator.exe*'
+      - 'i*tokenduplicator-main.zip*'
+      - 'i*tokenduplicator.zip*'

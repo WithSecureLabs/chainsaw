@@ -1,9 +1,9 @@
 ---
-title: PSExec
+title: Splashtop (Remote Monitoring and Management tool)
 group: MFT
-description: PsExec artifacts
+description: Splashtop (remote management tool) artifacts
 authors:
-  - Reece394, Krzysztof Kuzin
+  - Krzysztof Kuzin
 
 
 kind: mft
@@ -37,19 +37,15 @@ fields:
     to: DataStreams
 
 filter:
-  condition: psexec or (key_1 and key_2)
+  condition: splashtop
 
-  psexec:
+  splashtop:
     FullPath:
-      - 'i*PSEXESVC.exe*'
-      - 'i*PSExec.exe*'
-      - 'i*PSExec64.exe*'
-      - 'i*PS64.exe*'
-
-  key_1:
-    FullPath:
-      - 'i*.key*'
-
-  key_2:
-    FullPath:
-      - 'i*PSEXEC-*'
+      - 'i*strwinclt.exe*'
+      - 'i*SRAgent.sqlite3*'
+      - 'i*SRFeature.exe*'
+      - 'i*SRUtility.exe*'
+      - 'i*SSUAgent.exe*'
+      - 'i*SRAgent.exe*'
+      - 'i*SRService.exe*'
+      - 'i*SSUAgent.exe*'
