@@ -1,13 +1,13 @@
 ---
-title: PSExec
+title: svchost.exe Suspicious Location
 group: MFT
-description: PsExec artifacts
+description: svchost.exe in a different location than standard. Potential Malicious Activity.
 authors:
-  - Reece394, Krzysztof Kuzin
+  - Krzysztof Kuzin
 
 
 kind: mft
-level: medium
+level: high
 status: stable
 timestamp: StandardInfoCreated
 
@@ -37,19 +37,15 @@ fields:
     to: DataStreams
 
 filter:
-  condition: psexec or (key_1 and key_2)
+  condition: svchost and not svchost_1
 
-  psexec:
+  svchost:
     FullPath:
-      - 'i*PSEXESVC.exe*'
-      - 'i*PSExec.exe*'
-      - 'i*PSExec64.exe*'
-      - 'i*PS64.exe*'
+      - 'i*svchost.exe*'
 
-  key_1:
+  svchost_1:
     FullPath:
-      - 'i*.key*'
-
-  key_2:
-    FullPath:
-      - 'i*PSEXEC-*'
+      - 'iWindows/System32/svchost.exe'
+      - 'iWindows/SysWow64/svchost.exe'
+      - 'iWindows/winsxs/x86_microsoft-windows-*'
+      - 'iWindows/winsxs/amd64_microsoft-windows-*'
