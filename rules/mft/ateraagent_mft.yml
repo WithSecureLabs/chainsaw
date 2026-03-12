@@ -39,7 +39,7 @@ fields:
 filter:
   condition: ateraagent
 
-  atteraagent:
+  ateraagent:
     FullPath:
       - 'i*atera_agent.exe*'
       - 'i*ateraagent.exe*'
