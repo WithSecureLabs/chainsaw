@@ -41,7 +41,7 @@ filter:
 
   svchost:
     FullPath:
-      - 'i*svchost.exe*'
+      - 'i*/svchost.exe*'
 
   svchost_1:
     FullPath:
