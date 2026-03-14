@@ -1,9 +1,9 @@
 ---
-title: PSExec
+title: MeshAgent
 group: MFT
-description: PsExec artifacts
+description: MeshAgent (remote management tool) artifacts
 authors:
-  - Reece394, Krzysztof Kuzin
+  - Krzysztof Kuzin
 
 
 kind: mft
@@ -37,19 +37,14 @@ fields:
     to: DataStreams
 
 filter:
-  condition: psexec or (key_1 and key_2)
+  condition: meshagent
 
-  psexec:
+  meshagent:
     FullPath:
-      - 'i*PSEXESVC.exe*'
-      - 'i*PSExec.exe*'
-      - 'i*PSExec64.exe*'
-      - 'i*PS64.exe*'
-
-  key_1:
-    FullPath:
-      - 'i*.key*'
-
-  key_2:
-    FullPath:
-      - 'i*PSEXEC-*'
+      - 'i*meshagent.exe*'
+      - 'i*meshagent64.exe*'
+      - 'i*meshagent.proxy*'
+      - 'i*meshagent64.proxy*'
+      - 'i*meshagent.log*'
+      - 'i*meshagent.msh*'
+      - 'i*meshagent.db*'

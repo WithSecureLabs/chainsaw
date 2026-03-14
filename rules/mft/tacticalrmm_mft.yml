@@ -1,9 +1,9 @@
 ---
-title: PSExec
+title: Tactical RMM
 group: MFT
-description: PsExec artifacts
+description: Tactical RMM (remote management tool) artifacts
 authors:
-  - Reece394, Krzysztof Kuzin
+  - Krzysztof Kuzin
 
 
 kind: mft
@@ -37,19 +37,8 @@ fields:
     to: DataStreams
 
 filter:
-  condition: psexec or (key_1 and key_2)
+  condition: tacticalrmm
 
-  psexec:
+  tacticalrmm:
     FullPath:
-      - 'i*PSEXESVC.exe*'
-      - 'i*PSExec.exe*'
-      - 'i*PSExec64.exe*'
-      - 'i*PS64.exe*'
-
-  key_1:
-    FullPath:
-      - 'i*.key*'
-
-  key_2:
-    FullPath:
-      - 'i*PSEXEC-*'
+      - 'i*tacticalrmm.exe*'
