@@ -1,0 +1,64 @@
+---
+title: Netexec
+group: MFT
+description: Netexec - network service exploitation tool
+authors:
+  - Krzysztof Kuzin
+
+kind: mft
+level: high
+status: stable
+timestamp: StandardInfoCreated
+
+fields:
+  - name: FileNamePath
+    to: FullPath
+  - name: StandardInfoLastModified0x10
+    to: StandardInfoLastModified
+  - name: StandardInfoLastAccess0x10
+    to: StandardInfoLastAccess
+  - name: FileNameCreated0x30
+    to: FileNameCreated
+  - name: FileNameLastModified0x30
+    to: FileNameLastModified
+  - name: FileNameLastAccess0x30
+    to: FileNameLastAccess
+  - name: FileSize
+    to: FileSize
+  - name: IsADirectory
+    to: IsADirectory
+  - name: IsDeleted
+    to: IsDeleted
+  - name: HasAlternateDataStreams
+    to: HasAlternateDataStreams
+  - name: DataStreams
+    to: DataStreams
+
+filter:
+  condition: netexec or netexec1 or netexec2 or netexec3
+
+  netexec:
+    FullPath:
+      - 'i*nxc.exe*'
+
+   netexec1:
+    FullPath:
+      - 'i*.nxc\workspaces*'
+      - 'i*.nxc\workspaces\default*'
+
+    netexec2:
+    FullPath:
+      - 'i*nxc.conf*'
+
+    netexec3:
+    FullPath:
+      - 'iftp.db*'
+      - 'ildap.db*'
+      - 'imssql.db*'
+      - 'infs.db*'
+      - 'irdp.db*'
+      - 'ismb.db*'
+      - 'issh.db*'
+      - 'ivnc.db*'
+      - 'iwinrm.db*'
+      - 'iwmi.db*'
