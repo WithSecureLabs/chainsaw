@@ -1,16 +1,14 @@
 ---
-title: PSExec
+title: Netexec
 group: MFT
-description: PsExec artifacts
+description: Netexec - network service exploitation tool
 authors:
-  - Reece394, Krzysztof Kuzin
-
+  - Krzysztof Kuzin
 
 kind: mft
-level: medium
+level: high
 status: stable
 timestamp: StandardInfoCreated
-
 
 fields:
   - name: FileNamePath
@@ -37,19 +35,30 @@ fields:
     to: DataStreams
 
 filter:
-  condition: psexec or (key_1 and key_2)
+  condition: netexec or netexec1 or netexec2 or netexec3
 
-  psexec:
+  netexec:
     FullPath:
-      - 'i*PSEXESVC.exe*'
-      - 'i*PSExec.exe*'
-      - 'i*PSExec64.exe*'
-      - 'i*PS64.exe*'
+      - 'i*nxc.exe*'
 
-  key_1:
+   netexec1:
     FullPath:
-      - 'i*.key*'
+      - 'i*.nxc\workspaces*'
+      - 'i*.nxc\workspaces\default*'
 
-  key_2:
+    netexec2:
     FullPath:
-      - 'i*PSEXEC-*'
+      - 'inxc.conf*'
+
+    netexec3:
+    FullPath:
+      - 'iftp.db*'
+      - 'ildap.db*'
+      - 'imssql.db*'
+      - 'infs.db*'
+      - 'irdp.db*'
+      - 'ismb.db*'
+      - 'issh.db*'
+      - 'ivnc.db*'
+      - 'iwinrm.db*'
+      - 'iwmi.db*'

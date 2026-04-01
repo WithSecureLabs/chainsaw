@@ -1,16 +1,14 @@
 ---
-title: PSExec
+title: AnyViewer
 group: MFT
-description: PsExec artifacts
+description: AnyViewer (remote management tool) artifacts
 authors:
-  - Reece394, Krzysztof Kuzin
-
+  - Krzysztof Kuzin
 
 kind: mft
 level: medium
 status: stable
 timestamp: StandardInfoCreated
-
 
 fields:
   - name: FileNamePath
@@ -37,19 +35,9 @@ fields:
     to: DataStreams
 
 filter:
-  condition: psexec or (key_1 and key_2)
+  condition: anyviewer
 
-  psexec:
+  anyviewer:
     FullPath:
-      - 'i*PSEXESVC.exe*'
-      - 'i*PSExec.exe*'
-      - 'i*PSExec64.exe*'
-      - 'i*PS64.exe*'
-
-  key_1:
-    FullPath:
-      - 'i*.key*'
-
-  key_2:
-    FullPath:
-      - 'i*PSEXEC-*'
+      - 'i*AnyViewer.exe*'
+      - 'i*RCService.exe*'

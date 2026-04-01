@@ -1,9 +1,9 @@
 ---
-title: PSExec
+title: Atera Agent
 group: MFT
-description: PsExec artifacts
+description: Atera Agent (remote management tool) artifacts
 authors:
-  - Reece394, Krzysztof Kuzin
+  - Krzysztof Kuzin
 
 
 kind: mft
@@ -37,19 +37,11 @@ fields:
     to: DataStreams
 
 filter:
-  condition: psexec or (key_1 and key_2)
+  condition: ateraagent
 
-  psexec:
+  ateraagent:
     FullPath:
-      - 'i*PSEXESVC.exe*'
-      - 'i*PSExec.exe*'
-      - 'i*PSExec64.exe*'
-      - 'i*PS64.exe*'
-
-  key_1:
-    FullPath:
-      - 'i*.key*'
-
-  key_2:
-    FullPath:
-      - 'i*PSEXEC-*'
+      - 'i*atera_agent.exe*'
+      - 'i*ateraagent.exe*'
+      - 'i*AgentPackageNetworkDiscovery.exe*'
+      - 'i*AgentPackageTaskScheduler.exe*'

@@ -1,13 +1,13 @@
 ---
-title: PSExec
+title: KslKatz
 group: MFT
-description: PsExec artifacts
+description: KslKatz Credential Dumping Framework
 authors:
-  - Reece394, Krzysztof Kuzin
+  - Krzysztof Kuzin
 
 
 kind: mft
-level: medium
+level: high
 status: stable
 timestamp: StandardInfoCreated
 
@@ -37,19 +37,8 @@ fields:
     to: DataStreams
 
 filter:
-  condition: psexec or (key_1 and key_2)
+  condition: kslkatz
 
-  psexec:
+  kslkatz:
     FullPath:
-      - 'i*PSEXESVC.exe*'
-      - 'i*PSExec.exe*'
-      - 'i*PSExec64.exe*'
-      - 'i*PS64.exe*'
-
-  key_1:
-    FullPath:
-      - 'i*.key*'
-
-  key_2:
-    FullPath:
-      - 'i*PSEXEC-*'
+      - 'i*KslKatz.exe*'
