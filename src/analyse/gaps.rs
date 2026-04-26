@@ -1,10 +1,29 @@
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+use chrono::{Local, NaiveDateTime, TimeZone, Utc};
+use chrono_tz::Tz;
 use serde::Serialize;
 
 use crate::file::evtx::Parser as EvtxParser;
 use crate::get_files;
+
+#[derive(Debug, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum GapKind {
+    RecordId,
+    Timestamp,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Gap {
+    pub kind: GapKind,
+    pub channel: String,
+    pub from: u64,
+    pub until: u64,
+    pub start: i64,
+    pub stop: i64,
+}
 
 #[derive(Debug, Serialize)]
 pub struct ChannelStats {
@@ -12,36 +31,15 @@ pub struct ChannelStats {
     pub records_seen: u64,
     pub first_record_id: u64,
     pub last_record_id: u64,
-    pub first_timestamp: String,
-    pub last_timestamp: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct RecordIdGap {
-    pub channel: String,
-    pub prev_record_id: u64,
-    pub next_record_id: u64,
-    pub missing_records: u64,
-    pub prev_timestamp: String,
-    pub next_timestamp: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TimeGap {
-    pub channel: String,
-    pub prev_record_id: u64,
-    pub next_record_id: u64,
-    pub prev_timestamp: String,
-    pub next_timestamp: String,
-    pub gap_seconds: i64,
+    pub first_seconds: i64,
+    pub last_seconds: i64,
 }
 
 #[derive(Debug, Serialize)]
 pub struct FileGapReport {
     pub path: PathBuf,
     pub channels: Vec<ChannelStats>,
-    pub record_id_gaps: Vec<RecordIdGap>,
-    pub time_gaps: Vec<TimeGap>,
+    pub gaps: Vec<Gap>,
 }
 
 pub struct GapAnalyser {
@@ -50,6 +48,8 @@ pub struct GapAnalyser {
     detect_record_id_gaps: bool,
     detect_time_gaps: bool,
     skip_errors: bool,
+    from: Option<NaiveDateTime>,
+    to: Option<NaiveDateTime>,
 }
 
 impl GapAnalyser {
@@ -59,6 +59,8 @@ impl GapAnalyser {
         detect_record_id_gaps: bool,
         detect_time_gaps: bool,
         skip_errors: bool,
+        from: Option<NaiveDateTime>,
+        to: Option<NaiveDateTime>,
     ) -> Self {
         Self {
             paths,
@@ -66,6 +68,8 @@ impl GapAnalyser {
             detect_record_id_gaps,
             detect_time_gaps,
             skip_errors,
+            from,
+            to,
         }
     }
 
@@ -99,13 +103,25 @@ impl GapAnalyser {
 
     fn analyse_file(&self, path: &Path) -> crate::Result<FileGapReport> {
         let mut parser = EvtxParser::load(path)?;
+        let from_secs = self.from.map(|d| d.and_utc().timestamp());
+        let to_secs = self.to.map(|d| d.and_utc().timestamp());
 
-        // channel -> Vec<(record_id, ts_string, ts_seconds)>
-        let mut by_channel: BTreeMap<String, Vec<(u64, String, i64)>> = BTreeMap::new();
+        let mut entries: Vec<(String, u64, i64)> = Vec::new();
 
         for result in parser.parse() {
             match result {
                 Ok(rec) => {
+                    let secs = rec.timestamp.as_second();
+                    if let Some(f) = from_secs
+                        && secs < f
+                    {
+                        continue;
+                    }
+                    if let Some(t) = to_secs
+                        && secs > t
+                    {
+                        continue;
+                    }
                     let channel = rec
                         .data
                         .get("Event")
@@ -114,16 +130,15 @@ impl GapAnalyser {
                         .and_then(|c| c.as_str())
                         .unwrap_or("<unknown>")
                         .to_string();
-                    let ts = rec.timestamp;
-                    by_channel.entry(channel).or_default().push((
-                        rec.event_record_id,
-                        ts.to_string(),
-                        ts.as_second(),
-                    ));
+                    entries.push((channel, rec.event_record_id, secs));
                 }
                 Err(e) => {
                     if self.skip_errors {
-                        cs_eyellowln!("[!] failed to parse record in '{}' - {}", path.display(), e);
+                        cs_eyellowln!(
+                            "[!] failed to parse record in '{}' - {}",
+                            path.display(),
+                            e
+                        );
                         continue;
                     }
                     return Err(e.into());
@@ -131,9 +146,10 @@ impl GapAnalyser {
             }
         }
 
+        entries.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
         Ok(build_report(
             path.to_path_buf(),
-            by_channel,
+            &entries,
             self.min_time_gap_seconds,
             self.detect_record_id_gaps,
             self.detect_time_gaps,
@@ -143,139 +159,137 @@ impl GapAnalyser {
 
 fn build_report(
     path: PathBuf,
-    by_channel: BTreeMap<String, Vec<(u64, String, i64)>>,
+    entries: &[(String, u64, i64)],
     min_time_gap_seconds: i64,
     detect_record_id_gaps: bool,
     detect_time_gaps: bool,
 ) -> FileGapReport {
-    let mut channel_stats = Vec::new();
-    let mut record_id_gaps = Vec::new();
-    let mut time_gaps = Vec::new();
+    let mut channels = Vec::new();
+    let mut gaps = Vec::new();
 
-    for (channel, mut entries) in by_channel {
-        entries.sort_by_key(|(id, _, _)| *id);
-        if entries.is_empty() {
-            continue;
+    let mut i = 0;
+    while i < entries.len() {
+        let mut j = i + 1;
+        while j < entries.len() && entries[j].0 == entries[i].0 {
+            j += 1;
         }
-        let first = &entries[0];
-        let last = entries.last().expect("non-empty");
-        channel_stats.push(ChannelStats {
+        let slice = &entries[i..j];
+        let channel = &slice[0].0;
+        channels.push(ChannelStats {
             channel: channel.clone(),
-            records_seen: entries.len() as u64,
-            first_record_id: first.0,
-            last_record_id: last.0,
-            first_timestamp: first.1.clone(),
-            last_timestamp: last.1.clone(),
+            records_seen: slice.len() as u64,
+            first_record_id: slice[0].1,
+            last_record_id: slice[slice.len() - 1].1,
+            first_seconds: slice[0].2,
+            last_seconds: slice[slice.len() - 1].2,
         });
-
-        for pair in entries.windows(2) {
-            let (a_id, ref a_ts, a_secs) = pair[0];
-            let (b_id, ref b_ts, b_secs) = pair[1];
-
-            if detect_record_id_gaps && b_id > a_id + 1 {
-                record_id_gaps.push(RecordIdGap {
+        for pair in slice.windows(2) {
+            let (_, a_id, a_secs) = &pair[0];
+            let (_, b_id, b_secs) = &pair[1];
+            if detect_record_id_gaps && *b_id > a_id + 1 {
+                gaps.push(Gap {
+                    kind: GapKind::RecordId,
                     channel: channel.clone(),
-                    prev_record_id: a_id,
-                    next_record_id: b_id,
-                    missing_records: b_id - a_id - 1,
-                    prev_timestamp: a_ts.clone(),
-                    next_timestamp: b_ts.clone(),
+                    from: *a_id,
+                    until: *b_id,
+                    start: *a_secs,
+                    stop: *b_secs,
                 });
             }
-
-            if detect_time_gaps {
-                let gap_secs = b_secs - a_secs;
-                if gap_secs >= min_time_gap_seconds {
-                    time_gaps.push(TimeGap {
-                        channel: channel.clone(),
-                        prev_record_id: a_id,
-                        next_record_id: b_id,
-                        prev_timestamp: a_ts.clone(),
-                        next_timestamp: b_ts.clone(),
-                        gap_seconds: gap_secs,
-                    });
-                }
+            if detect_time_gaps && b_secs - a_secs >= min_time_gap_seconds {
+                gaps.push(Gap {
+                    kind: GapKind::Timestamp,
+                    channel: channel.clone(),
+                    from: *a_id,
+                    until: *b_id,
+                    start: *a_secs,
+                    stop: *b_secs,
+                });
             }
         }
+        i = j;
     }
 
     FileGapReport {
         path,
-        channels: channel_stats,
-        record_id_gaps,
-        time_gaps,
+        channels,
+        gaps,
     }
 }
 
-pub fn print_text_report(reports: &[FileGapReport]) {
-    use std::fmt::Write as _;
-
-    let mut buf = String::new();
+pub fn print_text_report(reports: &[FileGapReport], local: bool, timezone: Option<Tz>) {
+    let format = TimeFormat { local, timezone };
     let mut total_id_gaps = 0u64;
     let mut total_time_gaps = 0u64;
 
     for report in reports {
-        let _ = writeln!(buf, "\n=== {} ===", report.path.display());
-        let _ = writeln!(buf, "[+] Channels seen:");
+        cs_println!("\n=== {} ===", report.path.display());
+        cs_println!("[+] Channels seen:");
         for ch in &report.channels {
-            let _ = writeln!(
-                buf,
+            cs_println!(
                 "    - {}: {} records, RecordID {}..{}, {} -> {}",
                 ch.channel,
                 ch.records_seen,
                 ch.first_record_id,
                 ch.last_record_id,
-                ch.first_timestamp,
-                ch.last_timestamp
+                format.render(ch.first_seconds),
+                format.render(ch.last_seconds),
             );
         }
-        if report.record_id_gaps.is_empty() {
-            let _ = writeln!(buf, "[+] No RecordID gaps detected");
+
+        let id_gaps: Vec<&Gap> = report
+            .gaps
+            .iter()
+            .filter(|g| g.kind == GapKind::RecordId)
+            .collect();
+        if id_gaps.is_empty() {
+            cs_println!("[+] No RecordID gaps detected");
         } else {
-            let _ = writeln!(
-                buf,
+            cs_println!(
                 "[!] {} RecordID gap(s) detected (possible selective record deletion):",
-                report.record_id_gaps.len()
+                id_gaps.len()
             );
-            for g in &report.record_id_gaps {
-                let _ = writeln!(
-                    buf,
+            for g in &id_gaps {
+                cs_println!(
                     "    - {}: RecordID {} -> {} ({} missing) between {} and {}",
                     g.channel,
-                    g.prev_record_id,
-                    g.next_record_id,
-                    g.missing_records,
-                    g.prev_timestamp,
-                    g.next_timestamp
+                    g.from,
+                    g.until,
+                    g.until - g.from - 1,
+                    format.render(g.start),
+                    format.render(g.stop),
                 );
             }
-            total_id_gaps += report.record_id_gaps.len() as u64;
+            total_id_gaps += id_gaps.len() as u64;
         }
-        if report.time_gaps.is_empty() {
-            let _ = writeln!(buf, "[+] No suspicious time gaps detected");
+
+        let time_gaps: Vec<&Gap> = report
+            .gaps
+            .iter()
+            .filter(|g| g.kind == GapKind::Timestamp)
+            .collect();
+        if time_gaps.is_empty() {
+            cs_println!("[+] No suspicious time gaps detected");
         } else {
-            let _ = writeln!(
-                buf,
+            cs_println!(
                 "[!] {} time gap(s) exceeding threshold:",
-                report.time_gaps.len()
+                time_gaps.len()
             );
-            for g in &report.time_gaps {
-                let _ = writeln!(
-                    buf,
+            for g in &time_gaps {
+                cs_println!(
                     "    - {}: {} -> {} ({}s, RecordIDs {} -> {})",
                     g.channel,
-                    g.prev_timestamp,
-                    g.next_timestamp,
-                    g.gap_seconds,
-                    g.prev_record_id,
-                    g.next_record_id
+                    format.render(g.start),
+                    format.render(g.stop),
+                    g.stop - g.start,
+                    g.from,
+                    g.until,
                 );
             }
-            total_time_gaps += report.time_gaps.len() as u64;
+            total_time_gaps += time_gaps.len() as u64;
         }
     }
 
-    cs_print!("{}", buf);
     cs_eprintln!(
         "\n[+] Done. {} RecordID gap(s), {} time gap(s) across {} file(s).",
         total_id_gaps,
@@ -284,92 +298,121 @@ pub fn print_text_report(reports: &[FileGapReport]) {
     );
 }
 
+struct TimeFormat {
+    local: bool,
+    timezone: Option<Tz>,
+}
+
+impl TimeFormat {
+    fn render(&self, seconds: i64) -> String {
+        let utc = Utc
+            .timestamp_opt(seconds, 0)
+            .single()
+            .unwrap_or_else(|| Utc.timestamp_opt(0, 0).unwrap());
+        if let Some(tz) = self.timezone {
+            utc.with_timezone(&tz).to_rfc3339()
+        } else if self.local {
+            utc.with_timezone(&Local).to_rfc3339()
+        } else {
+            utc.to_rfc3339()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn entry(id: u64, secs: i64) -> (u64, String, i64) {
-        (id, format!("ts({})", secs), secs)
+    fn entry(channel: &str, id: u64, secs: i64) -> (String, u64, i64) {
+        (channel.to_string(), id, secs)
+    }
+
+    fn sorted(mut v: Vec<(String, u64, i64)>) -> Vec<(String, u64, i64)> {
+        v.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
+        v
     }
 
     #[test]
     fn detects_record_id_gap() {
-        let mut by_channel = BTreeMap::new();
-        by_channel.insert(
-            "Security".to_string(),
-            vec![entry(1, 0), entry(2, 10), entry(7, 20)],
-        );
-        let report = build_report(PathBuf::from("test.evtx"), by_channel, 60, true, true);
+        let entries = sorted(vec![
+            entry("Security", 1, 0),
+            entry("Security", 2, 10),
+            entry("Security", 7, 20),
+        ]);
+        let report = build_report(PathBuf::from("test.evtx"), &entries, 60, true, true);
 
-        assert_eq!(report.record_id_gaps.len(), 1);
-        let g = &report.record_id_gaps[0];
-        assert_eq!(g.channel, "Security");
-        assert_eq!(g.prev_record_id, 2);
-        assert_eq!(g.next_record_id, 7);
-        assert_eq!(g.missing_records, 4);
+        let id_gaps: Vec<&Gap> = report
+            .gaps
+            .iter()
+            .filter(|g| g.kind == GapKind::RecordId)
+            .collect();
+        assert_eq!(id_gaps.len(), 1);
+        assert_eq!(id_gaps[0].channel, "Security");
+        assert_eq!(id_gaps[0].from, 2);
+        assert_eq!(id_gaps[0].until, 7);
     }
 
     #[test]
     fn detects_time_gap_above_threshold() {
-        let mut by_channel = BTreeMap::new();
-        by_channel.insert(
-            "Security".to_string(),
-            vec![entry(1, 0), entry(2, 30), entry(3, 200)],
-        );
-        let report = build_report(PathBuf::from("test.evtx"), by_channel, 60, true, true);
+        let entries = sorted(vec![
+            entry("Security", 1, 0),
+            entry("Security", 2, 30),
+            entry("Security", 3, 200),
+        ]);
+        let report = build_report(PathBuf::from("test.evtx"), &entries, 60, true, true);
 
-        assert_eq!(report.time_gaps.len(), 1);
-        assert_eq!(report.time_gaps[0].gap_seconds, 170);
-        assert_eq!(report.time_gaps[0].prev_record_id, 2);
+        let time_gaps: Vec<&Gap> = report
+            .gaps
+            .iter()
+            .filter(|g| g.kind == GapKind::Timestamp)
+            .collect();
+        assert_eq!(time_gaps.len(), 1);
+        assert_eq!(time_gaps[0].stop - time_gaps[0].start, 170);
+        assert_eq!(time_gaps[0].from, 2);
     }
 
     #[test]
     fn ignores_clean_sequence() {
-        let mut by_channel = BTreeMap::new();
-        by_channel.insert(
-            "Security".to_string(),
-            vec![entry(1, 0), entry(2, 10), entry(3, 20)],
-        );
-        let report = build_report(PathBuf::from("test.evtx"), by_channel, 60, true, true);
-
-        assert!(report.record_id_gaps.is_empty());
-        assert!(report.time_gaps.is_empty());
+        let entries = sorted(vec![
+            entry("Security", 1, 0),
+            entry("Security", 2, 10),
+            entry("Security", 3, 20),
+        ]);
+        let report = build_report(PathBuf::from("test.evtx"), &entries, 60, true, true);
+        assert!(report.gaps.is_empty());
         assert_eq!(report.channels.len(), 1);
         assert_eq!(report.channels[0].records_seen, 3);
     }
 
     #[test]
     fn separates_gaps_per_channel() {
-        let mut by_channel = BTreeMap::new();
-        by_channel.insert("Security".to_string(), vec![entry(1, 0), entry(2, 10)]);
-        by_channel.insert(
-            "Microsoft-Windows-Sysmon/Operational".to_string(),
-            vec![entry(100, 0), entry(150, 10)],
-        );
-        let report = build_report(PathBuf::from("test.evtx"), by_channel, 60, true, true);
+        let entries = sorted(vec![
+            entry("Security", 1, 0),
+            entry("Security", 2, 10),
+            entry("Microsoft-Windows-Sysmon/Operational", 100, 0),
+            entry("Microsoft-Windows-Sysmon/Operational", 150, 10),
+        ]);
+        let report = build_report(PathBuf::from("test.evtx"), &entries, 60, true, true);
 
-        assert_eq!(report.record_id_gaps.len(), 1);
-        assert_eq!(
-            report.record_id_gaps[0].channel,
-            "Microsoft-Windows-Sysmon/Operational"
-        );
+        let id_gaps: Vec<&Gap> = report
+            .gaps
+            .iter()
+            .filter(|g| g.kind == GapKind::RecordId)
+            .collect();
+        assert_eq!(id_gaps.len(), 1);
+        assert_eq!(id_gaps[0].channel, "Microsoft-Windows-Sysmon/Operational");
     }
 
     #[test]
     fn flags_disabled_skip_their_category() {
-        let mut by_channel = BTreeMap::new();
-        by_channel.insert(
-            "Security".to_string(),
-            vec![entry(1, 0), entry(5, 600)], // both id-gap and time-gap
-        );
-        let report = build_report(PathBuf::from("test.evtx"), by_channel, 60, false, true);
-        assert!(report.record_id_gaps.is_empty());
-        assert_eq!(report.time_gaps.len(), 1);
+        let entries = sorted(vec![entry("Security", 1, 0), entry("Security", 5, 600)]);
 
-        let mut by_channel = BTreeMap::new();
-        by_channel.insert("Security".to_string(), vec![entry(1, 0), entry(5, 600)]);
-        let report = build_report(PathBuf::from("test.evtx"), by_channel, 60, true, false);
-        assert_eq!(report.record_id_gaps.len(), 1);
-        assert!(report.time_gaps.is_empty());
+        let report = build_report(PathBuf::from("test.evtx"), &entries, 60, false, true);
+        assert_eq!(report.gaps.len(), 1);
+        assert!(report.gaps.iter().all(|g| g.kind == GapKind::Timestamp));
+
+        let report = build_report(PathBuf::from("test.evtx"), &entries, 60, true, false);
+        assert_eq!(report.gaps.len(), 1);
+        assert!(report.gaps.iter().all(|g| g.kind == GapKind::RecordId));
     }
 }

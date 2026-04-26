@@ -184,8 +184,7 @@ fn analyse_gaps_json_output() -> Result<(), Box<dyn std::error::Error>> {
         .success()
         .stdout(predicate::str::contains("\"channel\":\"Security\""))
         .stdout(predicate::str::contains("\"records_seen\":10"))
-        .stdout(predicate::str::contains("\"record_id_gaps\":[]"))
-        .stdout(predicate::str::contains("\"time_gaps\":[]"));
+        .stdout(predicate::str::contains("\"gaps\":[]"));
 
     Ok(())
 }

@@ -310,12 +310,26 @@ enum AnalyseCommand {
         /// Minimum time gap (in minutes) between consecutive events to flag as suspicious
         #[arg(long = "min-time-gap-minutes", default_value_t = 30)]
         min_time_gap_minutes: i64,
-        /// Skip RecordID gap detection (only flag time gaps)
+        /// Skip RecordID gap detection
         #[arg(long = "no-record-id-gaps")]
         no_record_id_gaps: bool,
-        /// Skip time gap detection (only flag RecordID gaps)
+        /// Skip time gap detection
         #[arg(long = "no-time-gaps")]
         no_time_gaps: bool,
+        /// The timestamp to analyse from. Drops any records older than the value provided.
+        /// (YYYY-MM-ddTHH:mm:SS)
+        #[arg(long = "from")]
+        from: Option<NaiveDateTime>,
+        /// The timestamp to analyse up to. Drops any records newer than the value provided.
+        /// (YYYY-MM-ddTHH:mm:SS)
+        #[arg(long = "to")]
+        to: Option<NaiveDateTime>,
+        /// Output the timestamp using the local machine's timezone.
+        #[arg(long = "local", group = "tz")]
+        local: bool,
+        /// Output the timestamp using the timezone provided.
+        #[arg(long = "timezone", group = "tz")]
+        timezone: Option<Tz>,
         /// Print the output in json format
         #[arg(short = 'j', long = "json")]
         json: bool,
@@ -1118,6 +1132,10 @@ fn run() -> Result<()> {
                     min_time_gap_minutes,
                     no_record_id_gaps,
                     no_time_gaps,
+                    from,
+                    to,
+                    local,
+                    timezone,
                     json,
                     output,
                     quiet,
@@ -1133,12 +1151,14 @@ fn run() -> Result<()> {
                         !no_record_id_gaps,
                         !no_time_gaps,
                         skip_errors,
+                        from,
+                        to,
                     );
                     let reports = analyser.analyse()?;
                     if json {
                         cs_print_json!(&reports)?;
                     } else {
-                        print_gap_text_report(&reports);
+                        print_gap_text_report(&reports, local, timezone);
                     }
                     if let Some(out) = output {
                         cs_eprintln!(
