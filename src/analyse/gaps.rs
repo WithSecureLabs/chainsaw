@@ -42,6 +42,25 @@ pub struct FileGapReport {
     pub gaps: Vec<Gap>,
 }
 
+#[derive(Serialize)]
+pub struct JsonGap<'a> {
+    pub path: &'a Path,
+    #[serde(flatten)]
+    pub gap: &'a Gap,
+}
+
+pub fn flatten_for_json(reports: &[FileGapReport]) -> Vec<JsonGap<'_>> {
+    reports
+        .iter()
+        .flat_map(|r| {
+            r.gaps.iter().map(move |g| JsonGap {
+                path: r.path.as_path(),
+                gap: g,
+            })
+        })
+        .collect()
+}
+
 pub struct GapAnalyser {
     paths: Vec<PathBuf>,
     min_time_gap_seconds: i64,

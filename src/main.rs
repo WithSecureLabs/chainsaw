@@ -17,8 +17,8 @@ use clap::{ArgAction, Parser, Subcommand};
 
 use chainsaw::{
     Document, Filter, Format, GapAnalyser, Hunter, Reader, RuleKind, RuleLevel, RuleStatus,
-    Searcher, ShimcacheAnalyser, SrumAnalyser, Writer, cli, get_files, lint as lint_rule,
-    load as load_rule, print_gap_text_report, set_writer,
+    Searcher, ShimcacheAnalyser, SrumAnalyser, Writer, cli, flatten_gaps_for_json, get_files,
+    lint as lint_rule, load as load_rule, print_gap_text_report, set_writer,
 };
 
 #[derive(Parser)]
@@ -1156,7 +1156,8 @@ fn run() -> Result<()> {
                     );
                     let reports = analyser.analyse()?;
                     if json {
-                        cs_print_json!(&reports)?;
+                        let flat = flatten_gaps_for_json(&reports);
+                        cs_print_json!(&flat)?;
                     } else {
                         print_gap_text_report(&reports, local, timezone);
                     }
