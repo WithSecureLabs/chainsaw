@@ -3,6 +3,7 @@ extern crate anyhow;
 
 pub(crate) use anyhow::Result;
 
+pub use analyse::gaps::{FileGapReport, GapAnalyser, print_text_report as print_gap_text_report};
 pub use analyse::shimcache::ShimcacheAnalyser;
 pub use analyse::srum::SrumAnalyser;
 pub use file::{Document, Kind as FileKind, Reader, evtx, get_files};

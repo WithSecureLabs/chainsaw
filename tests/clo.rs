@@ -144,3 +144,69 @@ fn analyse_srum_database_json() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[test]
+fn analyse_gaps_clean_sample() -> Result<(), Box<dyn std::error::Error>> {
+    let root = env!("CARGO_MANIFEST_DIR");
+    let sample_path = Path::new(root)
+        .join("tests/evtx")
+        .join("security_sample.evtx");
+    let mut cmd = cargo_bin_cmd!("chainsaw");
+
+    cmd.arg("--no-banner")
+        .arg("analyse")
+        .arg("gaps")
+        .arg(sample_path);
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Channels seen"))
+        .stdout(predicate::str::contains("Security: 10 records"))
+        .stdout(predicate::str::contains("No RecordID gaps detected"))
+        .stdout(predicate::str::contains("No suspicious time gaps detected"));
+
+    Ok(())
+}
+
+#[test]
+fn analyse_gaps_json_output() -> Result<(), Box<dyn std::error::Error>> {
+    let root = env!("CARGO_MANIFEST_DIR");
+    let sample_path = Path::new(root)
+        .join("tests/evtx")
+        .join("security_sample.evtx");
+    let mut cmd = cargo_bin_cmd!("chainsaw");
+
+    cmd.arg("--no-banner")
+        .arg("analyse")
+        .arg("gaps")
+        .arg("--json")
+        .arg(sample_path);
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("\"channel\":\"Security\""))
+        .stdout(predicate::str::contains("\"records_seen\":10"))
+        .stdout(predicate::str::contains("\"record_id_gaps\":[]"))
+        .stdout(predicate::str::contains("\"time_gaps\":[]"));
+
+    Ok(())
+}
+
+#[test]
+fn analyse_gaps_low_threshold_flags_time_gaps() -> Result<(), Box<dyn std::error::Error>> {
+    let root = env!("CARGO_MANIFEST_DIR");
+    let sample_path = Path::new(root)
+        .join("tests/evtx")
+        .join("security_sample.evtx");
+    let mut cmd = cargo_bin_cmd!("chainsaw");
+
+    cmd.arg("--no-banner")
+        .arg("analyse")
+        .arg("gaps")
+        .arg("--min-time-gap-minutes")
+        .arg("0")
+        .arg(sample_path);
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("time gap(s) exceeding threshold"));
+
+    Ok(())
+}
