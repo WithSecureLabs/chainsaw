@@ -77,7 +77,7 @@ macro_rules! cs_print {
 
 #[macro_export]
 macro_rules! cs_println {
-    () => {
+    () => {{
         use std::io::Write;
         match $crate::writer().output.as_ref() {
             Some(mut f) => {
@@ -87,8 +87,8 @@ macro_rules! cs_println {
                 println!();
             }
         }
-    };
-    ($($arg:tt)*) => {
+    }};
+    ($($arg:tt)*) => {{
         use std::io::Write;
         match $crate::writer().output.as_ref() {
             Some(mut f) => {
@@ -99,7 +99,7 @@ macro_rules! cs_println {
                 println!($($arg)*);
             }
         }
-    }
+    }}
 }
 
 #[macro_export]

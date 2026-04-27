@@ -16,9 +16,9 @@ use chrono_tz::Tz;
 use clap::{ArgAction, Parser, Subcommand};
 
 use chainsaw::{
-    Document, Filter, Format, Hunter, Reader, RuleKind, RuleLevel, RuleStatus, Searcher,
-    ShimcacheAnalyser, SrumAnalyser, Writer, cli, get_files, lint as lint_rule, load as load_rule,
-    set_writer,
+    Document, Filter, Format, GapAnalyser, Hunter, Reader, RuleKind, RuleLevel, RuleStatus,
+    Searcher, ShimcacheAnalyser, SrumAnalyser, Writer, cli, flatten_gaps_for_json, get_files,
+    lint as lint_rule, load as load_rule, print_gap_text_report, set_writer,
 };
 
 #[derive(Parser)]
@@ -302,6 +302,46 @@ enum AnalyseCommand {
         /// Enable near timestamp pair detection between shimcache and amcache for finding additional insertion timestamps for shimcache entries
         #[arg(short = 'p', long = "tspair", requires = "amcache")]
         ts_near_pair_matching: bool,
+    },
+    /// Detect chronological or RecordID gaps in evtx files (possible selective record deletion)
+    Gaps {
+        /// The path(s) to evtx files or directories containing them
+        path: Vec<PathBuf>,
+        /// Minimum time gap (in minutes) between consecutive events to flag as suspicious
+        #[arg(long = "min-time-gap-minutes", default_value_t = 30)]
+        min_time_gap_minutes: i64,
+        /// Skip RecordID gap detection
+        #[arg(long = "no-record-id-gaps")]
+        no_record_id_gaps: bool,
+        /// Skip time gap detection
+        #[arg(long = "no-time-gaps")]
+        no_time_gaps: bool,
+        /// The timestamp to analyse from. Drops any records older than the value provided.
+        /// (YYYY-MM-ddTHH:mm:SS)
+        #[arg(long = "from")]
+        from: Option<NaiveDateTime>,
+        /// The timestamp to analyse up to. Drops any records newer than the value provided.
+        /// (YYYY-MM-ddTHH:mm:SS)
+        #[arg(long = "to")]
+        to: Option<NaiveDateTime>,
+        /// Output the timestamp using the local machine's timezone.
+        #[arg(long = "local", group = "tz")]
+        local: bool,
+        /// Output the timestamp using the timezone provided.
+        #[arg(long = "timezone", group = "tz")]
+        timezone: Option<Tz>,
+        /// Print the output in json format
+        #[arg(short = 'j', long = "json")]
+        json: bool,
+        /// Save the output to a file
+        #[arg(short = 'o', long = "output")]
+        output: Option<PathBuf>,
+        /// Suppress informational output
+        #[arg(short = 'q')]
+        quiet: bool,
+        /// Continue when an error is encountered
+        #[arg(long = "skip-errors")]
+        skip_errors: bool,
     },
     /// Analyse the SRUM database
     Srum {
@@ -1084,6 +1124,47 @@ fn run() -> Result<()> {
                             "[+] Saved output to {:?}",
                             std::fs::canonicalize(output_path)
                                 .expect("could not get absolute path")
+                        );
+                    }
+                }
+                AnalyseCommand::Gaps {
+                    path,
+                    min_time_gap_minutes,
+                    no_record_id_gaps,
+                    no_time_gaps,
+                    from,
+                    to,
+                    local,
+                    timezone,
+                    json,
+                    output,
+                    quiet,
+                    skip_errors,
+                } => {
+                    init_writer(output.clone(), false, json, quiet, args.verbose)?;
+                    if !args.no_banner {
+                        print_title();
+                    }
+                    let analyser = GapAnalyser::new(
+                        path,
+                        min_time_gap_minutes.saturating_mul(60),
+                        !no_record_id_gaps,
+                        !no_time_gaps,
+                        skip_errors,
+                        from,
+                        to,
+                    );
+                    let reports = analyser.analyse()?;
+                    if json {
+                        let flat = flatten_gaps_for_json(&reports);
+                        cs_print_json!(&flat)?;
+                    } else {
+                        print_gap_text_report(&reports, local, timezone);
+                    }
+                    if let Some(out) = output {
+                        cs_eprintln!(
+                            "[+] Saved output to {:?}",
+                            std::fs::canonicalize(out).expect("could not get absolute path")
                         );
                     }
                 }
