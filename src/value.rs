@@ -81,3 +81,77 @@ impl Document for Value {
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn json_to_value() {
+        let v = Value::from(json!({
+            "null": null,
+            "bool": true,
+            "uint": 1u64,
+            "int": -1i64,
+            "float": 1.5,
+            "string": "s",
+            "array": [1],
+        }));
+        match v {
+            Value::Object(o) => {
+                assert!(matches!(o.get("null"), Some(Value::Null)));
+                assert!(matches!(o.get("bool"), Some(Value::Bool(true))));
+                assert!(matches!(o.get("uint"), Some(Value::UInt(1))));
+                assert!(matches!(o.get("int"), Some(Value::Int(-1))));
+                assert!(matches!(o.get("float"), Some(Value::Float(_))));
+                assert!(matches!(o.get("string"), Some(Value::String(_))));
+                assert!(matches!(o.get("array"), Some(Value::Array(_))));
+            }
+            _ => panic!("expected Object"),
+        }
+    }
+
+    #[test]
+    fn value_to_json() {
+        assert_eq!(Json::from(Value::Null), Json::Null);
+        assert_eq!(Json::from(Value::Bool(true)), json!(true));
+        assert_eq!(Json::from(Value::Float(1.5)), json!(1.5));
+        assert_eq!(Json::from(Value::Int(-1)), json!(-1));
+        assert_eq!(Json::from(Value::UInt(1)), json!(1));
+        assert_eq!(Json::from(Value::String("s".to_string())), json!("s"));
+        assert_eq!(Json::from(Value::Array(vec![Value::UInt(1)])), json!([1]));
+        let mut o = FxHashMap::default();
+        o.insert("k".to_string(), Value::String("v".to_string()));
+        assert_eq!(Json::from(Value::Object(o)), json!({"k": "v"}));
+    }
+
+    #[test]
+    fn value_as_tau() {
+        assert!(matches!(Value::Null.as_value(), Tau::Null));
+        assert!(matches!(Value::Bool(true).as_value(), Tau::Bool(true)));
+        assert!(matches!(Value::Int(-1).as_value(), Tau::Int(-1)));
+        assert!(matches!(Value::UInt(1).as_value(), Tau::UInt(1)));
+        match Value::Float(1.5).as_value() {
+            Tau::Float(f) => assert_eq!(f, 1.5),
+            _ => panic!("expected Float"),
+        }
+        match Value::String("s".to_string()).as_value() {
+            Tau::String(s) => assert_eq!(s.as_ref(), "s"),
+            _ => panic!("expected String"),
+        }
+        assert!(matches!(Value::Array(vec![]).as_value(), Tau::Array(_)));
+        assert!(matches!(
+            Value::Object(FxHashMap::default()).as_value(),
+            Tau::Object(_)
+        ));
+    }
+
+    #[test]
+    fn value_supports_find() {
+        let v = Value::from(json!({"k": "v"}));
+        assert!(v.find("k").is_some());
+        assert!(v.find("missing").is_none());
+        assert!(Value::Null.find("k").is_none());
+    }
+}
