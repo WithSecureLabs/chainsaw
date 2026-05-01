@@ -35,7 +35,7 @@ use crate::value::Value;
 pub struct Precondition {
     #[serde(rename = "for")]
     for_: HashMap<String, String>,
-    #[serde(deserialize_with = "crate::ext::tau::deserialize_expression")]
+    #[serde(deserialize_with = "crate::ext::tau::deserialize_kv_expression")]
     pub filter: Expression,
 }
 

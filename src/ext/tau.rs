@@ -15,6 +15,72 @@ where
     parse_identifier(&yaml).map_err(de::Error::custom)
 }
 
+pub fn deserialize_kv_expression<'de, D>(deserializer: D) -> Result<Expression, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    let yaml: Yaml = de::Deserialize::deserialize(deserializer)?;
+    yaml_to_kv_expression(&yaml).map_err(de::Error::custom)
+}
+
+fn yaml_scalar_to_kv_value(value: &Yaml) -> crate::Result<String> {
+    match value {
+        Yaml::String(s) => Ok(s.clone()),
+        Yaml::Number(n) => Ok(format!("={}", n)),
+        Yaml::Bool(b) => Ok(b.to_string()),
+        _ => anyhow::bail!("filter values must be scalar (string, number, or bool)"),
+    }
+}
+
+fn yaml_to_kv_expression(yaml: &Yaml) -> crate::Result<Expression> {
+    match yaml {
+        Yaml::Mapping(map) => {
+            let mut expressions = Vec::with_capacity(map.len());
+            for (k, v) in map {
+                let key = match k {
+                    Yaml::String(s) => s,
+                    _ => anyhow::bail!("filter keys must be strings"),
+                };
+                match v {
+                    Yaml::Sequence(seq) => {
+                        let mut alts = Vec::with_capacity(seq.len());
+                        for item in seq {
+                            let s = yaml_scalar_to_kv_value(item)?;
+                            alts.push(parse_kv(&format!("{}: {}", key, s))?);
+                        }
+                        if alts.len() == 1 {
+                            expressions.push(alts.into_iter().next().unwrap());
+                        } else {
+                            expressions.push(Expression::BooleanGroup(BoolSym::Or, alts));
+                        }
+                    }
+                    _ => {
+                        let s = yaml_scalar_to_kv_value(v)?;
+                        expressions.push(parse_kv(&format!("{}: {}", key, s))?);
+                    }
+                }
+            }
+            if expressions.len() == 1 {
+                Ok(expressions.into_iter().next().unwrap())
+            } else {
+                Ok(Expression::BooleanGroup(BoolSym::And, expressions))
+            }
+        }
+        Yaml::Sequence(seq) => {
+            let mut alts = Vec::with_capacity(seq.len());
+            for item in seq {
+                alts.push(yaml_to_kv_expression(item)?);
+            }
+            if alts.len() == 1 {
+                Ok(alts.into_iter().next().unwrap())
+            } else {
+                Ok(Expression::BooleanGroup(BoolSym::Or, alts))
+            }
+        }
+        _ => anyhow::bail!("filter must be a mapping or sequence of mappings"),
+    }
+}
+
 pub fn deserialize_numeric<'de, D>(deserializer: D) -> Result<Pattern, D::Error>
 where
     D: de::Deserializer<'de>,
@@ -334,4 +400,136 @@ pub fn parse_kv(kv: &str) -> crate::Result<Expression> {
         return Ok(Expression::Negate(Box::new(expression)));
     }
     Ok(expression)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(yaml: &str) -> crate::Result<Expression> {
+        let value: Yaml = serde_yaml::from_str(yaml)?;
+        yaml_to_kv_expression(&value)
+    }
+
+    #[test]
+    fn single_pair_builds_equality() {
+        let expr = parse("int(EventID): 1").unwrap();
+        match expr {
+            Expression::BooleanExpression(left, BoolSym::Equal, right) => {
+                assert!(matches!(*left, Expression::Cast(ref f, ModSym::Int) if f == "EventID"));
+                assert!(matches!(*right, Expression::Integer(1)));
+            }
+            other => panic!("expected equality expression, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn bang_prefix_negates_value() {
+        let expr = parse("int(EventID): \"!=4688\"").unwrap();
+        match expr {
+            Expression::Negate(inner) => match *inner {
+                Expression::BooleanExpression(_, BoolSym::Equal, right) => {
+                    assert!(matches!(*right, Expression::Integer(4688)));
+                }
+                other => panic!("expected negated equality, got {:?}", other),
+            },
+            other => panic!("expected Negate, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn not_cast_key_negates() {
+        let expr = parse("not(Provider): Microsoft-Windows-Sysmon").unwrap();
+        assert!(matches!(expr, Expression::Negate(_)));
+    }
+
+    #[test]
+    fn multiple_pairs_join_with_and() {
+        let yaml = r#"
+Provider: Microsoft-Windows-Sysmon
+int(EventID): 1
+"#;
+        let expr = parse(yaml).unwrap();
+        match expr {
+            Expression::BooleanGroup(BoolSym::And, parts) => assert_eq!(parts.len(), 2),
+            other => panic!("expected AND group, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn list_value_joins_with_or() {
+        let yaml = r#"
+int(EventID):
+  - 4
+  - 16
+"#;
+        let expr = parse(yaml).unwrap();
+        match expr {
+            Expression::BooleanGroup(BoolSym::Or, parts) => assert_eq!(parts.len(), 2),
+            other => panic!("expected OR group, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn sequence_of_mappings_joins_with_or() {
+        let yaml = r#"
+- Provider: Microsoft-Windows-Sysmon
+  int(EventID): 1
+- Provider: Microsoft-Windows-Security-Auditing
+  int(EventID): 4688
+"#;
+        let expr = parse(yaml).unwrap();
+        match expr {
+            Expression::BooleanGroup(BoolSym::Or, parts) => {
+                assert_eq!(parts.len(), 2);
+                for part in parts {
+                    assert!(matches!(part, Expression::BooleanGroup(BoolSym::And, _)));
+                }
+            }
+            other => panic!("expected OR group, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn negated_value_in_list_negates_each_alternative() {
+        let yaml = r#"
+int(EventID):
+  - "!=4"
+  - "!=16"
+"#;
+        let expr = parse(yaml).unwrap();
+        match expr {
+            Expression::BooleanGroup(BoolSym::Or, parts) => {
+                assert_eq!(parts.len(), 2);
+                for part in parts {
+                    assert!(matches!(part, Expression::Negate(_)));
+                }
+            }
+            other => panic!("expected OR of negations, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn non_scalar_value_errors() {
+        let yaml = r#"
+Provider:
+  nested: bad
+"#;
+        assert!(parse(yaml).is_err());
+    }
+
+    #[test]
+    fn deserialize_kv_expression_via_serde() {
+        #[derive(serde::Deserialize)]
+        struct Wrapper {
+            #[serde(deserialize_with = "deserialize_kv_expression")]
+            filter: Expression,
+        }
+        let yaml = r#"
+filter:
+  int(EventID): "!=4688"
+"#;
+        let w: Wrapper = serde_yaml::from_str(yaml).unwrap();
+        assert!(matches!(w.filter, Expression::Negate(_)));
+    }
 }
