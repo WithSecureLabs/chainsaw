@@ -16,9 +16,10 @@ use chrono_tz::Tz;
 use clap::{ArgAction, Parser, Subcommand};
 
 use chainsaw::{
-    Document, Filter, Format, GapAnalyser, Hunter, Reader, RuleKind, RuleLevel, RuleStatus,
-    Searcher, ShimcacheAnalyser, SrumAnalyser, Writer, cli, flatten_gaps_for_json, get_files,
-    lint as lint_rule, load as load_rule, print_gap_text_report, set_writer,
+    Document, EvtxAnalyser, Filter, Format, GapAnalyser, Hunter, Reader, RuleKind, RuleLevel,
+    RuleStatus, Searcher, ShimcacheAnalyser, SrumAnalyser, Writer, cli, flatten_gaps_for_json,
+    get_files, lint as lint_rule, load as load_rule, print_evtx_text_report, print_gap_text_report,
+    set_writer,
 };
 
 #[derive(Parser)]
@@ -330,6 +331,23 @@ enum AnalyseCommand {
         /// Output the timestamp using the timezone provided.
         #[arg(long = "timezone", group = "tz")]
         timezone: Option<Tz>,
+        /// Print the output in json format
+        #[arg(short = 'j', long = "json")]
+        json: bool,
+        /// Save the output to a file
+        #[arg(short = 'o', long = "output")]
+        output: Option<PathBuf>,
+        /// Suppress informational output
+        #[arg(short = 'q')]
+        quiet: bool,
+        /// Continue when an error is encountered
+        #[arg(long = "skip-errors")]
+        skip_errors: bool,
+    },
+    /// Summarise evtx files (per-Channel record counts and per-Event-ID frequency)
+    Evtx {
+        /// The path(s) to evtx files or directories containing them
+        path: Vec<PathBuf>,
         /// Print the output in json format
         #[arg(short = 'j', long = "json")]
         json: bool,
@@ -1160,6 +1178,31 @@ fn run() -> Result<()> {
                         cs_print_json!(&flat)?;
                     } else {
                         print_gap_text_report(&reports, local, timezone);
+                    }
+                    if let Some(out) = output {
+                        cs_eprintln!(
+                            "[+] Saved output to {:?}",
+                            std::fs::canonicalize(out).expect("could not get absolute path")
+                        );
+                    }
+                }
+                AnalyseCommand::Evtx {
+                    path,
+                    json,
+                    output,
+                    quiet,
+                    skip_errors,
+                } => {
+                    init_writer(output.clone(), false, json, quiet, args.verbose)?;
+                    if !args.no_banner {
+                        print_title();
+                    }
+                    let analyser = EvtxAnalyser::new(path, skip_errors);
+                    let reports = analyser.analyse()?;
+                    if json {
+                        cs_print_json!(&reports)?;
+                    } else {
+                        print_evtx_text_report(&reports);
                     }
                     if let Some(out) = output {
                         cs_eprintln!(

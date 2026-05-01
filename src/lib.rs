@@ -3,6 +3,7 @@ extern crate anyhow;
 
 pub(crate) use anyhow::Result;
 
+pub use analyse::evtx::{EvtxAnalyser, FileEvtxStats, print_text_report as print_evtx_text_report};
 pub use analyse::gaps::{
     FileGapReport, GapAnalyser, flatten_for_json as flatten_gaps_for_json,
     print_text_report as print_gap_text_report,
