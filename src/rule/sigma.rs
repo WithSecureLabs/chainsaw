@@ -712,14 +712,26 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
                                 identifier = head;
                             }
                             if let Some(ident) = identifier.strip_suffix('*') {
+                                let mut seen = HashSet::new();
                                 let mut keys = vec![];
                                 for (k, _) in &det {
-                                    if let Yaml::String(key) = k
-                                        && key.starts_with(ident)
+                                    if let Yaml::String(key) = k && key.starts_with(ident)
                                     {
-                                        match patches.get(key) {
-                                            Some(i) => keys.push(i.to_owned()),
-                                            None => keys.push(key.to_owned()),
+                                        let mut found = false;
+                                        for (x, y) in &patches {
+                                            let c = y.strip_prefix("(").unwrap_or(y);
+                                            let c = c.strip_suffix(")").unwrap_or(y);
+                                            if c.split(' ').any(|p| p == key) {
+                                                found = true;
+                                                if !seen.contains(x) {
+                                                    keys.push(y.to_owned());
+                                                    seen.insert(x);
+                                                }
+                                                break;
+                                            }
+                                        }
+                                        if !found {
+                                            keys.push(key.to_owned());
                                         }
                                     }
                                 }
@@ -1162,7 +1174,11 @@ mod tests {
                     string: iefgh
                 selection1:
                     string: iijkl
-                condition: A and (selection0 and selection1)
+                selectionA_0:
+                    string: ifoo
+                selectionA_1:
+                    string: ibar
+                condition: A and (selection0 and selection1 and (selectionA_0 or selectionA_1))
             true_negatives: []
             true_positives: []
         "#;
@@ -1175,6 +1191,9 @@ mod tests {
                 string: efgh
             selection1:
                 string: ijkl
+            selectionA:
+                - string: foo
+                - string: bar
             condition: A and all of selection*
         "#;
 

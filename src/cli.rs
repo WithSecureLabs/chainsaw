@@ -263,7 +263,7 @@ pub fn print_log(
             rows.push((hit, &detection.kind));
         }
     }
-    rows.sort_by(|x, y| x.0.timestamp.cmp(&y.0.timestamp));
+    rows.sort_by_key(|x| x.0.timestamp);
     for (hit, kind) in rows {
         let hunt = &hunts.get(&hit.hunt).expect("could not get hunt");
         let rule = &rules.get(&hit.rule).expect("could not get rule");

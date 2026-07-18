@@ -41,6 +41,7 @@ Chainsaw provides a powerful ‘first-response’ capability to quickly identify
   - [Analysis](#analysis)
     - [Shimcache](#shimcache)
     - [SRUM (System Resource Usage Monitor)](#srum-system-resource-usage-monitor)
+    - [Gaps (event log gap detection)](#gaps-event-log-gap-detection)
   - [Dumping](#srum)
 - [Acknowledgements](#acknowledgements)
 
@@ -406,6 +407,40 @@ A massive thank you to [@AlexKornitzer](https://twitter.com/AlexKornitzer?lang=e
    *Analyse a shimcache artefact with the provided regex patterns (without amcache enrichment). Output to the terminal.*
 
     ./chainsaw analyse shimcache ./SYSTEM --regexfile ./analysis/shimcache_patterns.txt
+
+#### Gaps (event log gap detection)
+Detects two indicators of selective event-log tampering inside one or more `.evtx` files:
+
+- **RecordID gaps**: per-channel `EventRecordID` values are normally monotonically increasing with no holes. A hole inside a single evtx file (i.e., not a log-rotation boundary) is unusual and is the fingerprint left by tools that surgically delete individual records (e.g., `Eventlogedit`-style techniques) without triggering the noisy "log cleared" event (EID 1102).
+- **Time gaps**: unexpectedly long quiet windows between consecutive events on a normally-chatty channel can indicate that records inside that window were removed. The threshold is configurable; per-host baselining is left to the analyst.
+
+    COMMAND:
+        analyse gaps                                   Detect chronological or RecordID gaps in evtx files (possible selective record deletion)
+
+    USAGE:
+        chainsaw analyse gaps [OPTIONS] [PATH]...
+
+    ARGUMENTS:
+        [PATH]...                                      The path(s) to evtx files or directories containing them
+
+    OPTIONS:
+            --min-time-gap-minutes <MINUTES>           Minimum time gap (in minutes) between consecutive events to flag as suspicious [default: 30]
+            --no-record-id-gaps                        Skip RecordID gap detection (only flag time gaps)
+            --no-time-gaps                             Skip time gap detection (only flag RecordID gaps)
+        -j, --json                                     Print the output in json format
+        -o, --output <OUTPUT>                          Save the output to a file
+        -q                                             Suppress informational output
+            --skip-errors                              Continue when an error is encountered
+        -h, --help                                     Print help
+
+##### Command Examples
+   *Scan a directory of evtx files for both RecordID and time gaps with the default 30-minute threshold:*
+
+    ./chainsaw analyse gaps ./Logs/
+
+   *Only look for selectively deleted records (RecordID holes), and emit machine-readable JSON:*
+
+    ./chainsaw analyse gaps ./Logs/ --no-time-gaps --json -o ./gaps.json
 
 #### SRUM (System Resource Usage Monitor)
 The SRUM database parser implemented in Chainsaw differs from other parsers because it does not rely on hardcoded values about the tables. The information is extracted directly from the SOFTWARE hive, which is a mandatory argument. The goal is to avoid errors related to unknown tables.
