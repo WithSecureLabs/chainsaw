@@ -124,6 +124,11 @@ macro_rules! cs_trace {
 macro_rules! cs_eprintln {
     ($($arg:tt)*) => ({
         if !$crate::writer().quiet {
+            use std::io::Write;
+            match $crate::writer().output.as_ref() {
+                Some(mut f) => f.flush().expect("could not flush"),
+                None => std::io::stdout().flush().expect("could not flush"),
+            };
             eprintln!($($arg)*);
         }
     })
@@ -132,16 +137,9 @@ macro_rules! cs_eprintln {
 #[macro_export]
 macro_rules! cs_print_json {
     ($value:expr) => {{
-        use std::io::Write;
         match $crate::writer().output.as_ref() {
-            Some(mut f) => {
-                ::serde_json::to_writer(f, $value)?;
-                f.flush()
-            }
-            None => {
-                ::serde_json::to_writer(std::io::stdout(), $value)?;
-                std::io::stdout().flush()
-            }
+            Some(f) => ::serde_json::to_writer(f, $value),
+            None => ::serde_json::to_writer(std::io::stdout(), $value),
         }
     }};
 }
@@ -149,16 +147,9 @@ macro_rules! cs_print_json {
 #[macro_export]
 macro_rules! cs_print_json_pretty {
     ($value:expr) => {{
-        use std::io::Write;
         match $crate::writer().output.as_ref() {
-            Some(mut f) => {
-                ::serde_json::to_writer_pretty(f, $value)?;
-                f.flush()
-            }
-            None => {
-                ::serde_json::to_writer_pretty(std::io::stdout(), $value)?;
-                std::io::stdout().flush()
-            }
+            Some(f) => ::serde_json::to_writer_pretty(f, $value),
+            None => ::serde_json::to_writer_pretty(std::io::stdout(), $value),
         }
     }};
 }
@@ -170,13 +161,11 @@ macro_rules! cs_print_yaml {
         match $crate::writer().output.as_ref() {
             Some(mut f) => {
                 ::serde_yaml::to_writer(f, $value)?;
-                f.write_all(b"\n")?;
-                f.flush()
+                f.write_all(b"\n")
             }
             None => {
                 ::serde_yaml::to_writer(std::io::stdout(), $value)?;
-                println!();
-                std::io::stdout().flush()
+                std::io::stdout().write_all(b"\n")
             }
         }
     }};
