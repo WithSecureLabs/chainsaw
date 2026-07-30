@@ -23,7 +23,8 @@ impl Parser {
     pub fn load(path: &Path) -> crate::Result<Self> {
         // Find registry transaction logs from the same directory
         let mut transaction_log_files: Vec<PathBuf> = Vec::new();
-        let parent_dir = path
+        let canonical_path = path.canonicalize()?;
+        let parent_dir = canonical_path
             .parent()
             .ok_or(anyhow!("Could not get registry hive parent directory!"))?;
         let hive_file_name = path.file_name();
