@@ -315,7 +315,7 @@ dependencies = [
 
 [[package]]
 name = "chainsaw"
-version = "2.16.3-beta.0"
+version = "2.16.3-beta.1"
 dependencies = [
  "aho-corasick",
  "anyhow",
