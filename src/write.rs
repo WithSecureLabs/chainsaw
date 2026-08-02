@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::io::BufWriter;
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -21,7 +22,7 @@ pub enum Format {
 
 pub struct Writer {
     pub format: Format,
-    pub output: Option<File>,
+    pub output: Option<BufWriter<File>>,
     pub path: Option<PathBuf>,
     pub quiet: bool,
     pub verbose: u8,
@@ -53,10 +54,10 @@ where
     Ok(())
 }
 
-pub fn writer() -> &'static Writer {
+pub fn writer() -> &'static mut Writer {
     #[allow(static_mut_refs)]
     unsafe {
-        &WRITER
+        &mut WRITER
     }
 }
 
@@ -64,8 +65,8 @@ pub fn writer() -> &'static Writer {
 macro_rules! cs_print {
     ($($arg:tt)*) => ({
         use std::io::Write;
-        match $crate::writer().output.as_ref() {
-            Some(mut f) => {
+        match &mut $crate::writer().output.as_mut() {
+            Some(f) => {
                 f.write_all(format!($($arg)*).as_bytes()).expect("could not write to file");
             }
             None => {
@@ -79,8 +80,8 @@ macro_rules! cs_print {
 macro_rules! cs_println {
     () => {{
         use std::io::Write;
-        match $crate::writer().output.as_ref() {
-            Some(mut f) => {
+        match &mut $crate::writer().output.as_mut() {
+            Some(f) => {
                 f.write_all(b"\n").expect("could not write to file");
             }
             None => {
@@ -90,8 +91,8 @@ macro_rules! cs_println {
     }};
     ($($arg:tt)*) => {{
         use std::io::Write;
-        match $crate::writer().output.as_ref() {
-            Some(mut f) => {
+        match &mut $crate::writer().output.as_mut() {
+            Some(f) => {
                 f.write_all(format!($($arg)*).as_bytes()).expect("could not write to file");
                 f.write_all(b"\n").expect("could not write to file");
             }
@@ -125,8 +126,8 @@ macro_rules! cs_eprintln {
     ($($arg:tt)*) => ({
         if !$crate::writer().quiet {
             use std::io::Write;
-            match $crate::writer().output.as_ref() {
-                Some(mut f) => f.flush().expect("could not flush"),
+            match &mut $crate::writer().output.as_mut() {
+                Some(f) => f.flush().expect("could not flush"),
                 None => std::io::stdout().flush().expect("could not flush"),
             };
             eprintln!($($arg)*);
@@ -137,7 +138,7 @@ macro_rules! cs_eprintln {
 #[macro_export]
 macro_rules! cs_print_json {
     ($value:expr) => {{
-        match $crate::writer().output.as_ref() {
+        match &mut $crate::writer().output.as_mut() {
             Some(f) => ::serde_json::to_writer(f, $value),
             None => ::serde_json::to_writer(std::io::stdout(), $value),
         }
@@ -147,7 +148,7 @@ macro_rules! cs_print_json {
 #[macro_export]
 macro_rules! cs_print_json_pretty {
     ($value:expr) => {{
-        match $crate::writer().output.as_ref() {
+        match &mut $crate::writer().output.as_mut() {
             Some(f) => ::serde_json::to_writer_pretty(f, $value),
             None => ::serde_json::to_writer_pretty(std::io::stdout(), $value),
         }
@@ -158,9 +159,9 @@ macro_rules! cs_print_json_pretty {
 macro_rules! cs_print_yaml {
     ($value:expr) => {{
         use std::io::Write;
-        match $crate::writer().output.as_ref() {
-            Some(mut f) => {
-                ::serde_yaml::to_writer(f, $value)?;
+        match &mut $crate::writer().output.as_mut() {
+            Some(f) => {
+                ::serde_yaml::to_writer(&mut *f, $value)?;
                 f.write_all(b"\n")
             }
             None => {
@@ -173,9 +174,9 @@ macro_rules! cs_print_yaml {
 
 macro_rules! cs_print_table {
     ($table:ident) => {
-        match $crate::writer().output.as_ref() {
-            Some(mut f) => {
-                let _ = $table.print(&mut f).expect("could not write table to file");
+        match &mut $crate::writer().output.as_mut() {
+            Some(f) => {
+                let _ = $table.print(f).expect("could not write table to file");
             }
             None => $table.printstd(),
         }
@@ -185,8 +186,8 @@ macro_rules! cs_print_table {
 macro_rules! cs_greenln {
     ($($arg:tt)*) => {
         use std::io::Write;
-        match $crate::writer().output.as_ref() {
-            Some(mut f) => {
+        match &mut $crate::writer().output.as_mut() {
+            Some(f) => {
                 f.write_all(format!($($arg)*).as_bytes()).expect("could not write to file");
                 f.write_all(b"\n").expect("could not write to file");
             }

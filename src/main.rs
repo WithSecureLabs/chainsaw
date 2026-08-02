@@ -3,7 +3,7 @@ extern crate chainsaw;
 
 use rayon::prelude::*;
 use std::fs::{self, File};
-use std::io::BufRead;
+use std::io::{BufRead, BufWriter};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::{collections::HashSet, io::BufReader};
@@ -424,7 +424,7 @@ fn init_writer(
                 (Some(path.to_path_buf()), None)
             } else {
                 let file = match File::create(path) {
-                    Ok(f) => f,
+                    Ok(f) => BufWriter::new(f),
                     Err(e) => {
                         return Err(anyhow::anyhow!(
                             "Unable to write to specified output file - {} - {}",
