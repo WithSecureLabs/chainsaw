@@ -731,7 +731,10 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
                                             }
                                         }
                                         if !found {
-                                            keys.push(key.to_owned());
+                                            match patches.get(key) {
+                                                Some(i) => keys.push(i.to_owned()),
+                                                None => keys.push(key.to_owned()),
+                                            }
                                         }
                                     }
                                 }
@@ -1212,7 +1215,10 @@ mod tests {
                     string: iefgh
                 selection1:
                     string: iijkl
-                condition: A and (selection0 or selection1)
+                selectionA:
+                    - string: iabcd*
+                    - string: i*ijkl
+                condition: A and (selection0 or selection1 or all(selectionA))
             true_negatives: []
             true_positives: []
         "#;
@@ -1225,6 +1231,9 @@ mod tests {
                 string: efgh
             selection1:
                 string: ijkl
+            selectionA:
+                string|startswith: abcd
+                string|endswith: ijkl
             condition: A and 1 of selection*
         "#;
 
