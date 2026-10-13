@@ -296,6 +296,7 @@ lazy_static::lazy_static! {
         set.insert("endswith".to_owned());
         set.insert("startswith".to_owned());
         set.insert("re".to_owned());
+        set.insert("i".to_owned());
         set
     };
 }
@@ -370,7 +371,11 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
                         return Err(anyhow!(s.to_owned()).context("unsupported regex"));
                     }
                 };
+                if modifiers.contains("i") {
+                Yaml::String(format!("i{}", r))
+                }else {
                 Yaml::String(r)
+                    }
             } else if modifiers.contains("startswith") {
                 match s.as_startswith() {
                     Some(s) => Yaml::String(s),
