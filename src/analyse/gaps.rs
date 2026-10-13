@@ -153,11 +153,7 @@ impl GapAnalyser {
                 }
                 Err(e) => {
                     if self.skip_errors {
-                        cs_eyellowln!(
-                            "[!] failed to parse record in '{}' - {}",
-                            path.display(),
-                            e
-                        );
+                        cs_eyellowln!("[!] failed to parse record in '{}' - {}", path.display(), e);
                         continue;
                     }
                     return Err(e.into());
@@ -290,10 +286,7 @@ pub fn print_text_report(reports: &[FileGapReport], local: bool, timezone: Optio
         if time_gaps.is_empty() {
             cs_println!("[+] No suspicious time gaps detected");
         } else {
-            cs_println!(
-                "[!] {} time gap(s) exceeding threshold:",
-                time_gaps.len()
-            );
+            cs_println!("[!] {} time gap(s) exceeding threshold:", time_gaps.len());
             for g in &time_gaps {
                 cs_println!(
                     "    - {}: {} -> {} ({}s, RecordIDs {} -> {})",

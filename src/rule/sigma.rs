@@ -212,7 +212,6 @@ impl Match for String {
         format!("i*{}", self)
     }
     fn as_match(&self) -> Option<String> {
-        // TODO: Handle nested wildcards
         let len = self.len();
         if len > 1 {
             let mut start = 0;
@@ -223,6 +222,8 @@ impl Match for String {
             if self.ends_with('*') {
                 end -= 1;
             }
+            // NOTE: Nested wildcards are handled in regex as this is the only supported approach
+            // via Tau
             if self[start..end].contains('*') || self[start..end].contains('?') {
                 return None;
             }
@@ -231,24 +232,38 @@ impl Match for String {
     }
     fn as_regex(&self, convert: bool) -> Option<String> {
         if convert {
-            let literal = regex::escape(self);
-            let mut scratch = Vec::with_capacity(literal.len());
+            let mut scratch = Vec::with_capacity(self.len());
             let mut escaped = false;
-            for c in literal.chars() {
+            for c in self.chars() {
                 match c {
+                    '.' | '+' | '(' | ')' | '|' | '[' | ']' | '{' | '}' | '^' | '$' | '#' | '&'
+                    | '-' | '~' => {
+                        if escaped {
+                            scratch.push('\\');
+                        }
+                        scratch.push('\\');
+                        escaped = false;
+                    }
                     '*' | '?' => {
                         if !escaped {
                             scratch.push('.');
                         }
+                        escaped = false;
                     }
                     '\\' => {
                         escaped = !escaped;
                     }
                     _ => {
+                        if escaped {
+                            scratch.push('\\');
+                        }
                         escaped = false;
                     }
                 }
                 scratch.push(c);
+            }
+            if escaped {
+                scratch.push('\\');
             }
             Some(format!("i?{}", scratch.into_iter().collect::<String>()))
         } else {
@@ -715,7 +730,8 @@ fn detections_to_tau(detection: Detection) -> Result<Mapping> {
                                 let mut seen = HashSet::new();
                                 let mut keys = vec![];
                                 for (k, _) in &det {
-                                    if let Yaml::String(key) = k && key.starts_with(ident)
+                                    if let Yaml::String(key) = k
+                                        && key.starts_with(ident)
                                     {
                                         let mut found = false;
                                         for (x, y) in &patches {
@@ -968,6 +984,39 @@ mod tests {
 
         let x = "foobar".to_owned();
         assert_eq!(x.as_regex(true).unwrap(), "i?foobar");
+
+        let x = "foo*bar".to_owned();
+        assert_eq!(x.as_regex(true).unwrap(), "i?foo.*bar");
+
+        let x = "foo?bar".to_owned();
+        assert_eq!(x.as_regex(true).unwrap(), "i?foo.?bar");
+
+        let x = r"foo\bar".to_owned();
+        assert_eq!(x.as_regex(true).unwrap(), r"i?foo\\bar");
+
+        let x = r"foo\\bar".to_owned();
+        assert_eq!(x.as_regex(true).unwrap(), r"i?foo\\bar");
+
+        let x = r"foo\\\\bar".to_owned();
+        assert_eq!(x.as_regex(true).unwrap(), r"i?foo\\\\bar");
+
+        let x = r"foo\\\\\?bar".to_owned();
+        assert_eq!(x.as_regex(true).unwrap(), r"i?foo\\\\\?bar");
+
+        let x = "foo.?bar".to_owned();
+        assert_eq!(x.as_regex(true).unwrap(), "i?foo\\..?bar");
+
+        let x = ".+*?()|[]{}^$#&-~".to_owned();
+        assert_eq!(
+            x.as_regex(true).unwrap(),
+            "i?\\.\\+.*.?\\(\\)\\|\\[\\]\\{\\}\\^\\$\\#\\&\\-\\~"
+        );
+
+        let x = r"foobar\".to_owned();
+        assert_eq!(x.as_regex(true).unwrap(), r"i?foobar\\");
+
+        let x = r"foobar\{".to_owned();
+        assert_eq!(x.as_regex(true).unwrap(), r"i?foobar\\\{");
     }
 
     #[test]
