@@ -250,7 +250,7 @@ impl Match for String {
                 }
                 scratch.push(c);
             }
-            Some(format!("?{}", scratch.into_iter().collect::<String>()))
+            Some(format!("i?{}", scratch.into_iter().collect::<String>()))
         } else {
             let _ = Regex::new(self).ok()?;
             Some(format!("?{}", self))
@@ -965,6 +965,9 @@ mod tests {
     fn test_match_regex() {
         let x = "foobar".to_owned();
         assert_eq!(x.as_regex(false).unwrap(), "?foobar");
+
+        let x = "foobar".to_owned();
+        assert_eq!(x.as_regex(true).unwrap(), "i?foobar");
     }
 
     #[test]
