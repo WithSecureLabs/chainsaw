@@ -297,6 +297,7 @@ lazy_static::lazy_static! {
         set.insert("startswith".to_owned());
         set.insert("re".to_owned());
         set.insert("i".to_owned());
+        set.insert("windash".to_owned());
         set
     };
 }
@@ -331,7 +332,7 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
             Yaml::Sequence(scratch)
         }
         Yaml::String(s) => {
-            if modifiers.contains("base64") {
+            let s = if modifiers.contains("base64") {
                 let mut remaining = modifiers.clone();
                 let _ = remaining.remove("base64");
                 let encoded = base64::engine::general_purpose::STANDARD.encode(s);
@@ -372,10 +373,10 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
                     }
                 };
                 if modifiers.contains("i") {
-                Yaml::String(format!("i{}", r))
-                }else {
-                Yaml::String(r)
-                    }
+                    Yaml::String(format!("i{}", r))
+                } else {
+                    Yaml::String(r)
+                }
             } else if modifiers.contains("startswith") {
                 match s.as_startswith() {
                     Some(s) => Yaml::String(s),
@@ -393,6 +394,36 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
                     }
                 };
                 Yaml::String(s)
+            };
+            if modifiers.contains("windash") {
+                match s {
+                    Yaml::String(s) => Yaml::Sequence(vec![
+                        Yaml::String(s.replace("-", "/")),
+                        Yaml::String(s.replace("-", "–")),
+                        Yaml::String(s.replace("-", "—")),
+                        Yaml::String(s.replace("-", "―")),
+                        Yaml::String(s),
+                    ]),
+                    Yaml::Sequence(v) => {
+                        let mut vec = Vec::with_capacity(v.len() * 5);
+                        for s in v {
+                            match s {
+                                Yaml::String(s) => {
+                                    vec.push(Yaml::String(s.replace("-", "/")));
+                                    vec.push(Yaml::String(s.replace("-", "–")));
+                                    vec.push(Yaml::String(s.replace("-", "—")));
+                                    vec.push(Yaml::String(s.replace("-", "―")));
+                                    vec.push(Yaml::String(s));
+                                }
+                                _ => vec.push(s),
+                            }
+                        }
+                        Yaml::Sequence(vec)
+                    }
+                    _ => s,
+                }
+            } else {
+                s
             }
         }
         _ => value.clone(),
