@@ -197,19 +197,25 @@ impl Condition for String {
 }
 
 trait Match {
-    fn as_contains(&self) -> String;
-    fn as_endswith(&self) -> String;
+    fn as_contains(&self) -> Option<String>;
+    fn as_endswith(&self) -> Option<String>;
     fn as_match(&self) -> Option<String>;
     fn as_regex(&self, convert: bool) -> Option<String>;
-    fn as_startswith(&self) -> String;
+    fn as_startswith(&self) -> Option<String>;
 }
 
 impl Match for String {
-    fn as_contains(&self) -> String {
-        format!("i*{}*", self)
+    fn as_contains(&self) -> Option<String> {
+        if self.contains("*") || self.contains('?') {
+            return None;
+        }
+        Some(format!("i*{}*", self))
     }
-    fn as_endswith(&self) -> String {
-        format!("i*{}", self)
+    fn as_endswith(&self) -> Option<String> {
+        if self.contains("*") || self.contains('?') {
+            return None;
+        }
+        Some(format!("i*{}", self))
     }
     fn as_match(&self) -> Option<String> {
         let len = self.len();
@@ -271,8 +277,11 @@ impl Match for String {
             Some(format!("?{}", self))
         }
     }
-    fn as_startswith(&self) -> String {
-        format!("i{}*", self)
+    fn as_startswith(&self) -> Option<String> {
+        if self.contains("*") || self.contains('?') {
+            return None;
+        }
+        Some(format!("i{}*", self))
     }
 }
 
@@ -345,9 +354,15 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
                 }
                 Yaml::Sequence(scratch)
             } else if modifiers.contains("contains") {
-                Yaml::String(s.as_contains())
+                match s.as_contains() {
+                    Some(s) => Yaml::String(s),
+                    None => Yaml::String(s.as_regex(true).expect("unsupported regex")),
+                }
             } else if modifiers.contains("endswith") {
-                Yaml::String(s.as_endswith())
+                match s.as_endswith() {
+                    Some(s) => Yaml::String(s),
+                    None => Yaml::String(s.as_regex(true).expect("unsupported regex")),
+                }
             } else if modifiers.contains("re") {
                 let r = match s.as_regex(false) {
                     Some(r) => r,
@@ -357,7 +372,10 @@ fn parse_identifier(value: &Yaml, modifiers: &HashSet<String>) -> Result<Yaml> {
                 };
                 Yaml::String(r)
             } else if modifiers.contains("startswith") {
-                Yaml::String(s.as_startswith())
+                match s.as_startswith() {
+                    Some(s) => Yaml::String(s),
+                    None => Yaml::String(s.as_regex(true).expect("unsupported regex")),
+                }
             } else {
                 let s = match s.as_match() {
                     Some(s) => s,
@@ -947,13 +965,13 @@ mod tests {
     #[test]
     fn test_match_contains() {
         let x = "foobar".to_owned();
-        assert_eq!(x.as_contains(), "i*foobar*");
+        assert_eq!(x.as_contains().unwrap(), "i*foobar*");
     }
 
     #[test]
     fn test_match_endswith() {
         let x = "foobar".to_owned();
-        assert_eq!(x.as_endswith(), "i*foobar");
+        assert_eq!(x.as_endswith().unwrap(), "i*foobar");
     }
 
     #[test]
@@ -1022,7 +1040,7 @@ mod tests {
     #[test]
     fn test_match_startswith() {
         let x = "foobar".to_owned();
-        assert_eq!(x.as_startswith(), "ifoobar*");
+        assert_eq!(x.as_startswith().unwrap(), "ifoobar*");
     }
 
     #[test]
