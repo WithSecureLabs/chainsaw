@@ -283,11 +283,12 @@ impl super::Parser {
 /// Converts a slice of bytes representing UTF-16 into a String
 fn utf16_to_string(bytes: &[u8]) -> crate::Result<String> {
     let bytes_vec = Vec::from_iter(bytes);
-    let chunk_iterator = bytes_vec.chunks_exact(2);
-    if !chunk_iterator.remainder().is_empty() {
+    let (chunks, remainder) = bytes_vec.as_chunks::<2>();
+    if !remainder.is_empty() {
         bail!("Bytes did not align to 16 bits!");
     }
-    let word_vector: Vec<u16> = chunk_iterator
+    let word_vector: Vec<u16> = chunks
+        .iter()
         .map(|a| u16::from_ne_bytes([*a[0], *a[1]]))
         .collect();
     let word_slice: &[u16] = word_vector.as_slice();
