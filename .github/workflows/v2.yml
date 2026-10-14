@@ -5,6 +5,9 @@ on:
   push:
     tags: [v2*]
 
+permissions:
+  contents: write
+
 jobs:
   build-linux:
     runs-on: ubuntu-latest
@@ -35,7 +38,7 @@ jobs:
       - name: Create ZIP File
         run: tar -czf chainsaw_x86_64-unknown-linux-gnu.tar.gz chainsaw/*
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: chainsaw_x86_64-unknown-linux-gnu.tar.gz
@@ -73,7 +76,7 @@ jobs:
       - name: Create ZIP File
         run: tar -czf chainsaw_aarch64-unknown-linux-gnu.tar.gz chainsaw/*
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: chainsaw_aarch64-unknown-linux-gnu.tar.gz
@@ -106,7 +109,7 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path .\chainsaw\ -Destination chainsaw_x86_64-pc-windows-msvc.zip
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: chainsaw_x86_64-pc-windows-msvc.zip
@@ -139,7 +142,7 @@ jobs:
       - name: Create ZIP File
         run: zip -qq -r chainsaw_x86_64-apple-darwin.zip chainsaw
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: chainsaw_x86_64-apple-darwin.zip
@@ -172,7 +175,7 @@ jobs:
       - name: Create ZIP File
         run: zip -qq -r chainsaw_aarch64-apple-darwin.zip chainsaw
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: chainsaw_aarch64-apple-darwin.zip
@@ -244,7 +247,7 @@ jobs:
       - name: Create ZIP File
         run: zip -r chainsaw_all_platforms+rules.zip chainsaw/
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
