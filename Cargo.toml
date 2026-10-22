@@ -19,6 +19,18 @@ chrono = "0.4"
 chrono-tz = { version = "0.10", features = ["serde"] }
 clap = { version = "4.0", features = ["derive"] }
 crossterm = "0.29"
+# --- PCAP ingestion (feat/pcap-ingestion) -----------------------------------
+# NOTE: versions below are compilation-UNVERIFIED (authored without a Rust
+# toolchain). Pin exact versions with `cargo update -p <crate>` on a build box.
+#
+# Native dissection backend (default, self-contained, no libpcap/tshark needed):
+#   pcap-parser : pure-Rust reader for both legacy .pcap and .pcapng containers.
+#   etherparse  : pure-Rust Ethernet/IPv4/IPv6/UDP/TCP parsing (L2..L4).
+# Kerberos ASN.1 (RFC 4120) is dissected by a small hand-rolled BER/DER TLV
+# reader inside src/file/pcap.rs — we intentionally avoid a general ASN.1 crate
+# (rasn/der) for the first cut to keep the dependency + compile surface minimal.
+pcap-parser = "0.16"
+etherparse = "0.16"
 evtx = { version = "0.12", default-features = false }
 hex = "0.4.3"
 indicatif = "0.18"
@@ -41,6 +53,18 @@ tau-engine = { version = "1.0", features = ["core", "json", "sync"] }
 tempfile = "3.2"
 terminal_size = "0.4"
 uuid = { version = "1.1", features = ["serde", "v4"] }
+
+# Optional tshark-backed dissection backend. OFF by default so the default build
+# stays a single self-contained binary (the "one tool" goal). Enable with
+# `cargo build --release --features tshark`. Adds a RUNTIME dependency on a
+# `tshark` binary being installed on the host.
+rtshark = { version = "2", optional = true }
+
+
+[features]
+default = []
+# tshark backend: breadth now, at the cost of a tshark runtime dependency.
+tshark = ["dep:rtshark"]
 
 
 [dev-dependencies]
