@@ -66,7 +66,8 @@ impl Iterator for Iter<'_> {
                     | Document::Json(json)
                     | Document::Xml(json)
                     | Document::Mft(json)
-                    | Document::Esedb(json) => match json.find(field) {
+                    | Document::Esedb(json)
+                    | Document::Pcap(json) => match json.find(field) {
                         Some(value) => match value.as_str() {
                             Some(timestamp) => {
                                 NaiveDateTime::parse_from_str(timestamp, "%Y-%m-%dT%H:%M:%S%.fZ")
@@ -121,7 +122,8 @@ impl Iterator for Iter<'_> {
                 | Document::Json(json)
                 | Document::Xml(json)
                 | Document::Mft(json)
-                | Document::Esedb(json) => {
+                | Document::Esedb(json)
+                | Document::Pcap(json) => {
                     if let Some(expression) = &self.searcher.tau {
                         if !tau_engine::core::solve(expression, &json) {
                             continue;

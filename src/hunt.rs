@@ -252,6 +252,7 @@ impl HunterBuilder {
                         FileKind::Mft => FileKind::Mft,
                         FileKind::Xml => FileKind::Xml,
                         FileKind::Esedb => FileKind::Esedb,
+                        FileKind::Pcap => FileKind::Pcap,
                         FileKind::Unknown => unreachable!(),
                     };
                     hunts.push(Hunt {
@@ -839,6 +840,10 @@ impl Hunter {
                         cs_trace!("[*] Hunting through document {} - {:?}", document_id, esedb);
                         (FileKind::Esedb, esedb.into())
                     }
+                    File::Pcap(pcap) => {
+                        cs_trace!("[*] Hunting through document {} - {:?}", document_id, pcap);
+                        (FileKind::Pcap, pcap.into())
+                    }
                 };
                 let mut hits = smallvec::smallvec![];
                 for hunt in &self.inner.hunts {
@@ -847,10 +852,15 @@ impl Hunter {
                     }
 
                     let wrapper;
+                    let pcap_wrapper;
                     let mapped = match &kind {
                         FileKind::Evtx => {
                             wrapper = crate::evtx::Wrapper(&value);
                             hunt.mapper.mapped(&wrapper)
+                        }
+                        FileKind::Pcap => {
+                            pcap_wrapper = crate::pcap::Wrapper(&value);
+                            hunt.mapper.mapped(&pcap_wrapper)
                         }
                         _ => hunt.mapper.mapped(&value),
                     };

@@ -142,6 +142,7 @@ fn agg_to_doc<'a>(
         for document in documents {
             let data: Value;
             let wrapper;
+            let pcap_wrapper;
             let mapped = match &document.kind {
                 FileKind::Evtx => {
                     (data, _) = bincode::serde::decode_from_slice::<Value, _>(
@@ -150,6 +151,14 @@ fn agg_to_doc<'a>(
                     )?;
                     wrapper = crate::evtx::Wrapper(&data);
                     hunt.mapper.mapped(&wrapper)
+                }
+                FileKind::Pcap => {
+                    (data, _) = bincode::serde::decode_from_slice::<Value, _>(
+                        &document.data,
+                        bincode::config::standard(),
+                    )?;
+                    pcap_wrapper = crate::pcap::Wrapper(&data);
+                    hunt.mapper.mapped(&pcap_wrapper)
                 }
                 FileKind::Hve
                 | FileKind::Json
@@ -309,6 +318,7 @@ pub fn print_log(
         let mut values = vec![];
         let data: Value;
         let wrapper;
+        let pcap_wrapper;
         let mapped = match &document.kind {
             FileKind::Evtx => {
                 (data, _) = bincode::serde::decode_from_slice::<Value, _>(
@@ -317,6 +327,14 @@ pub fn print_log(
                 )?;
                 wrapper = crate::evtx::Wrapper(&data);
                 hunt.mapper.mapped(&wrapper)
+            }
+            FileKind::Pcap => {
+                (data, _) = bincode::serde::decode_from_slice::<Value, _>(
+                    &document.data,
+                    bincode::config::standard(),
+                )?;
+                pcap_wrapper = crate::pcap::Wrapper(&data);
+                hunt.mapper.mapped(&pcap_wrapper)
             }
             FileKind::Hve
             | FileKind::Json
@@ -493,6 +511,7 @@ pub fn print_detections(
                     for hit in &grouping.hits {
                         let data: Value;
                         let wrapper;
+                        let pcap_wrapper;
                         let mapped = match &document.kind {
                             FileKind::Evtx => {
                                 (data, _) = bincode::serde::decode_from_slice::<Value, _>(
@@ -502,6 +521,15 @@ pub fn print_detections(
                                 .expect("could not decompress");
                                 wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
+                            }
+                            FileKind::Pcap => {
+                                (data, _) = bincode::serde::decode_from_slice::<Value, _>(
+                                    &document.data,
+                                    bincode::config::standard(),
+                                )
+                                .expect("could not decompress");
+                                pcap_wrapper = crate::pcap::Wrapper(&data);
+                                hit.hunt.mapper.mapped(&pcap_wrapper)
                             }
                             FileKind::Hve
                             | FileKind::Esedb
@@ -892,6 +920,7 @@ pub fn print_csv(
                     for hit in &grouping.hits {
                         let data: Value;
                         let wrapper;
+                        let pcap_wrapper;
                         let mapped = match &document.kind {
                             FileKind::Evtx => {
                                 (data, _) = bincode::serde::decode_from_slice::<Value, _>(
@@ -900,6 +929,14 @@ pub fn print_csv(
                                 )?;
                                 wrapper = crate::evtx::Wrapper(&data);
                                 hit.hunt.mapper.mapped(&wrapper)
+                            }
+                            FileKind::Pcap => {
+                                (data, _) = bincode::serde::decode_from_slice::<Value, _>(
+                                    &document.data,
+                                    bincode::config::standard(),
+                                )?;
+                                pcap_wrapper = crate::pcap::Wrapper(&data);
+                                hit.hunt.mapper.mapped(&pcap_wrapper)
                             }
                             FileKind::Hve
                             | FileKind::Esedb

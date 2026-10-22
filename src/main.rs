@@ -549,7 +549,8 @@ fn run() -> Result<()> {
                         | Document::Json(json)
                         | Document::Xml(json)
                         | Document::Mft(json)
-                        | Document::Esedb(json) => json,
+                        | Document::Esedb(json)
+                        | Document::Pcap(json) => json,
                     };
 
                     if json {
