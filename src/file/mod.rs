@@ -12,6 +12,7 @@ use self::evtx::{Evtx, Parser as EvtxParser};
 use self::hve::{Hve, Parser as HveParser};
 use self::json::{Json, Parser as JsonParser, lines::Parser as JsonlParser};
 use self::mft::{Mft, Parser as MftParser};
+use self::pcap::{Parser as PcapParser, Pcap};
 use self::xml::{Parser as XmlParser, Xml};
 
 pub mod esedb;
@@ -19,6 +20,7 @@ pub mod evtx;
 pub mod hve;
 pub mod json;
 pub mod mft;
+pub mod pcap;
 pub mod xml;
 
 #[derive(Clone)]
@@ -29,6 +31,7 @@ pub enum Document {
     Mft(Mft),
     Xml(Xml),
     Esedb(Esedb),
+    Pcap(Pcap),
 }
 
 pub struct Documents<'a> {
@@ -45,6 +48,7 @@ pub enum Kind {
     Mft,
     Xml,
     Esedb,
+    Pcap,
     Unknown,
 }
 
@@ -62,6 +66,7 @@ impl Kind {
             ]),
             Kind::Xml => Some(vec!["xml".to_string()]),
             Kind::Esedb => Some(vec!["dat".to_string(), "edb".to_string()]),
+            Kind::Pcap => Some(vec!["pcap".to_string(), "pcapng".to_string()]),
             Kind::Unknown => None,
         }
     }
@@ -93,6 +98,7 @@ pub enum Parser {
     Mft(MftParser),
     Xml(XmlParser),
     Esedb(EsedbParser),
+    Pcap(PcapParser),
     Unknown,
 }
 
@@ -270,6 +276,28 @@ impl Reader {
                         parser: Parser::Esedb(parser),
                     })
                 }
+                "pcap" | "pcapng" => {
+                    let parser = match PcapParser::load(file) {
+                        Ok(parser) => parser,
+                        Err(e) => {
+                            if skip_errors {
+                                cs_eyellowln!(
+                                    "[!] failed to load file '{}' - {}\n",
+                                    file.display(),
+                                    e
+                                );
+                                return Ok(Self {
+                                    parser: Parser::Unknown,
+                                });
+                            } else {
+                                anyhow::bail!(e);
+                            }
+                        }
+                    };
+                    Ok(Self {
+                        parser: Parser::Pcap(parser),
+                    })
+                }
                 _ => {
                     if load_unknown {
                         if let Ok(parser) = EvtxParser::load(file) {
@@ -412,6 +440,8 @@ impl Reader {
                     .map(|r| r.map(Document::Esedb)),
             )
                 as Box<dyn Iterator<Item = crate::Result<Document>> + Send + 'a>,
+            Parser::Pcap(parser) => Box::new(parser.parse().map(|r| r.map(Document::Pcap)))
+                as Box<dyn Iterator<Item = crate::Result<Document>> + Send + 'a>,
             Parser::Unknown => {
                 Box::new(Unknown) as Box<dyn Iterator<Item = crate::Result<Document>> + Send + 'a>
             }
@@ -428,6 +458,7 @@ impl Reader {
             Parser::Mft(_) => Kind::Mft,
             Parser::Xml(_) => Kind::Xml,
             Parser::Esedb(_) => Kind::Esedb,
+            Parser::Pcap(_) => Kind::Pcap,
             Parser::Unknown => Kind::Unknown,
         }
     }

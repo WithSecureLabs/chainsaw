@@ -10,7 +10,7 @@ pub use analyse::gaps::{
 };
 pub use analyse::shimcache::ShimcacheAnalyser;
 pub use analyse::srum::SrumAnalyser;
-pub use file::{Document, Kind as FileKind, Reader, evtx, get_files};
+pub use file::{Document, Kind as FileKind, Reader, evtx, get_files, pcap};
 pub use hunt::{Hunter, HunterBuilder};
 pub use rule::{
     Filter, Kind as RuleKind, Level as RuleLevel, Status as RuleStatus, lint, load, sigma,
