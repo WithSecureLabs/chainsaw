@@ -1,0 +1,35 @@
+---
+# WIRE FACT: Rubeus hard-codes the KDC-REQ-BODY `till` (ticket end time) to the
+# constant 20370913024805Z in its AS-REQ / TGS-REQ builders. Legitimate
+# Windows clients derive `till` from policy and it varies; a fixed 2037 value is
+# a strong Rubeus fingerprint. `till` is PLAINTEXT in the request body, so this
+# detection works on ordinary encrypted Kerberos traffic.
+#
+# COMPILATION/RUN STATE: UNVERIFIED.
+title: Rubeus Default Kerberos Ticket Lifetime (till 20370913024805Z)
+id: 7c2f6a90-0f1e-4e2a-9b1a-0002deadbeef2
+status: experimental
+description: >
+  Detects Kerberos AS-REQ/TGS-REQ messages whose request body `till` field is
+  the Rubeus default 20370913024805Z.
+author: chainsaw-pcap prototype
+date: 2026/10/22
+references:
+  - https://github.com/GhostPack/Rubeus
+  - https://www.rfc-editor.org/rfc/rfc4120
+tags:
+  - attack.credential_access
+  - attack.t1558
+  - attack.t1550.003
+logsource:
+  product: network
+  service: kerberos
+detection:
+  is_kdc_req:
+    MsgType:
+      - 10   # AS-REQ
+      - 12   # TGS-REQ
+  rubeus_till:
+    Till: "20370913024805Z"
+  condition: is_kdc_req and rubeus_till
+level: high

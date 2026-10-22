@@ -1,0 +1,79 @@
+---
+# Chainsaw Sigma mapping for PCAP-dissected network documents.
+#
+# COMPILATION/RUN STATE: UNVERIFIED (authored without a Rust toolchain).
+#
+# Documents emitted by src/file/pcap.rs are nested JSON under two namespaces:
+#   Network.*   L3/L4 envelope (protocol, transport, addrs, ports, timestamp)
+#   Kerberos.*  RFC 4120 wire fields (see docs/pcap-ingestion.md §3)
+#
+# Because those documents already use clean dotted paths, this mapping is thin:
+# it just gives friendly Sigma aliases (from -> to). Any field not listed here
+# falls through to a direct lookup, so a rule may also reference the full
+# `Kerberos.*` path verbatim.
+name: Chainsaw network (PCAP) Sigma mappings
+kind: pcap
+rules: sigma
+
+groups:
+  - name: Network
+    # Packet capture time, emitted as %Y-%m-%dT%H:%M:%S%.6fZ.
+    timestamp: Network.timestamp
+    # Every dissected document carries Network.protocol, so this selects them all.
+    filter:
+      Network.protocol: "*"
+    fields:
+      # --- Network.* envelope ---
+      - from: Protocol
+        to: Network.protocol
+      - from: Transport
+        to: Network.transport
+      - from: SrcIp
+        to: Network.src_ip
+      - from: DstIp
+        to: Network.dst_ip
+      - from: SrcPort
+        to: Network.src_port
+      - from: DstPort
+        to: Network.dst_port
+      # --- Kerberos.* ---
+      - from: MsgType
+        to: Kerberos.msg_type
+      - from: MsgTypeName
+        to: Kerberos.msg_type_name
+      - from: Realm
+        to: Kerberos.realm
+      - from: ClientName
+        to: Kerberos.cname_string
+      - from: ServiceName
+        to: Kerberos.sname_string
+      - from: TicketServiceName
+        to: Kerberos.ticket_sname_string
+      - from: KdcOptions
+        to: Kerberos.kdc_options
+      - from: KdcOptionsFlags
+        to: Kerberos.kdc_options_flags
+      - from: EtypeFirst
+        to: Kerberos.etype_first
+      - from: Etypes
+        to: Kerberos.etypes
+      - from: EtypeCount
+        to: Kerberos.etype_count
+      - from: Till
+        to: Kerberos.till
+      - from: RenewTill
+        to: Kerberos.renew_till
+      - from: Nonce
+        to: Kerberos.nonce
+      - from: PaDataTypes
+        to: Kerberos.padata_types
+      - from: PaForUser
+        to: Kerberos.pa_for_user
+      - from: PaForUserName
+        to: Kerberos.pa_for_user_name
+      - from: AuthenticatorEtype
+        to: Kerberos.authenticator_etype
+      - from: AuthenticatorSeq
+        to: Kerberos.authenticator_seq_hex
+      - from: EncPartEtype
+        to: Kerberos.enc_part_etype
