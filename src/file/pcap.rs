@@ -323,6 +323,7 @@ fn dissect_capture(path: &Path) -> crate::Result<Vec<Json>> {
         }
     }
 
+    eprintln!("[pcap-dbg] frames={} linktype={} docs={}", frame, linktype.0, out.len());
     Ok(out)
 }
 
@@ -338,13 +339,15 @@ fn handle_frame(
 ) {
     let seg = match parse_l2_l4(linktype, data, timestamp, frame) {
         Some(s) => s,
-        None => return,
+        None => { eprintln!("[pcap-dbg] frame {}: parse_l2_l4 -> None (linktype {})", frame, linktype.0); return; }
     };
+    eprintln!("[pcap-dbg] frame {}: {} {}:{}->{}:{} payload={}", frame, seg.meta.transport, seg.meta.src_ip, seg.meta.src_port, seg.meta.dst_ip, seg.meta.dst_port, seg.payload.len());
 
     // Only bother with flows some dissector claims (either direction).
     let claimed = table
         .iter()
         .any(|d| d.claims(seg.meta.src_port) || d.claims(seg.meta.dst_port));
+    eprintln!("[pcap-dbg] frame {}: claimed={}", seg.meta.frame, claimed);
     if !claimed {
         return;
     }
@@ -389,7 +392,9 @@ fn handle_frame(
 fn dispatch(table: &[Box<dyn Dissector>], meta: &FlowMeta, payload: &[u8], out: &mut Vec<Json>) {
     for d in table {
         if d.claims(meta.src_port) || d.claims(meta.dst_port) {
-            out.extend(d.dissect(meta, payload));
+            let r = d.dissect(meta, payload);
+            eprintln!("[pcap-dbg] dissect on {}:{} payload={} -> {} docs", meta.transport, meta.dst_port, payload.len(), r.len());
+            out.extend(r);
         }
     }
 }
