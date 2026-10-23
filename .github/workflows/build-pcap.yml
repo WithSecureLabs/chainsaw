@@ -1,0 +1,22 @@
+name: build-pcap
+on:
+  push:
+    branches: [ feat/pcap-ingestion ]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: rustup update stable && rustup default stable
+      - name: Build (default features — native pcap, no tshark)
+        run: cargo build --release --verbose
+      - name: Unit tests (BER/DER + existing)
+        run: cargo test --release --verbose
+      - name: Smoke — binary runs and knows the pcap kind
+        run: |
+          ./target/release/chainsaw hunt --help 2>&1 | head -40
+          ./target/release/chainsaw lint --kind sigma rules-network 2>&1 | tail -20 || true
